@@ -38,7 +38,7 @@ export default function SignUp() {
           <View className="mb-2">
             <Image
               source={require('../../assets/images/sona-long-logo.png')}
-              className="w-52 h-16"
+              className="w-52 h-16 opacity-75"
               resizeMode="contain"
             />
           </View>

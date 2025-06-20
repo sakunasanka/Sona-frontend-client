@@ -12,7 +12,7 @@ export default function Home() {
       
       <View className="w-full max-w-sm space-y-4">
         {/* This is your signup navigation button */}
-        <Link href="/feed" asChild>
+        <Link href="/signin" asChild>
           <PrimaryButton 
             title="Go to Sign In" 
             onPress={() => {}} // Empty because Link handles navigation

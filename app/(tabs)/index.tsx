@@ -13,7 +13,7 @@ export default function Home() {
       <View className="flex-row gap-3">
         <PrimaryButton 
           title="Sign In" 
-          onPress={() => router.push("/signin")} 
+          onPress={() => router.push("/profile/counsellor_profile")} 
         />
       </View>
     </View>

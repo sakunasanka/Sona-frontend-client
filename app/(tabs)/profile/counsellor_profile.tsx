@@ -76,7 +76,7 @@ export default function CounsellorProfile() {
         </View>
 
         {/* Profile Hero Section */}
-        <View className="bg-gradient-to-b from-indigo-50 to-white px-6 py-8">
+        <View className="bg-gradient-to-b from-blue-50 to-white px-6 py-8">
           <View className="items-center">
             <View className="relative mb-6">
               <Image
@@ -91,7 +91,7 @@ export default function CounsellorProfile() {
             <Text className="text-2xl font-bold text-gray-900 mb-1 text-center">
               {counsellorData.name}
             </Text>
-            <Text className="text-base font-medium text-indigo-600 mb-3">
+            <Text className="text-base font-medium text-primary mb-3">
               {counsellorData.title}
             </Text>
             
@@ -121,7 +121,6 @@ export default function CounsellorProfile() {
               title="Message"
               onPress={handleMessage}
               icon={MessageSquare}
-              iconColor="#6366F1"
             />
             
             <PrimaryButton

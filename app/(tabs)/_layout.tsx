@@ -26,7 +26,7 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="profile"
+        name="profile/view_profile"
         options={{
           title: 'Profile',
           tabBarIcon: ({ color }) => <User color={color} />,

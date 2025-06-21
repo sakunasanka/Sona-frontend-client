@@ -165,7 +165,7 @@ export default function Feed() {
                 className="flex-1 bg-gray-100 rounded-full px-4 py-2"
                 onPress={() => console.log('Create post pressed')}
               >
-                <Text className="text-gray-500">What's on your mind?</Text>
+                <Text className="text-gray-500">What&apos;s on your mind?</Text>
               </TouchableOpacity>
             </View>
             {/* <View className="flex-row justify-between px-4">
@@ -196,10 +196,10 @@ export default function Feed() {
       )}
 
       {/* Bottom Navigation */}
-      <BottomNavigation 
+      {/* <BottomNavigation 
         activeTab={currentNavTab}
         onTabPress={handleNavTabPress}
-      />
+      /> */}
     </View>
   );
 }

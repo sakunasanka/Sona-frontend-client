@@ -11,6 +11,7 @@ module.exports = {
         gray: {
           400: "#9CA3AF", 
         },
+        green: '#16a34a',
       },
       fontFamily: {
         sans: ["Inter", "sans-serif"], // Example font family

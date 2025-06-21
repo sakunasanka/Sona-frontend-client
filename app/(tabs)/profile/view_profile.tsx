@@ -1,0 +1,140 @@
+import React from 'react';
+import { View, Text, TouchableOpacity, ScrollView, SafeAreaView, Image } from 'react-native';
+import { ArrowLeft, Edit, Bookmark, HelpCircle, LogOut, Shield, BadgeCheck } from 'lucide-react-native';
+import { Link, router } from 'expo-router';
+import {LogoutButton} from '../../components/Buttons';
+
+export default function Profile() {
+  const userData = {
+    name: 'Sakuna Sanka',
+    nickname: 'John',
+    dob: '23/05/2003',
+    email: 'john.s@example.com',
+    joinDate: 'January 2023',
+    checkins: 24,
+    goals: 18,
+    streak: 36
+  };
+
+  return (
+    <SafeAreaView className="flex-1 bg-gray-50">
+      <ScrollView 
+        contentContainerStyle={{ paddingBottom: 40 }}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Header */}
+        <View className="flex-row justify-between items-center px-5 py-4 border-b border-gray-200">
+          <Link href="/" asChild>
+            <TouchableOpacity className="p-2">
+              <ArrowLeft size={24} color="#2563EB" />
+            </TouchableOpacity>
+          </Link>
+          <Text className="text-xl font-semibold text-gray-900">Profile</Text>
+          <TouchableOpacity onPress={() => router.push('/profile/edit_profile')}>
+            <Edit size={24} color="#2563EB" />
+          </TouchableOpacity>
+        </View>
+
+        {/* Profile Section */}
+        <View className="items-center py-6 border-b border-gray-200">
+          <View className="relative mb-4">
+            <Image 
+              source={{ uri: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg' }} 
+              className="w-32 h-32 rounded-full border-4 border-gray-200"
+            />
+            <TouchableOpacity 
+              className="absolute bottom-0 right-0 bg-primary rounded-full w-8 h-8 justify-center items-center"
+              onPress={() => router.push('/profile/edit_profile')}
+            >
+              <Edit size={16} color="white" />
+            </TouchableOpacity>
+          </View>
+
+          <Text className="text-2xl font-bold text-gray-900 mb-1">{userData.name}</Text>
+          <Text className="text-base text-gray-500 mb-4">@{userData.nickname}</Text>
+          
+          <View className="flex-row justify-around w-full px-10 mt-4">
+            <View className="items-center">
+              <Text className="text-xl font-bold text-primary">{userData.checkins}</Text>
+              <Text className="text-sm text-gray-500 mt-1">Check-ins</Text>
+            </View>
+            <View className="items-center">
+              <Text className="text-xl font-bold text-primary">{userData.streak}</Text>
+              <Text className="text-sm text-gray-500 mt-1">Day Streak</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Personal Info Section */}
+        <View className="p-5 border-b border-gray-200">
+          <Text className="text-lg font-semibold text-gray-900 mb-4">Personal Information</Text>
+          
+          <View className="flex-row justify-between mb-4">
+            <Text className="text-sm text-gray-500">Full Name</Text>
+            <Text className="text-sm font-medium text-gray-900">{userData.name}</Text>
+          </View>
+          
+          <View className="flex-row justify-between mb-4">
+            <Text className="text-sm text-gray-500">Nickname</Text>
+            <Text className="text-sm font-medium text-gray-900">{userData.nickname}</Text>
+          </View>
+          
+          <View className="flex-row justify-between mb-4">
+            <Text className="text-sm text-gray-500">Date of Birth</Text>
+            <Text className="text-sm font-medium text-gray-900">{userData.dob}</Text>
+          </View>
+          
+          <View className="flex-row justify-between mb-4">
+            <Text className="text-sm text-gray-500">Email</Text>
+            <Text className="text-sm font-medium text-gray-900">{userData.email}</Text>
+          </View>
+          
+          <View className="flex-row justify-between mb-4">
+            <Text className="text-sm text-gray-500">Member Since</Text>
+            <Text className="text-sm font-medium text-gray-900">{userData.joinDate}</Text>
+          </View>
+        </View>
+
+        {/* Actions Section */}
+        <View className="p-5">
+          <Text className="text-lg font-semibold text-gray-900 mb-4">Account</Text>
+          
+          <TouchableOpacity className="flex-row items-center py-4 border-b border-gray-100">
+            <View className="w-9 h-9 rounded-full bg-blue-50 justify-center items-center mr-4">
+              <Bookmark size={20} color="#2563EB" />
+            </View>
+            <Text className="text-base text-gray-900">Saved Resources</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity className="flex-row items-center py-4 border-b border-gray-100">
+            <View className="w-9 h-9 rounded-full bg-blue-50 justify-center items-center mr-4">
+              <Shield size={20} color="#2563EB" />
+            </View>
+            <Text className="text-base text-gray-900">Privacy Settings</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity className="flex-row items-center py-4 border-b border-gray-100">
+            <View className="w-9 h-9 rounded-full bg-blue-50 justify-center items-center mr-4">
+              <HelpCircle size={20} color="#2563EB" />
+            </View>
+            <Text className="text-base text-gray-900">Help & Support</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity className="flex-row items-center py-4 border-b border-gray-100">
+            <View className="w-9 h-9 rounded-full bg-blue-50 justify-center items-center mr-4">
+              <BadgeCheck size={20} color="#2563EB" />
+            </View>
+            <Text className="text-base text-gray-900">Apply for Student Plan</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Logout Button */}
+        <LogoutButton 
+            title="Log Out" 
+            onPress={() => {}} 
+            icon={LogOut}
+          />
+      </ScrollView>
+    </SafeAreaView>
+  );
+}

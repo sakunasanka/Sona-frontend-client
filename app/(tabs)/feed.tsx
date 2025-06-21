@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import BottomNavigation from '../components/BottomNavigation';
 import FeedCard from '../components/FeedCard';
+import { Search, PlusCircle, MoreHorizontal } from 'lucide-react-native';
 
 interface Post {
   id: string;
@@ -34,13 +35,11 @@ interface Post {
 
 export default function Feed() {
   const [activeTab, setActiveTab] = useState<'Recent' | 'Popular'>('Recent');
-  const [shareText, setShareText] = useState('');
   const [currentNavTab, setCurrentNavTab] = useState<'home' | 'menu' | 'users' | 'settings'>('menu');
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [posts, setPosts] = useState<Post[]>([]);
 
-  // Simulate fetching posts
   const fetchPosts = useCallback(() => {
     setLoading(true);
     setTimeout(() => {
@@ -49,7 +48,6 @@ export default function Feed() {
     }, 800);
   }, []);
 
-  // Initial load
   React.useEffect(() => {
     fetchPosts();
   }, [fetchPosts]);
@@ -64,7 +62,6 @@ export default function Feed() {
 
   const handleNavTabPress = useCallback((tab: 'home' | 'menu' | 'users' | 'settings') => {
     setCurrentNavTab(tab);
-    console.log('Navigation tab pressed:', tab);
   }, []);
 
   const handleLikePost = useCallback((postId: string) => {
@@ -100,37 +97,37 @@ export default function Feed() {
   }, [activeTab, posts]);
 
   return (
-    <View className="flex-1 bg-white">
+    <View className="flex-1 bg-gray-50">
       <StatusBar barStyle="dark-content" backgroundColor="white" />
       
       {/* Header */}
-      <View className="flex-row justify-between items-center px-5 py-4 border-b border-gray-200">
-        <Text className="text-xl font-bold text-gray-900">Feed</Text>
-        <View className="flex-row items-center space-x-3">
+      <View className="flex-row justify-between items-center px-5 py-4 bg-white border-b border-gray-100">
+        <Text className="text-xl font-semibold text-gray-900">Feed</Text>
+        <View className="flex-row items-center space-x-4">
           <TouchableOpacity>
-            <Image 
-              source={{ uri: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg' }} 
-              className="w-8 h-8 rounded-full"
-            />
+            <Search size={24} color="#4B5563" />
+          </TouchableOpacity>
+          <TouchableOpacity>
+            <MoreHorizontal size={24} color="#4B5563" />
           </TouchableOpacity>
         </View>
       </View>
 
       {/* Tab Selector */}
-      <View className="flex-row border-b border-gray-200">
+      <View className="flex-row bg-white border-b border-gray-100">
         <TouchableOpacity 
-          className={`flex-1 py-4 items-center ${activeTab === 'Recent' ? 'border-b-2 border-blue-500' : ''}`}
+          className={`flex-1 py-3 items-center ${activeTab === 'Recent' ? 'border-b-2 border-primary' : ''}`}
           onPress={() => setActiveTab('Recent')}
         >
-          <Text className={`font-medium ${activeTab === 'Recent' ? 'text-blue-500' : 'text-gray-500'}`}>
+          <Text className={`text-sm font-medium ${activeTab === 'Recent' ? 'text-primary' : 'text-gray-500'}`}>
             Recent
           </Text>
         </TouchableOpacity>
         <TouchableOpacity 
-          className={`flex-1 py-4 items-center ${activeTab === 'Popular' ? 'border-b-2 border-blue-500' : ''}`}
+          className={`flex-1 py-3 items-center ${activeTab === 'Popular' ? 'border-b-2 border-primary' : ''}`}
           onPress={() => setActiveTab('Popular')}
         >
-          <Text className={`font-medium ${activeTab === 'Popular' ? 'text-blue-500' : 'text-gray-500'}`}>
+          <Text className={`text-sm font-medium ${activeTab === 'Popular' ? 'text-primary' : 'text-gray-500'}`}>
             Popular
           </Text>
         </TouchableOpacity>
@@ -138,7 +135,7 @@ export default function Feed() {
 
       {/* Posts Feed */}
       {loading && posts.length === 0 ? (
-        <View className="flex-1 justify-center items-center">
+        <View className="flex-1 justify-center items-center bg-white">
           <ActivityIndicator size="large" color="#3B82F6" />
         </View>
       ) : (
@@ -155,8 +152,8 @@ export default function Feed() {
           }
         >
           {/* Create Post */}
-          <View className="p-4 border-b border-gray-100">
-            <View className="flex-row items-center space-x-3 mb-3">
+          <View className="p-4 bg-white mb-2">
+            <View className="flex-row items-center space-x-3">
               <Image 
                 source={{ uri: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg' }} 
                 className="w-10 h-10 rounded-full"
@@ -165,33 +162,18 @@ export default function Feed() {
                 className="flex-1 bg-gray-100 rounded-full px-4 py-2"
                 onPress={() => console.log('Create post pressed')}
               >
-                <Text className="text-gray-500">What's on your mind?</Text>
+                <Text className="text-gray-500">Share your thoughts...</Text>
+              </TouchableOpacity>
+              <TouchableOpacity className="ml-2">
+                <PlusCircle size={24} color="#3B82F6" />
               </TouchableOpacity>
             </View>
-            {/* <View className="flex-row justify-between px-4">
-              <TouchableOpacity className="flex-row items-center">
-                <View className="w-8 h-8 bg-blue-100 rounded-full items-center justify-center mr-1">
-                  <Text className="text-blue-500">🎥</Text>
-                </View>
-                <Text className="text-gray-500">Live</Text>
-              </TouchableOpacity>
-              <TouchableOpacity className="flex-row items-center">
-                <View className="w-8 h-8 bg-green-100 rounded-full items-center justify-center mr-1">
-                  <Text className="text-green-500">📷</Text>
-                </View>
-                <Text className="text-gray-500">Photo</Text>
-              </TouchableOpacity>
-              <TouchableOpacity className="flex-row items-center">
-                <View className="w-8 h-8 bg-purple-100 rounded-full items-center justify-center mr-1">
-                  <Text className="text-purple-500">😊</Text>
-                </View>
-                <Text className="text-gray-500">Feeling</Text>
-              </TouchableOpacity>
-            </View> */}
           </View>
 
           {/* Posts List */}
-          {filteredPosts.map(renderPost)}
+          <View className="space-y-2">
+            {filteredPosts.map(renderPost)}
+          </View>
         </ScrollView>
       )}
 
@@ -204,7 +186,7 @@ export default function Feed() {
   );
 }
 
-// Mock data
+// Mock data (same as before)
 const mockPosts: Post[] = [
   {
     id: '1',

@@ -1,7 +1,7 @@
 import { Text, View } from "react-native";
-import { Link } from "expo-router";
 import { PrimaryButton } from "../components/Buttons";
 import "../global.css";
+import { router } from "expo-router";
 
 export default function Home() {
   return (
@@ -10,14 +10,11 @@ export default function Home() {
         Welcome to Sona!
       </Text>
       
-      <View className="w-full max-w-sm space-y-4">
-        {/* This is your signup navigation button */}
-        <Link href="/signin" asChild>
-          <PrimaryButton 
-            title="Go to Sign In" 
-            onPress={() => {}} // Empty because Link handles navigation
-          />
-        </Link>
+      <View className="flex-row gap-3">
+        <PrimaryButton 
+          title="Sign In" 
+          onPress={() => router.push("/signin")} 
+        />
       </View>
     </View>
   );

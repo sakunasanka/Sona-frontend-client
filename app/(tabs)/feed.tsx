@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import BottomNavigation from '../components/BottomNavigation';
 import FeedCard from '../components/FeedCard';
+import TopBar from '../components/TopBar';
 
 interface Post {
   id: string;
@@ -102,19 +103,8 @@ export default function Feed() {
   return (
     <View className="flex-1 bg-white">
       <StatusBar barStyle="dark-content" backgroundColor="white" />
-      
-      {/* Header */}
-      <View className="flex-row justify-between items-center px-5 py-4 border-b border-gray-200">
-        <Text className="text-xl font-bold text-gray-900">Feed</Text>
-        <View className="flex-row items-center space-x-3">
-          <TouchableOpacity>
-            <Image 
-              source={{ uri: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg' }} 
-              className="w-8 h-8 rounded-full"
-            />
-          </TouchableOpacity>
-        </View>
-      </View>
+      {/* Top Bar */}
+      <TopBar title="Feed" />
 
       {/* Tab Selector */}
       <View className="flex-row border-b border-gray-200">
@@ -165,7 +155,7 @@ export default function Feed() {
                 className="flex-1 bg-gray-100 rounded-full px-4 py-2"
                 onPress={() => console.log('Create post pressed')}
               >
-                <Text className="text-gray-500">What's on your mind?</Text>
+                <Text className="text-gray-500">What&apos;s on your mind?</Text>
               </TouchableOpacity>
             </View>
             {/* <View className="flex-row justify-between px-4">
@@ -196,10 +186,10 @@ export default function Feed() {
       )}
 
       {/* Bottom Navigation */}
-      <BottomNavigation 
+      {/* <BottomNavigation 
         activeTab={currentNavTab}
         onTabPress={handleNavTabPress}
-      />
+      /> */}
     </View>
   );
 }

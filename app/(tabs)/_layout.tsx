@@ -1,13 +1,38 @@
-import { Stack } from "expo-router";
+import { Tabs } from 'expo-router';
+import { Home, User, Newspaper, Smile } from 'lucide-react-native';
+import TopBar from '../components/TopBar';
 
-export default function RootLayout() {
+export default function TabsLayout() {
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="index" options={{ title: 'Home' }} />
-      <Stack.Screen name="signup" options={{ title: 'Sign Up' }} />
-      <Stack.Screen name="signin" options={{ title: 'Sign In' }} />
-      <Stack.Screen name="forgot-password" options={{ title: 'Forgot Password' }} />
-      <Stack.Screen name="feed" options={{ title: 'Feed' }} />
-    </Stack>
+    <>
+    <Tabs
+      screenOptions={{
+        headerShown: false,
+        tabBarActiveTintColor: '#EF5DA8',
+      }}
+    >
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: 'home',
+          tabBarIcon: ({ color }) => <Home color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="feed"
+        options={{
+          title: 'Feed',
+          tabBarIcon: ({ color }) => <Newspaper color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: 'Profile',
+          tabBarIcon: ({ color }) => <User color={color} />,
+        }}
+      />
+    </Tabs>
+    </>
   );
 }

@@ -11,6 +11,7 @@ module.exports = {
         gray: {
           400: "#9CA3AF", 
         },
+        green: '#16a34a',
         buttonPink: {
           500: '#EF5DA8',
         },

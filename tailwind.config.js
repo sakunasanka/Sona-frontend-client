@@ -12,10 +12,24 @@ module.exports = {
           400: "#9CA3AF", 
         },
         green: '#16a34a',
+        buttonPink: {
+          500: '#EF5DA8',
+        },
+        buttonOrange: {
+          500: '#F09E54',
+        },
+        buttonBlue: {
+          500: '#AEAFF7'
+        },
+        buttonGreen: {
+          500: '#A0E3E2'
+        }
       },
       fontFamily: {
         sans: ["Inter", "sans-serif"], // Example font family
         serif: ["Merriweather", "serif"], // Example font family
+        alegreya: ['Alegreya'],
+        alegreyaBold: ['Alegreya-Bold'],
       },
       spacing: {
         '128': '32rem', // Example custom spacing

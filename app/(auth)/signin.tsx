@@ -15,7 +15,7 @@ export default function SignIn() {
 
   const handleSignIn = () => {
     // Navigate tohome page
-    // router.replace('/home');
+    router.replace('/(tabs)');
     console.log('Sign in pressed', formData);
   };
 
@@ -126,7 +126,7 @@ export default function SignIn() {
 
         {/* Sign Up Link */}
         <View className="flex-row justify-center items-center">
-          <Text className="text-sm text-gray-500">Don't have an account? </Text>
+          <Text className="text-sm text-gray-500">Don&apos;t have an account? </Text>
           <Link href="/signup" asChild>
             <TouchableOpacity>
               <Text className="text-sm text-primary font-semibold">Sign up</Text>

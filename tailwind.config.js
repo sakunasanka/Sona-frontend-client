@@ -22,6 +22,10 @@ module.exports = {
         },
         buttonGreen: {
           500: '#A0E3E2'
+        },
+        pink: {
+          100: '#FCDDEC',
+          500: '#EF5DA8'
         }
       },
       fontFamily: {
@@ -29,6 +33,8 @@ module.exports = {
         serif: ["Merriweather", "serif"], // Example font family
         alegreya: ['Alegreya'],
         alegreyaBold: ['Alegreya-Bold'],
+        alegrayaSCB: ['AlegreyaSCB'],
+        alegreyaSC: ['AlegreyaSC']
       },
       spacing: {
         '128': '32rem', // Example custom spacing

@@ -12,7 +12,7 @@ interface IconButtonProps {
 const IconButton: React.FC<IconButtonProps> = ({ icon, text, color = 'bg-buttonPink-500', onPress }) => {
   return (
     <TouchableOpacity
-      className={`flex-col items-center justify-center rounded-xl w-44 h-40 overflow-visible ${color}`}
+      className={`flex-col items-center justify-center rounded-xl overflow-visible ${color}`}
       onPress={onPress}
       activeOpacity={0.8}
     >

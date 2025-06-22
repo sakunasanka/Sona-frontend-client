@@ -20,7 +20,7 @@ const FirstTimeHome = () => {
     {
       icon: icons.quiz,
       text: 'Take a quick check-in',
-      color: 'buttonPink-500',
+      color: 'buttonPink-500 w-44 h-40',
       navigationPath: 'Quiz',
     },
     {
@@ -72,13 +72,13 @@ const FirstTimeHome = () => {
               icon={icons.quiz}
               text="Take a quick check-in"
               onPress={() => console.log('Quiz pressed')}
-              color='bg-buttonPink-500'
+              color='bg-buttonPink-500 w-44 h-40'
             />
             <CustomButton
               icon={icons.coucelier}
               text="Find a counsellor"
               onPress={() => console.log('Quiz pressed')}
-              color='bg-buttonOrange-500'
+              color='bg-buttonOrange-500 w-44 h-40'
             />
           </View>
           <View style={styles.buttonRow}>
@@ -86,13 +86,13 @@ const FirstTimeHome = () => {
               icon={icons.meditation}
               text="Try 2 min breathing session"
               onPress={() => console.log('Quiz pressed')}
-              color='bg-buttonBlue-500'
+              color='bg-buttonBlue-500 w-44 h-40'
             />
             <CustomButton
               icon={icons.chatbot}
               text="Chat with AI chatbot"
               onPress={() => console.log('Quiz pressed')}
-              color='bg-buttonGreen-500'
+              color='bg-buttonGreen-500 w-44 h-40'
             />
           </View>
         </View>

@@ -6,6 +6,8 @@ export default function RootLayout() {
   const [fontsLoaded] = useFonts({
     'Alegreya': require('../assets/fonts/Alegreya-Regular.ttf'),
     'Alegreya-Bold': require('../assets/fonts/Alegreya-Bold.otf'),
+    'AlegreyaSCB' : require('../assets/fonts/AlegreyaSC-Black.otf'),
+    'AlegreyaSC' : require('../assets/fonts/AlegreyaSC-Regular.otf'),
   });
 
   useEffect(() => {

@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, ScrollView, SafeAreaView, Image } from 'react-native';
 import { ArrowLeft, Edit, Bookmark, HelpCircle, LogOut, Shield, BadgeCheck } from 'lucide-react-native';
 import { Link, router } from 'expo-router';
-import {LogoutButton} from '../../components/Buttons';
+import {LogoutButton} from '../components/Buttons';
 
 export default function Profile() {
   const userData = {
@@ -131,7 +131,7 @@ export default function Profile() {
         {/* Logout Button */}
         <LogoutButton 
             title="Log Out" 
-            onPress={() => {}} 
+            onPress={() => router.replace('/(auth)/signin')} 
             icon={LogOut}
           />
       </ScrollView>

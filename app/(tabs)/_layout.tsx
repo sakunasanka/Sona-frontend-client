@@ -1,6 +1,7 @@
 import { Tabs } from 'expo-router';
-import { Home, User, Newspaper, Smile } from 'lucide-react-native';
+import { Home, User, Newspaper, Smile, PersonStanding } from 'lucide-react-native';
 import TopBar from '../components/TopBar';
+import Counsellor from './counsellor';
 
 export default function TabsLayout() {
   return (
@@ -26,7 +27,14 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="profile/view_profile"
+        name="counsellor"
+        options={{
+          title: 'Counsellor',
+          tabBarIcon: ({ color }) => <PersonStanding color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="view_profile"
         options={{
           title: 'Profile',
           tabBarIcon: ({ color }) => <User color={color} />,

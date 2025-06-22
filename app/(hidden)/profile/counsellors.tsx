@@ -10,9 +10,9 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
-import SpecialtyTabs from '../components/SpecialtyTabs';
-import SearchBar from '../components/SearchBar';
-import { PrimaryButton, SecondaryButton } from '../components/Buttons';
+import SpecialtyTabs from '../../components/SpecialtyTabs';
+import SearchBar from '../../components/SearchBar';
+import { PrimaryButton, SecondaryButton } from '../../components/Buttons';
 import { router } from "expo-router";
 
 interface Counselor {

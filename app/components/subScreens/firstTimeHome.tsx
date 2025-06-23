@@ -4,6 +4,7 @@ import { useNavigation, useNavigationState } from '@react-navigation/native';
 import CustomButton from '@/components/Iconbutton';
 import {icons} from '../../../constants/icons';
 import GradientText from '@/components/Gradient';
+import { router } from 'expo-router';
 
 const FirstTimeHome = () => {
   const navigation = useNavigation();
@@ -71,22 +72,22 @@ const FirstTimeHome = () => {
             <CustomButton
               icon={icons.quiz}
               text="Take a quick check-in"
-              onPress={() => console.log('Quiz pressed')}
+              onPress={() => router.push('/(hidden)/question/start')}
               color='bg-buttonPink-500 w-44 h-40'
             />
             <CustomButton
               icon={icons.coucelier}
               text="Find a counsellor"
               onPress={() => console.log('Quiz pressed')}
-              color='bg-buttonOrange-500 w-44 h-40'
+              color='bg-buttonBlue-500 w-44 h-40'
             />
           </View>
           <View style={styles.buttonRow}>
             <CustomButton
               icon={icons.meditation}
               text="Try 2 min breathing session"
-              onPress={() => console.log('Quiz pressed')}
-              color='bg-buttonBlue-500 w-44 h-40'
+              onPress={() => router.push('/(hidden)/meditation/meditationAnimation')}
+              color='bg-buttonOrange-500 w-44 h-40'
             />
             <CustomButton
               icon={icons.chatbot}

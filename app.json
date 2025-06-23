@@ -8,6 +8,7 @@
     "scheme": "sonaclientfrontend",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "jsEngine": "hermes",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.anonymous.SonaClientFrontend"

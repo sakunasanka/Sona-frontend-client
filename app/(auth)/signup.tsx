@@ -49,7 +49,7 @@ export default function SignUp() {
 
         {/* Subtitle */}
         <Text className="text-base text-gray-500 text-center mb-8 leading-6">
-          Let's get you started — just a few{' '}
+          Let&apos;s get you started — just a few{' '}
           <Text className="text-purple-600 font-semibold">quick</Text> details.
         </Text>
 

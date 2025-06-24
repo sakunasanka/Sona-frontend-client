@@ -1,4 +1,5 @@
-import React, { useState, useCallback, useMemo } from 'react';
+// app/(tabs)/feed.tsx
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -8,30 +9,16 @@ import {
   StatusBar,
   TextInput,
   RefreshControl,
-  ActivityIndicator
+  ActivityIndicator,
+  Alert,
+  Modal
 } from 'react-native';
 import BottomNavigation from '../components/BottomNavigation';
 import FeedCard from '../components/FeedCard';
 import TopBar from '../components/TopBar';
-
-interface Post {
-  id: string;
-  author: {
-    name: string;
-    avatar: string;
-    badge: 'User' | 'Premium';
-  };
-  timeAgo: string;
-  content: string;
-  hashtags: string[];
-  stats: {
-    views: number;
-    likes: number;
-    comments: number;
-  };
-  backgroundColor: string;
-  liked: boolean;
-}
+import AddPostModal from '../components/AddPostModal';
+import { fetchPosts, likePost, Post } from '../../api/Posts';
+import { router } from 'expo-router';
 
 export default function Feed() {
   const [activeTab, setActiveTab] = useState<'Recent' | 'Popular'>('Recent');
@@ -40,49 +27,96 @@ export default function Feed() {
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [posts, setPosts] = useState<Post[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [showAddPostModal, setShowAddPostModal] = useState(false);
 
-  // Simulate fetching posts
-  const fetchPosts = useCallback(() => {
-    setLoading(true);
-    setTimeout(() => {
-      setPosts(mockPosts);
+  const fetchPostsData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await fetchPosts();
+      // Ensure we always have an array, even if empty
+      setPosts(Array.isArray(data) ? data : []);
+      
+    } catch (err) {
+      setError('Failed to load posts. Please try again.');
+      console.error('Fetch error:', err);
+      setPosts([]); // Set empty array on error
+    } finally {
       setLoading(false);
-    }, 800);
+      setRefreshing(false);
+    }
   }, []);
 
   // Initial load
-  React.useEffect(() => {
-    fetchPosts();
-  }, [fetchPosts]);
+  useEffect(() => {
+    fetchPostsData();
+  }, [fetchPostsData]);
 
   const handleRefresh = useCallback(() => {
     setRefreshing(true);
-    fetchPosts();
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 1000);
-  }, [fetchPosts]);
+    fetchPostsData();
+  }, [fetchPostsData]);
 
   const handleNavTabPress = useCallback((tab: 'home' | 'menu' | 'users' | 'settings') => {
     setCurrentNavTab(tab);
     console.log('Navigation tab pressed:', tab);
   }, []);
 
-  const handleLikePost = useCallback((postId: string) => {
-    setPosts(prevPosts => 
-      prevPosts.map(post => 
-        post.id === postId 
-          ? { 
-              ...post, 
-              liked: !post.liked,
-              stats: {
-                ...post.stats,
-                likes: post.liked ? post.stats.likes - 1 : post.stats.likes + 1
-              }
-            } 
-          : post
-      )
-    );
+  const handleLikePost = useCallback(async (postId: string) => {
+    try {
+      // Optimistic UI update
+      setPosts(prevPosts => 
+        prevPosts.map(post => 
+          post.id === postId 
+            ? { 
+                ...post, 
+                liked: !post.liked,
+                stats: {
+                  ...post.stats,
+                  likes: post.liked ? post.stats.likes - 1 : post.stats.likes + 1
+                }
+              } 
+            : post
+        )
+      );
+      
+      // Send request to backend
+      await likePost(postId);
+    } catch (error) {
+      // Revert if error
+      setPosts(prevPosts => 
+        prevPosts.map(post => 
+          post.id === postId 
+            ? { 
+                ...post, 
+                liked: !post.liked,
+                stats: {
+                  ...post.stats,
+                  likes: post.liked ? post.stats.likes - 1 : post.stats.likes + 1
+                }
+              } 
+            : post
+        )
+      );
+      Alert.alert('Error', 'Failed to like post');
+    }
+  }, []);
+
+  const handleCreatePost = useCallback(() => {
+    setShowAddPostModal(true);
+  }, []);
+
+  const handleCloseModal = useCallback(() => {
+    setShowAddPostModal(false);
+  }, []);
+
+  const handlePostSubmit = useCallback((newPost: Post) => {
+    // Add the new post to the beginning of the posts array
+    setPosts(prevPosts => [newPost, ...prevPosts]);
+    setShowAddPostModal(false);
+    // Optionally show success message
+    Alert.alert('Success', 'Post created successfully!');
   }, []);
 
   const renderPost = useCallback((post: Post) => (
@@ -99,6 +133,20 @@ export default function Feed() {
     }
     return posts;
   }, [activeTab, posts]);
+
+  if (error) {
+    return (
+      <View className="flex-1 justify-center items-center">
+        <Text className="text-red-500 text-lg mb-4">{error}</Text>
+        <TouchableOpacity 
+          className="bg-blue-500 px-4 py-2 rounded"
+          onPress={fetchPostsData}
+        >
+          <Text className="text-white">Retry</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <View className="flex-1 bg-white">
@@ -153,37 +201,24 @@ export default function Feed() {
               />
               <TouchableOpacity 
                 className="flex-1 bg-gray-100 rounded-full px-4 py-2"
-                onPress={() => console.log('Create post pressed')}
+                onPress={handleCreatePost}
               >
-                <Text className="text-gray-500">What&apos;s on your mind?</Text>
+                <Text className="text-gray-500">What's on your mind?</Text>
               </TouchableOpacity>
             </View>
-            {/* <View className="flex-row justify-between px-4">
-              <TouchableOpacity className="flex-row items-center">
-                <View className="w-8 h-8 bg-blue-100 rounded-full items-center justify-center mr-1">
-                  <Text className="text-blue-500">🎥</Text>
-                </View>
-                <Text className="text-gray-500">Live</Text>
-              </TouchableOpacity>
-              <TouchableOpacity className="flex-row items-center">
-                <View className="w-8 h-8 bg-green-100 rounded-full items-center justify-center mr-1">
-                  <Text className="text-green-500">📷</Text>
-                </View>
-                <Text className="text-gray-500">Photo</Text>
-              </TouchableOpacity>
-              <TouchableOpacity className="flex-row items-center">
-                <View className="w-8 h-8 bg-purple-100 rounded-full items-center justify-center mr-1">
-                  <Text className="text-purple-500">😊</Text>
-                </View>
-                <Text className="text-gray-500">Feeling</Text>
-              </TouchableOpacity>
-            </View> */}
           </View>
 
           {/* Posts List */}
           {filteredPosts.map(renderPost)}
         </ScrollView>
       )}
+
+      {/* Add Post Modal */}
+      <AddPostModal 
+        visible={showAddPostModal}
+        onClose={handleCloseModal}
+        onSubmit={handlePostSubmit}
+      />
 
       {/* Bottom Navigation */}
       {/* <BottomNavigation 
@@ -193,75 +228,3 @@ export default function Feed() {
     </View>
   );
 }
-
-// Mock data
-const mockPosts: Post[] = [
-  {
-    id: '1',
-    author: {
-      name: 'Uzumaki Naruto',
-      avatar: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg',
-      badge: 'User'
-    },
-    timeAgo: '2 hours ago',
-    content: `Today i visited my favourite ramen shop which is "Ichiraku Ramen" Like always i forgot to bought money 😅😅
-
-Old man Teuchi just laughed and said, "You again?" Luckily, he let me eat on credit—again 😅. I got my usual miso pork with extra toppings, and man, it hit the spot! 😋
-
-Even when life gets rough or training wears me down, Ichiraku always feels like home. It's not just about the food—it's about that warmth, that small moment of peace.
-
-Sometimes, little comforts like this help me keep going. 😊✨`,
-    hashtags: ['#RamenTherapy', '#SmallJoys', '#BelieveIt'],
-    stats: {
-      views: 2345,
-      likes: 1678,
-      comments: 102
-    },
-    backgroundColor: '#FFE4E6',
-    liked: false
-  },
-  {
-    id: '2',
-    author: {
-      name: 'Sakura Haruno',
-      avatar: 'https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg',
-      badge: 'Premium'
-    },
-    timeAgo: '5 hours ago',
-    content: `Just finished my medical training session with Lady Tsunade! 💪 Learned some amazing new healing techniques today. 
-
-The human body is so complex, but understanding it helps me become a better medic ninja. Can't wait to put these skills to use! 
-
-PS: Naruto, if you're reading this - please stop getting injured so much! 😤`,
-    hashtags: ['#MedicNinja', '#Training', '#HealingHands'],
-    stats: {
-      views: 1890,
-      likes: 1243,
-      comments: 87
-    },
-    backgroundColor: '#E0F2FE',
-    liked: true
-  },
-  {
-    id: '3',
-    author: {
-      name: 'Kakashi Hatake',
-      avatar: 'https://images.pexels.com/photos/2379005/pexels-photo-2379005.jpeg',
-      badge: 'Premium'
-    },
-    timeAgo: '1 day ago',
-    content: `Found a new spot to read my book today. Perfect shade, quiet, and no distractions. 
-
-Though I might have to find a new place tomorrow... Naruto has a knack for finding me when I least expect it. 
-
-*flips page*`,
-    hashtags: ['#Reading', '#PeaceAndQuiet', '#MakeOutTactics'],
-    stats: {
-      views: 3210,
-      likes: 2456,
-      comments: 156
-    },
-    backgroundColor: '#ECFDF5',
-    liked: false
-  }
-];

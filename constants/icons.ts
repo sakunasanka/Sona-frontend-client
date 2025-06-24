@@ -11,6 +11,7 @@ import relax from '@/assets/icons/Relax.png';
 import calm2 from '@/assets/icons/Calm2.png';
 import play from '@/assets/icons/play.png';
 import clock from '@/assets/icons/clock.png';
+import pause from '@/assets/icons/pause.png';
 
 export const icons = {
     quiz,
@@ -26,4 +27,5 @@ export const icons = {
     calm2,
     play,
     clock,
+    pause,
 }

@@ -4,6 +4,7 @@ import TopBar from '../TopBar';
 import IconButton from '@/components/Iconbutton';
 import { icons }  from '@/constants/icons';
 import Homecard from '@/components/HomescreenCard';
+import { router } from 'expo-router';
 
 const moodData = [
   { icon: icons.happy, text: 'Happy', color: 'bg-buttonPink-500 w-32 h-32' },
@@ -20,16 +21,18 @@ const HomescreenCard = [
     textColor: 'text-pink-500',
     icon: icons.meetup,
     focusIcon: icons.play,
-    focusText: "Start Session"
+    focusText: "Start Session",
+    onPress: () => router.push('/(hidden)/meditation/meditationAnimation')
   },
   {
-    title: "Daily Tips",
+    title: "Meditation",
     description: "Aura is the most important thing that matters to you.join us on ",
     backgroundColor: 'bg-orange-100',
     textColor: 'text-orange-500',
     icon: icons.meditation1,
     focusIcon: icons.clock,
-    focusText: "View Tips"
+    focusText: "6.00 AM",
+    onPress: () => router.push('/(hidden)/meditation/meditationAnimation')
   }
 ]
 
@@ -80,6 +83,7 @@ export default function RegularHome() {
               icon={item.icon}
               focusText={item.focusText}
               focusIcon={item.focusIcon}
+              onPress={item.onPress}
             />
           )}
           showsVerticalScrollIndicator={false}

@@ -1,6 +1,7 @@
 import { Stack, SplashScreen } from "expo-router";
 import { useFonts } from "expo-font";
 import { useEffect } from "react";
+import 'react-native-reanimated';
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({

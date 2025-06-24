@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, Image, ImageSourcePropType } from "react-native";
+import { View, Text, Image, ImageSourcePropType, TouchableOpacity } from "react-native";
 // import { icons } from "@/constants/icons"; 
 
 interface HomecardProps {
@@ -20,7 +20,8 @@ const Homecard: React.FC<HomecardProps> = ({
   textColor, 
   icon, 
   focusIcon, 
-  focusText 
+  focusText,
+  onPress = () => {}
 }) => {
   return (
     <View className={`flex-1 p-4 rounded-lg ${backgroundColor} mb-4 h-48`}>
@@ -35,11 +36,13 @@ const Homecard: React.FC<HomecardProps> = ({
         </View>
       </View> 
       {/* Bottom text and icon */}
-      <View className={`flex-row items-center mt-5`}>
-        <Text className={`font-alegreya font-bold text-2xl ${textColor}`}>{focusText}</Text>
-        <View className="w-2" />
-        <Image source={focusIcon} className="size-6 mr-2" />
-      </View>
+      <TouchableOpacity onPress={onPress} activeOpacity={0.7} className="flex-1">
+        <View className={`flex-row items-center mt-5`}>
+          <Text className={`font-alegreya font-bold text-2xl ${textColor}`}>{focusText}</Text>
+          <View className="w-2" />
+          <Image source={focusIcon} className="size-6 mr-2" />
+        </View>
+      </TouchableOpacity>
     </View>
   );
 }

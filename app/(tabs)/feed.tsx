@@ -1,3 +1,4 @@
+// app/(tabs)/feed.tsx
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { 
   View, 
@@ -9,12 +10,15 @@ import {
   TextInput,
   RefreshControl,
   ActivityIndicator,
-  Alert
+  Alert,
+  Modal
 } from 'react-native';
 import BottomNavigation from '../components/BottomNavigation';
 import FeedCard from '../components/FeedCard';
 import TopBar from '../components/TopBar';
+import AddPostModal from '../components/AddPostModal';
 import { fetchPosts, likePost, Post } from '../../api/Posts';
+import { router } from 'expo-router';
 
 export default function Feed() {
   const [activeTab, setActiveTab] = useState<'Recent' | 'Popular'>('Recent');
@@ -24,24 +28,25 @@ export default function Feed() {
   const [loading, setLoading] = useState(false);
   const [posts, setPosts] = useState<Post[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [showAddPostModal, setShowAddPostModal] = useState(false);
 
   const fetchPostsData = useCallback(async () => {
-  try {
-    setLoading(true);
-    setError(null);
-    const data = await fetchPosts();
-    // Ensure we always have an array, even if empty
-    setPosts(Array.isArray(data) ? data : []);
-    
-  } catch (err) {
-    setError('Failed to load posts. Please try again.');
-    console.error('Fetch error:', err);
-    setPosts([]); // Set empty array on error
-  } finally {
-    setLoading(false);
-    setRefreshing(false);
-  }
-}, []);
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await fetchPosts();
+      // Ensure we always have an array, even if empty
+      setPosts(Array.isArray(data) ? data : []);
+      
+    } catch (err) {
+      setError('Failed to load posts. Please try again.');
+      console.error('Fetch error:', err);
+      setPosts([]); // Set empty array on error
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
 
   // Initial load
   useEffect(() => {
@@ -96,6 +101,22 @@ export default function Feed() {
       );
       Alert.alert('Error', 'Failed to like post');
     }
+  }, []);
+
+  const handleCreatePost = useCallback(() => {
+    setShowAddPostModal(true);
+  }, []);
+
+  const handleCloseModal = useCallback(() => {
+    setShowAddPostModal(false);
+  }, []);
+
+  const handlePostSubmit = useCallback((newPost: Post) => {
+    // Add the new post to the beginning of the posts array
+    setPosts(prevPosts => [newPost, ...prevPosts]);
+    setShowAddPostModal(false);
+    // Optionally show success message
+    Alert.alert('Success', 'Post created successfully!');
   }, []);
 
   const renderPost = useCallback((post: Post) => (
@@ -180,9 +201,9 @@ export default function Feed() {
               />
               <TouchableOpacity 
                 className="flex-1 bg-gray-100 rounded-full px-4 py-2"
-                onPress={() => console.log('Create post pressed')}
+                onPress={handleCreatePost}
               >
-                <Text className="text-gray-500">What&apos;s on your mind?</Text>
+                <Text className="text-gray-500">What's on your mind?</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -191,6 +212,13 @@ export default function Feed() {
           {filteredPosts.map(renderPost)}
         </ScrollView>
       )}
+
+      {/* Add Post Modal */}
+      <AddPostModal 
+        visible={showAddPostModal}
+        onClose={handleCloseModal}
+        onSubmit={handlePostSubmit}
+      />
 
       {/* Bottom Navigation */}
       {/* <BottomNavigation 

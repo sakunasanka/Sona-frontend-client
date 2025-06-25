@@ -1,22 +1,55 @@
 import React, { useState } from 'react';
-import { Text, View, TextInput, TouchableOpacity, Image, ScrollView } from 'react-native';
-import { Link } from 'expo-router';
+import { Text, View, TextInput, TouchableOpacity, Image, ScrollView, Modal, ActivityIndicator } from 'react-native';
+import { Link, useRouter } from 'expo-router';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react-native';
 import { PrimaryButton } from '../components/Buttons';
-import { useRouter } from 'expo-router';
+import { apiRequest } from '@/api/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const saveDisplayName = async (name: string) => {
+  try {
+    await AsyncStorage.setItem('displayName', name);
+    console.log('Display name saved successfully');
+  } catch (error) {
+    console.error('Failed to save display name:', error);
+  }
+};
 
 export default function SignIn() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
   });
 
-  const handleSignIn = () => {
-    // Navigate tohome page
-    router.replace('/(tabs)');
+  const handleSignIn = async () => {
+    if (isLoading) return; // Prevent multiple submissions
+    setIsLoading(true);
     console.log('Sign in pressed', formData);
+    try {
+    const result = await apiRequest({
+      method: 'post',
+      path: '/api/auth/signin',
+      data: {
+        email: formData.email,
+        password: formData.password,
+      },
+    });
+
+    const { displayName } = result;
+    if (displayName) {
+      await saveDisplayName(displayName);
+    }
+    console.log('Login success:', result);
+    setIsLoading(false);
+
+    router.replace('/(tabs)');
+  } catch (err) {
+    console.error('Login failed:', err);
+    setIsLoading(false);
+  }
   };
 
   return (
@@ -58,14 +91,18 @@ export default function SignIn() {
             <Text className="text-sm font-medium text-gray-700 mb-2">Email Address</Text>
             <View className="flex-row items-center bg-white rounded-xl border border-gray-200 px-4 py-3 shadow-sm">
               <Mail size={20} className="mr-3 text-gray-400" />
-              <TextInput
-                className="flex-1 text-base text-gray-900"
-                placeholder="Enter your email"
-                value={formData.email}
-                onChangeText={(text) => setFormData({...formData, email: text})}
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
+              <View className="mr-4"/>
+             <TextInput
+              className="flex-1 text-base"
+              placeholder="Email"
+              value={formData.email}
+              onChangeText={(text) => setFormData({ ...formData, email: text })}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+              autoComplete="email"
+              textContentType="emailAddress"
+            />
             </View>
           </View>
 
@@ -73,13 +110,16 @@ export default function SignIn() {
             <Text className="text-sm font-medium text-gray-700 mb-2">Password</Text>
             <View className="flex-row items-center bg-white rounded-xl border border-gray-200 px-4 py-3 shadow-sm">
               <Lock size={20} className="mr-3 text-gray-400" />
+              <View className="mr-4"/>
               <TextInput
-                className="flex-1 text-base text-gray-900"
-                placeholder="Enter your password"
-                value={formData.password}
-                onChangeText={(text) => setFormData({...formData, password: text})}
-                secureTextEntry={!showPassword}
-              />
+                  className="flex-1 text-base text-gray-900"
+                  placeholder="Enter your password"
+                  value={formData.password}
+                  onChangeText={(text) => setFormData({ ...formData, password: text })}
+                  secureTextEntry={!showPassword}
+                  autoComplete="password"
+                  textContentType="password"
+                />
               <TouchableOpacity
                 onPress={() => setShowPassword(!showPassword)}
                 className="p-1"
@@ -134,6 +174,12 @@ export default function SignIn() {
           </Link>
         </View>
       </ScrollView>
+      <Modal visible={isLoading} transparent animationType="fade">
+        <View className="flex-1 justify-center items-center bg-black/50">
+          <ActivityIndicator size="large" color="#fff" />
+          <Text className="mt-4 text-white">Sign in...</Text>
+        </View>
+      </Modal>
     </View>
   );
 }

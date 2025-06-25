@@ -117,7 +117,7 @@ export default function EditProfile() {
           <View className="flex-row gap-3 mt-3">
             <PrimaryButton 
             title="Save Changes" 
-            onPress={() => {}} 
+            onPress={handleSave} 
           />
           </View>
         </View>

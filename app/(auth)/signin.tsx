@@ -167,11 +167,9 @@ export default function SignIn() {
         {/* Sign Up Link */}
         <View className="flex-row justify-center items-center">
           <Text className="text-sm text-gray-500">Don&apos;t have an account? </Text>
-          <Link href="/signup" asChild>
-            <TouchableOpacity>
+            <TouchableOpacity onPress={() => router.push('/(auth)/signup')}>
               <Text className="text-sm text-primary font-semibold">Sign up</Text>
             </TouchableOpacity>
-          </Link>
         </View>
       </ScrollView>
       <Modal visible={isLoading} transparent animationType="fade">

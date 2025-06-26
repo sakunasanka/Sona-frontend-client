@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Text, View, TextInput, TouchableOpacity, Image, ScrollView, Modal, ActivityIndicator } from 'react-native';
-import { Link, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { User, Mail, Lock, Eye, EyeOff } from 'lucide-react-native';
 import { PrimaryButton } from '../components/Buttons';
 import { apiRequest } from '@/api/api';
@@ -197,11 +197,9 @@ export default function SignUp() {
         {/* Sign In Link */}
         <View className="flex-row justify-center items-center">
           <Text className="text-sm text-gray-500">Already have an account </Text>
-          <Link href="/signin" asChild>
-            <TouchableOpacity>
+            <TouchableOpacity onPress={() => router.back()}>
               <Text className="text-sm text-primary font-semibold">Sign in</Text>
             </TouchableOpacity>
-          </Link>
         </View>
       </ScrollView>
       <Modal visible={isLoading} transparent animationType="fade">

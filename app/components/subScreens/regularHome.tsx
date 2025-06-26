@@ -5,6 +5,8 @@ import IconButton from '@/components/Iconbutton';
 import { icons }  from '@/constants/icons';
 import Homecard from '@/components/HomescreenCard';
 import { router } from 'expo-router';
+import { getDisplayName } from '@/util/asyncName';
+
 
 const moodData = [
   { icon: icons.happy, text: 'Happy', color: 'bg-buttonPink-500 w-32 h-32' },
@@ -37,6 +39,7 @@ const HomescreenCard = [
 ]
 
 export default function RegularHome() {
+  const name = getDisplayName() || "friend";
   return (
     <View>
       <TopBar title='Home'/>
@@ -44,7 +47,7 @@ export default function RegularHome() {
       <View className='px-4 pt-4 mt-5'>
         <Text className='text-gray-700 text-4xl font-alegreya'>
           Welcome Back,
-          <Text className='font-bold font-alegreya'> Friend</Text>
+          <Text className='font-bold font-alegreya'>{name}</Text>
         </Text>
         <View className='mt-2' />
         <Text className='text-gray-500 text-lg mt-1'>How are you feeling today?</Text>

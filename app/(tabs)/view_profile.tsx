@@ -1,8 +1,9 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, ScrollView, SafeAreaView, Image } from 'react-native';
 import { ArrowLeft, Edit, Bookmark, HelpCircle, LogOut, Shield, BadgeCheck } from 'lucide-react-native';
-import { Link, router } from 'expo-router';
+import { router } from 'expo-router';
 import {LogoutButton} from '../components/Buttons';
+import { getDisplayName } from '@/util/asyncName';
 
 export default function Profile() {
   const userData = {
@@ -16,6 +17,8 @@ export default function Profile() {
     streak: 36
   };
 
+  const name = getDisplayName() || userData.name;
+
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
       <ScrollView 
@@ -24,11 +27,9 @@ export default function Profile() {
       >
         {/* Header */}
         <View className="flex-row justify-between items-center px-5 py-4 border-b border-gray-200">
-          <Link href="/" asChild>
-            <TouchableOpacity className="p-2">
+            <TouchableOpacity className="p-2" onPress={() => router.navigate('/(tabs)')}>
               <ArrowLeft size={24} color="#2563EB" />
             </TouchableOpacity>
-          </Link>
           <Text className="text-xl font-semibold text-gray-900">Profile</Text>
           <TouchableOpacity onPress={() => router.push('/profile/edit_profile')}>
             <Edit size={24} color="#2563EB" />
@@ -50,7 +51,7 @@ export default function Profile() {
             </TouchableOpacity>
           </View>
 
-          <Text className="text-2xl font-bold text-gray-900 mb-1">{userData.name}</Text>
+          <Text className="text-2xl font-bold text-gray-900 mb-1">{name}</Text>
           <Text className="text-base text-gray-500 mb-4">@{userData.nickname}</Text>
           
           <View className="flex-row justify-around w-full px-10 mt-4">

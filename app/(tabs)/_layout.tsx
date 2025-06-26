@@ -1,7 +1,6 @@
 import { Tabs } from 'expo-router';
-import { Home, User, Newspaper, Smile, PersonStanding } from 'lucide-react-native';
-import TopBar from '../components/TopBar';
-import Counsellor from './counsellor';
+import { Home, User, Newspaper, PersonStanding } from 'lucide-react-native';
+
 
 export default function TabsLayout() {
   return (

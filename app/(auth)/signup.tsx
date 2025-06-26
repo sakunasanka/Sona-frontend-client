@@ -1,12 +1,16 @@
 import React, { useState } from 'react';
-import { Text, View, TextInput, TouchableOpacity, Image, ScrollView } from 'react-native';
-import { Link } from 'expo-router';
+import { Text, View, TextInput, TouchableOpacity, Image, ScrollView, Modal, ActivityIndicator } from 'react-native';
+import { useRouter } from 'expo-router';
 import { User, Mail, Lock, Eye, EyeOff } from 'lucide-react-native';
 import { PrimaryButton } from '../components/Buttons';
+import { apiRequest } from '@/api/api';
 
 export default function SignUp() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showSuccessOverlay, setShowSuccessOverlay] = useState(false);
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     // nickname: '',
@@ -15,12 +19,36 @@ export default function SignUp() {
     confirmPassword: ''
   });
 
-  const handleSignUp = () => {
-    // Add your sign up logic here
+  const handleSignUp = async () => {
+    if (isLoading) return; // Prevent multiple submissions
+    setIsLoading(true);
     console.log('Sign up pressed', formData);
+
+    try { 
+    const result = await apiRequest({
+      method: 'post',
+      path: '/api/auth/signup',
+      data: {
+        displayName: formData.name,
+        // nickname: formData.nickname,
+        email: formData.email,
+        password: formData.password,
+        confirmPassword: formData.confirmPassword
+      }
+    });
+    setIsLoading(false);
+    setShowSuccessOverlay(true);
+     console.log('Sign up success:', result);
+  } catch (error) {
+    setIsLoading(false);
+    console.error('Sign up failed:', error);
+    // Handle error (e.g., show error message)
+    return;
+  }
   };
 
   return (
+    
     <View className="flex-1 bg-slate-50">
       {/* Background Decorative Elements */}
       <View className="absolute inset-0 overflow-hidden">
@@ -169,13 +197,35 @@ export default function SignUp() {
         {/* Sign In Link */}
         <View className="flex-row justify-center items-center">
           <Text className="text-sm text-gray-500">Already have an account </Text>
-          <Link href="/signin" asChild>
-            <TouchableOpacity>
+            <TouchableOpacity onPress={() => router.back()}>
               <Text className="text-sm text-primary font-semibold">Sign in</Text>
             </TouchableOpacity>
-          </Link>
         </View>
       </ScrollView>
+      <Modal visible={isLoading} transparent animationType="fade">
+        <View className="flex-1 justify-center items-center bg-black/50">
+          <ActivityIndicator size="large" color="#fff" />
+          <Text className="mt-4 text-white">Creating your account...</Text>
+        </View>
+      </Modal>
+      <Modal visible={showSuccessOverlay} transparent animationType="fade">
+        <View className="flex-1 justify-center items-center bg-black/50 px-8">
+          <View className="bg-white rounded-2xl p-6 items-center w-full">
+            <Text className="text-xl font-semibold text-green-700 mb-4">Account Created!</Text>
+            <Text className="text-center text-gray-600 mb-6">
+              Your account has been successfully created. You can now sign in.
+            </Text>
+
+            <PrimaryButton
+              title="Go to Sign In"
+              onPress={() => {
+                setShowSuccessOverlay(false);
+                router.replace('/signin');
+              }}
+            />
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }

@@ -342,6 +342,18 @@ export default function BookSessionScreen() {
         <View className="mt-6">
           <Text className="text-lg font-semibold text-gray-900 px-5 mb-3">Payment Method</Text>
           <View className="px-5">
+            {/* Add Payment Method Button */}
+            <TouchableOpacity
+              onPress={() => Alert.alert('Add Payment Method', 'This feature is coming soon!')}
+              className="mb-3 p-4 rounded-2xl border border-dashed border-gray-300 bg-gray-50 flex-row items-center"
+            >
+              <View className="p-2 rounded-lg mr-3 bg-gray-200">
+                <CreditCard size={20} color="#6B7280" />
+              </View>
+              <Text className="flex-1 text-gray-700 font-medium">Add Payment Method</Text>
+              <Text className="text-primary font-medium">+</Text>
+            </TouchableOpacity>
+            
             {PAYMENT_METHODS.map((method) => (
               <TouchableOpacity
                 key={method.id}

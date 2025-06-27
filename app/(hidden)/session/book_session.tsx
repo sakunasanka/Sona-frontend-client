@@ -1,7 +1,8 @@
 import { router } from "expo-router";
 import { ArrowLeft, CreditCard, MessageCircle, Phone, Video } from 'lucide-react-native';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   FlatList,
   Image,
@@ -91,7 +92,35 @@ const PAYMENT_METHODS: PaymentMethod[] = [
   }
 ];
 
-const generateTimeSlots = (date: Date): TimeSlot[] => {
+// Fetch time slots from backend API
+const fetchTimeSlots = async (counsellorId: string, date: Date): Promise<TimeSlot[]> => {
+  // Format date as YYYY-MM-DD for API
+  const formattedDate = date.toISOString().split('T')[0];
+  
+  try {
+    const response = await fetch(`http://localhost:5001/api/sessions/timeslots/${counsellorId}/${formattedDate}`);
+    
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    
+    // Transform API response to TimeSlot format
+    return data.map((slot: any) => ({
+      id: slot.id || `time-${slot.time}`,
+      time: slot.time,
+      available: slot.isBooked === false // Only available if not booked
+    }));
+  } catch (error) {
+    console.error('Error fetching time slots:', error);
+    // Return fallback time slots if API fails
+    return generateFallbackTimeSlots(date);
+  }
+};
+
+// Fallback method if API call fails
+const generateFallbackTimeSlots = (date: Date): TimeSlot[] => {
   const slots: TimeSlot[] = [];
   const today = new Date();
   const isToday = date.toDateString() === today.toDateString();
@@ -133,9 +162,10 @@ export default function BookSessionScreen() {
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('1');
   const [concerns, setConcerns] = useState<string>('');
   const [imageError, setImageError] = useState(false);
+  const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
+  const [isLoadingSlots, setIsLoadingSlots] = useState<boolean>(false);
 
   const dates = generateDates();
-  const timeSlots = generateTimeSlots(selectedDate);
   const selectedSession = SESSION_TYPES.find(type => type.id === selectedSessionType);
 
   const handleBookSession = () => {
@@ -155,6 +185,28 @@ export default function BookSessionScreen() {
       ]
     );
   };
+
+  // Load time slots when date changes
+  useEffect(() => {
+    const loadTimeSlots = async () => {
+      setIsLoadingSlots(true);
+      setSelectedTime(''); // Reset selected time when date changes
+      try {
+        // Use the counselor's ID from the mock data for now
+        const slots = await fetchTimeSlots(MOCK_COUNSELOR.id, selectedDate);
+        setTimeSlots(slots);
+      } catch (error) {
+        console.error('Failed to load time slots:', error);
+        Alert.alert('Error', 'Failed to load available time slots. Please try again.');
+        // Fallback to generated slots
+        setTimeSlots(generateFallbackTimeSlots(selectedDate));
+      } finally {
+        setIsLoadingSlots(false);
+      }
+    };
+
+    loadTimeSlots();
+  }, [selectedDate]);
 
   const DateCard = ({ date, isSelected }: { date: Date; isSelected: boolean }) => (
     <TouchableOpacity
@@ -197,6 +249,7 @@ export default function BookSessionScreen() {
           }`}
         >
           {slot.time}
+          {!slot.available}
         </Text>
       </TouchableOpacity>
     );
@@ -299,11 +352,24 @@ export default function BookSessionScreen() {
         <View className="mt-6">
           <Text className="text-lg font-semibold text-gray-900 px-5 mb-3">Available Times</Text>
           <View className="px-5">
-            <View className="flex-row flex-wrap">
-              {timeSlots.map((slot) => (
-                <TimeSlot key={slot.id} slot={slot} />
-              ))}
-            </View>
+            {isLoadingSlots ? (
+              <View className="py-8 items-center">
+                <ActivityIndicator size="large" color="#6366F1" />
+                <Text className="mt-2 text-gray-600">Loading available times...</Text>
+              </View>
+            ) : timeSlots.length > 0 ? (
+              <View>
+                <View className="flex-row flex-wrap">
+                  {timeSlots.map((slot) => (
+                    <TimeSlot key={slot.id} slot={slot} />
+                  ))}
+                </View>
+              </View>
+            ) : (
+              <View className="py-8 items-center">
+                <Text className="text-gray-600">No available time slots for this date.</Text>
+              </View>
+            )}
           </View>
         </View>
 

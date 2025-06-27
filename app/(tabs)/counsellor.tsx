@@ -1,19 +1,20 @@
-import { Link } from 'expo-router';
-import { ArrowLeft, Clock, Filter, MessageCircle, Star, Video } from 'lucide-react-native';
+import { router } from "expo-router";
+import { ArrowLeft, Check, Clock, Filter, Star, Video, X } from 'lucide-react-native';
 import React, { useMemo, useState } from 'react';
 import {
   FlatList,
   Image,
+  Modal,
   SafeAreaView,
+  ScrollView,
   StatusBar,
   Text,
   TouchableOpacity,
   View
 } from 'react-native';
-import SpecialtyTabs from '../components/SpecialtyTabs';
+import { PrimaryButton } from '../components/Buttons';
 import SearchBar from '../components/SearchBar';
-import { PrimaryButton, SecondaryButton } from '../components/Buttons';
-import { router } from "expo-router";
+import SpecialtyTabs from '../components/SpecialtyTabs';
 
 interface Counselor {
   id: string;
@@ -161,9 +162,29 @@ const CounselorCard = ({ counselor }: { counselor: Counselor }) => {
 export default function CounselorsScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSpecialty, setSelectedSpecialty] = useState('All');
+  const [showFilterModal, setShowFilterModal] = useState(false);
+  
+  // Filter states
+  const [filters, setFilters] = useState({
+    availableNow: false,
+    availableToday: false,
+    priceRange: 'all', // 'all', 'low', 'medium', 'high'
+    highestRated: false,
+    experiencedCounselors: false, // 5+ years
+  });
+
+  const applyFilters = (newFilters: React.SetStateAction<{
+      availableNow: boolean; availableToday: boolean; priceRange: string; // 'all', 'low', 'medium', 'high'
+      highestRated: boolean; experiencedCounselors: boolean;
+    }>) => {
+    setFilters(newFilters);
+    setShowFilterModal(false);
+  };
 
   const filteredCounselors = useMemo(() => {
     let filtered = COUNSELORS_DATA;
+    
+    // Apply search query
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(
@@ -173,15 +194,58 @@ export default function CounselorsScreen() {
           counselor.specialties.some((specialty) => specialty.toLowerCase().includes(query))
       );
     }
+    
+    // Apply specialty filter
     if (selectedSpecialty !== 'All') {
-      filtered = filtered.filter((counselor) => counselor.specialties.includes(selectedSpecialty));
+      filtered = filtered.filter((counselor) => 
+        counselor.specialties.includes(selectedSpecialty)
+      );
     }
+    
+    // Apply additional filters
+    if (filters.availableNow) {
+      filtered = filtered.filter((counselor) => 
+        counselor.isOnline && counselor.nextAvailable === 'Available now'
+      );
+    }
+    
+    if (filters.availableToday && !filters.availableNow) {
+      filtered = filtered.filter((counselor) => 
+        counselor.isOnline || counselor.nextAvailable.includes('Today') || 
+        counselor.nextAvailable.includes('in')
+      );
+    }
+    
+    if (filters.priceRange !== 'all') {
+      filtered = filtered.filter((counselor) => {
+        const price = parseInt(counselor.price.replace(/\D/g, ''));
+        if (filters.priceRange === 'low') return price <= 70;
+        if (filters.priceRange === 'medium') return price > 70 && price <= 85;
+        if (filters.priceRange === 'high') return price > 85;
+        return true;
+      });
+    }
+    
+    if (filters.experiencedCounselors) {
+      filtered = filtered.filter((counselor) => {
+        const years = parseInt(counselor.experience);
+        return !isNaN(years) && years >= 5;
+      });
+    }
+    
+    // Sort results
     return filtered.sort((a, b) => {
+      // If highest rated filter is on, prioritize rating
+      if (filters.highestRated) {
+        if (b.rating !== a.rating) return b.rating - a.rating;
+      }
+      
+      // Otherwise use default sort (online first, then by rating)
       if (a.isOnline && !b.isOnline) return -1;
       if (!a.isOnline && b.isOnline) return 1;
       return b.rating - a.rating;
     });
-  }, [searchQuery, selectedSpecialty]);
+  }, [searchQuery, selectedSpecialty, filters]);
 
   return (
     <SafeAreaView className="flex-1 bg-primary">
@@ -193,8 +257,12 @@ export default function CounselorsScreen() {
         </TouchableOpacity>
 
         <Text className="text-white text-lg font-semibold">Find a Counselor</Text>
-        <TouchableOpacity>
+        <TouchableOpacity onPress={() => setShowFilterModal(true)} className="relative">
           <Filter size={24} color="white" />
+          {(filters.availableNow || filters.availableToday || filters.priceRange !== 'all' || 
+            filters.highestRated || filters.experiencedCounselors) && (
+            <View className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full"></View>
+          )}
         </TouchableOpacity>
       </View>
 
@@ -209,14 +277,173 @@ export default function CounselorsScreen() {
           onChangeText={setSearchQuery}
         />
     
-        <FlatList
-          data={filteredCounselors}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => <CounselorCard counselor={item} />}
-          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 20 }}
-          showsVerticalScrollIndicator={false}
-        />
+        {filteredCounselors.length > 0 ? (
+          <FlatList
+            data={filteredCounselors}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => <CounselorCard counselor={item} />}
+            contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 20 }}
+            showsVerticalScrollIndicator={false}
+          />
+        ) : (
+          <View className="flex-1 justify-center items-center px-6">
+            <Text className="text-lg text-gray-600 text-center mb-2">No counselors found</Text>
+            <Text className="text-sm text-gray-500 text-center mb-4">
+              Try adjusting your filters or search criteria
+            </Text>
+            <TouchableOpacity
+              onPress={() => {
+                setFilters({
+                  availableNow: false,
+                  availableToday: false,
+                  priceRange: 'all',
+                  highestRated: false,
+                  experiencedCounselors: false,
+                });
+                setSearchQuery('');
+                setSelectedSpecialty('All');
+              }}
+              className="px-4 py-2 bg-primary rounded-lg"
+            >
+              <Text className="text-white font-semibold">Reset All Filters</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
+
+      {/* Filter Modal */}
+      <Modal
+        visible={showFilterModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowFilterModal(false)}
+      >
+        <View className="flex-1 bg-black/50 justify-end">
+          <View className="bg-white rounded-t-3xl p-6 h-4/5">
+            <View className="flex-row justify-between items-center mb-6">
+              <Text className="text-xl font-bold text-gray-900">Filters</Text>
+              <TouchableOpacity
+                onPress={() => setShowFilterModal(false)}
+                className="p-2 rounded-full bg-gray-100"
+              >
+                <X size={20} color="#374151" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {/* Availability Section */}
+              <View className="mb-6">
+                <Text className="text-lg font-semibold text-gray-900 mb-3">Availability</Text>
+                
+                <TouchableOpacity 
+                  className="flex-row items-center justify-between py-3 border-b border-gray-100"
+                  onPress={() => setFilters({...filters, availableNow: !filters.availableNow})}
+                >
+                  <Text className="text-gray-700 text-base">Available now</Text>
+                  <View className={`w-6 h-6 rounded-full border-2 ${
+                    filters.availableNow ? 'border-primary bg-primary' : 'border-gray-300'
+                  } items-center justify-center`}>
+                    {filters.availableNow && <Check size={14} color="white" />}
+                  </View>
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  className="flex-row items-center justify-between py-3 border-b border-gray-100"
+                  onPress={() => setFilters({...filters, availableToday: !filters.availableToday})}
+                >
+                  <Text className="text-gray-700 text-base">Available today</Text>
+                  <View className={`w-6 h-6 rounded-full border-2 ${
+                    filters.availableToday ? 'border-primary bg-primary' : 'border-gray-300'
+                  } items-center justify-center`}>
+                    {filters.availableToday && <Check size={14} color="white" />}
+                  </View>
+                </TouchableOpacity>
+              </View>
+
+              {/* Price Range */}
+              <View className="mb-6">
+                <Text className="text-lg font-semibold text-gray-900 mb-3">Price Range</Text>
+                
+                {['all', 'low', 'medium', 'high'].map((range) => {
+                  const label = range === 'all' ? 'All prices' : 
+                                range === 'low' ? '$70 or less' :
+                                range === 'medium' ? '$71 - $85' : 'Above $85';
+                  
+                  return (
+                    <TouchableOpacity 
+                      key={range}
+                      className="flex-row items-center justify-between py-3 border-b border-gray-100"
+                      onPress={() => setFilters({...filters, priceRange: range})}
+                    >
+                      <Text className="text-gray-700 text-base">{label}</Text>
+                      <View className={`w-6 h-6 rounded-full border-2 ${
+                        filters.priceRange === range ? 'border-primary bg-primary' : 'border-gray-300'
+                      } items-center justify-center`}>
+                        {filters.priceRange === range && <Check size={14} color="white" />}
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              {/* Other Filters */}
+              <View className="mb-6">
+                <Text className="text-lg font-semibold text-gray-900 mb-3">Other Filters</Text>
+                
+                <TouchableOpacity 
+                  className="flex-row items-center justify-between py-3 border-b border-gray-100"
+                  onPress={() => setFilters({...filters, highestRated: !filters.highestRated})}
+                >
+                  <Text className="text-gray-700 text-base">Highest rated first</Text>
+                  <View className={`w-6 h-6 rounded-full border-2 ${
+                    filters.highestRated ? 'border-primary bg-primary' : 'border-gray-300'
+                  } items-center justify-center`}>
+                    {filters.highestRated && <Check size={14} color="white" />}
+                  </View>
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  className="flex-row items-center justify-between py-3 border-b border-gray-100"
+                  onPress={() => setFilters({...filters, experiencedCounselors: !filters.experiencedCounselors})}
+                >
+                  <Text className="text-gray-700 text-base">5+ years experience</Text>
+                  <View className={`w-6 h-6 rounded-full border-2 ${
+                    filters.experiencedCounselors ? 'border-primary bg-primary' : 'border-gray-300'
+                  } items-center justify-center`}>
+                    {filters.experiencedCounselors && <Check size={14} color="white" />}
+                  </View>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+
+            {/* Apply buttons */}
+            <View className="flex-row gap-4 pt-4">
+              <TouchableOpacity
+                onPress={() => {
+                  setFilters({
+                    availableNow: false,
+                    availableToday: false,
+                    priceRange: 'all',
+                    highestRated: false,
+                    experiencedCounselors: false,
+                  });
+                  setShowFilterModal(false);
+                }}
+                className="flex-1 py-3 rounded-xl border border-gray-300"
+              >
+                <Text className="text-center font-semibold text-gray-700">Reset</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                onPress={() => setShowFilterModal(false)}
+                className="flex-1 py-3 rounded-xl bg-primary"
+              >
+                <Text className="text-center font-semibold text-white">Apply</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }

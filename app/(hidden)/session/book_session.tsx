@@ -29,6 +29,8 @@ interface TimeSlot {
   id: string;
   time: string;
   available: boolean;
+  isBooked?: boolean;
+  isAvailable?: boolean; 
 }
 
 interface PaymentMethod {
@@ -106,40 +108,38 @@ const fetchTimeSlots = async (counsellorId: string, date: Date): Promise<TimeSlo
     
     const data = await response.json();
     
+    // Handle different response structures
+    let slotsArray = data;
+    
+    // If the response is wrapped in an object, extract the array
+    if (data && typeof data === 'object' && !Array.isArray(data)) {
+      // Try common property names for the slots array
+      slotsArray = data.slots || data.timeSlots || data.data || data.timeslots || [];
+    }
+    
+    // Ensure we have an array
+    if (!Array.isArray(slotsArray)) {
+      console.warn('API response is not an array:', slotsArray);
+      return [];
+    }
+    
+    // If empty array, return empty
+    if (slotsArray.length === 0) {
+      return [];
+    }
+    
     // Transform API response to TimeSlot format
-    return data.map((slot: any) => ({
+    return slotsArray.map((slot: any) => ({
       id: slot.id || `time-${slot.time}`,
       time: slot.time,
-      available: slot.isBooked === false // Only available if not booked
+      available: slot.isAvailable === true,
+      isBooked: slot.isBooked === true
     }));
   } catch (error) {
     console.error('Error fetching time slots:', error);
-    // Return fallback time slots if API fails
-    return generateFallbackTimeSlots(date);
+    // Return empty array instead of fallback slots
+    throw error;
   }
-};
-
-// Fallback method if API call fails
-const generateFallbackTimeSlots = (date: Date): TimeSlot[] => {
-  const slots: TimeSlot[] = [];
-  const today = new Date();
-  const isToday = date.toDateString() === today.toDateString();
-  const currentHour = today.getHours();
-
-  for (let hour = 9; hour <= 17; hour++) {
-    for (let minute = 0; minute < 60; minute += 60) {
-      const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
-      const available = !isToday || hour > currentHour + 1;
-      
-      slots.push({
-        id: `${hour}-${minute}`,
-        time: timeString,
-        available
-      });
-    }
-  }
-  
-  return slots;
 };
 
 const generateDates = (): Date[] => {
@@ -198,8 +198,7 @@ export default function BookSessionScreen() {
       } catch (error) {
         console.error('Failed to load time slots:', error);
         Alert.alert('Error', 'Failed to load available time slots. Please try again.');
-        // Fallback to generated slots
-        setTimeSlots(generateFallbackTimeSlots(selectedDate));
+        setTimeSlots([]); // Set empty array instead of fallback slots
       } finally {
         setIsLoadingSlots(false);
       }
@@ -225,31 +224,25 @@ export default function BookSessionScreen() {
   );
 
   const TimeSlot = ({ slot }: { slot: TimeSlot }) => {
-    const isSelected = selectedTime === slot.time && slot.available;
+    const isSelected = selectedTime === slot.time;
     
     return (
       <TouchableOpacity
-        onPress={() => slot.available && setSelectedTime(slot.time)}
-        disabled={!slot.available}
+        onPress={() => setSelectedTime(slot.time)}
         className={`mr-3 mb-3 px-4 py-3 rounded-xl ${
           isSelected 
             ? 'bg-primary' 
-            : slot.available 
-              ? 'bg-white border border-gray-200' 
-              : 'bg-gray-100 border border-gray-100'
+            : 'bg-white border border-gray-200'
         }`}
       >
         <Text 
           className={`text-sm font-medium ${
             isSelected 
               ? 'text-white' 
-              : slot.available 
-                ? 'text-gray-900' 
-                : 'text-gray-400'
+              : 'text-gray-900'
           }`}
         >
           {slot.time}
-          {!slot.available}
         </Text>
       </TouchableOpacity>
     );
@@ -357,12 +350,14 @@ export default function BookSessionScreen() {
                 <ActivityIndicator size="large" color="#6366F1" />
                 <Text className="mt-2 text-gray-600">Loading available times...</Text>
               </View>
-            ) : timeSlots.length > 0 ? (
+            ) : timeSlots.filter(slot => slot.available && !slot.isBooked).length > 0 ? (
               <View>
                 <View className="flex-row flex-wrap">
-                  {timeSlots.map((slot) => (
-                    <TimeSlot key={slot.id} slot={slot} />
-                  ))}
+                  {timeSlots
+                    .filter(slot => slot.available && !slot.isBooked)
+                    .map((slot) => (
+                      <TimeSlot key={slot.id} slot={slot} />
+                    ))}
                 </View>
               </View>
             ) : (

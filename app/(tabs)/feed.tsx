@@ -1,24 +1,20 @@
 // app/(tabs)/feed.tsx
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  ScrollView, 
-  TouchableOpacity, 
-  Image, 
-  StatusBar,
-  TextInput,
-  RefreshControl,
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import {
   ActivityIndicator,
   Alert,
-  Modal
+  Image,
+  RefreshControl,
+  ScrollView,
+  StatusBar,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
-import BottomNavigation from '../components/BottomNavigation';
+import { fetchPosts, likePost, Post } from '../../api/Posts';
+import AddPostModal from '../components/AddPostModal';
 import FeedCard from '../components/FeedCard';
 import TopBar from '../components/TopBar';
-import AddPostModal from '../components/AddPostModal';
-import { fetchPosts, likePost, Post } from '../../api/Posts';
-import { router } from 'expo-router';
 
 export default function Feed() {
   const [activeTab, setActiveTab] = useState<'Recent' | 'Popular'>('Recent');

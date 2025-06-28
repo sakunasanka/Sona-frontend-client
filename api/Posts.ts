@@ -3,18 +3,19 @@ import axios from 'axios';
 import { Platform } from 'react-native';
 
 let API_BASE_URL = '';
+let PORT = process.env.PORT || 5001;
 if (Platform.OS === 'android') {
-  API_BASE_URL = 'http://' + process.env.LOCAL_IP + ':' + process.env.PORT + '/api';
+  API_BASE_URL = 'http://' + process.env.LOCAL_IP + ':' + PORT + '/api';
 } else if (Platform.OS === 'ios') {
-  API_BASE_URL = 'http://localhost:' + process.env.PORT + '/api';
+  API_BASE_URL = 'http://localhost:' + PORT + '/api';
 } else {
-  API_BASE_URL = 'http://localhost:' + process.env.PORT + '/api';
+  API_BASE_URL = 'http://localhost:' + PORT + '/api';
 }
 
 interface Author {
   name: string;
   avatar: string;
-  badge: 'User' | 'Premium';
+  role: 'Client' | 'Counsellor' | 'Psychiatrist' | 'Admin';
 }
 
 export interface Post {
@@ -49,7 +50,7 @@ export const fetchPosts = async (): Promise<Post[]> => {
       author: {
         name: post.author?.name || 'Anonymous',
         avatar: post.author?.avatar || 'https://i.imgur.com/5fhM5oV.png',
-        badge: post.author?.badge === 'Premium' ? 'Premium' : 'User'
+        role: post.author?.role || 'Client'
       },
       timeAgo: post.timeAgo || 'Just now',
       content: post.content || '',
@@ -100,7 +101,7 @@ export const createPost = async (postData: CreatePostData): Promise<Post> => {
       author: {
         name: createdPost.author?.name || 'Anonymous',
         avatar: createdPost.author?.avatar || 'https://i.imgur.com/5fhM5oV.png',
-        badge: createdPost.author?.badge === 'Premium' ? 'Premium' : 'User'
+        role: createdPost.author?.role || 'Client',
       },
       timeAgo: createdPost.timeAgo || 'Just now',
       content: createdPost.content || '',
@@ -123,7 +124,7 @@ export const createPost = async (postData: CreatePostData): Promise<Post> => {
       author: {
         name: 'John Doe', // This would come from user context
         avatar: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg',
-        badge: 'User'
+        role: 'Client'
       },
       timeAgo: 'Just now',
       content: postData.content,
@@ -161,7 +162,7 @@ export const updatePost = async (postId: string, updates: Partial<CreatePostData
       author: {
         name: updatedPost.author?.name || 'Anonymous',
         avatar: updatedPost.author?.avatar || 'https://i.imgur.com/5fhM5oV.png',
-        badge: updatedPost.author?.badge === 'Premium' ? 'Premium' : 'User'
+        role: updatedPost.author?.role || 'Client',
       },
       timeAgo: updatedPost.timeAgo || 'Just now',
       content: updatedPost.content || '',

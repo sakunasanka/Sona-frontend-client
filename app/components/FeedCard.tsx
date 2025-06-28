@@ -8,7 +8,7 @@ interface FeedCardProps {
     author: {
       name: string;
       avatar: string;
-      badge: 'User' | 'Premium';
+      role: 'Client' | 'Counsellor' | 'Psychiatrist' | 'Admin';
     };
     timeAgo: string;
     content: string;
@@ -43,8 +43,8 @@ const FeedCard: React.FC<FeedCardProps> = ({ post, onLikePress }) => {
             <Text className="text-sm text-gray-500 mt-0.5">{post.timeAgo}</Text>
           </View>
         </View>
-        <View className={`px-3 py-1.5 rounded-xl ${post.author.badge === 'Premium' ? 'bg-amber-400' : 'bg-blue-400'}`}>
-          <Text className="text-xs font-semibold text-white">{post.author.badge}</Text>
+        <View className={`px-3 py-1.5 rounded-xl ${post.author.role === 'Counsellor' ? 'bg-amber-400' : 'bg-blue-400'}`}>
+          <Text className="text-xs font-semibold text-white">{post.author.role}</Text>
         </View>
         <TouchableOpacity className="ml-2">
           <MoreHorizontal size={20} color="#6B7280" />

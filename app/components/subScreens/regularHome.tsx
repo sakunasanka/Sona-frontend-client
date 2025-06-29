@@ -1,18 +1,22 @@
-import React from 'react';
-import { View, Text, FlatList } from 'react-native';
-import TopBar from '../TopBar';
-import IconButton from '@/components/Iconbutton';
-import { icons }  from '@/constants/icons';
 import Homecard from '@/components/HomescreenCard';
-import { router } from 'expo-router';
+import IconButton from '@/components/Iconbutton';
+import FallingLeaves from '@/components/LeafFalling';
+import PinkOverlay from '@/components/Pinkoverlay'; // Import your overlay components
+//import FallingLeaves from '@/components/PurpleLeaves';
+import CloudFloatingAnimation from '@/components/Cloud';
+import FocusAnimation from '@/components/Focused';
+import { icons } from '@/constants/icons';
 import { getDisplayName } from '@/util/asyncName';
-
+import { router } from 'expo-router';
+import React, { useState } from 'react';
+import { FlatList, Text, View } from 'react-native';
+import TopBar from '../TopBar';
 
 const moodData = [
-  { icon: icons.happy, text: 'Happy', color: 'bg-buttonPink-500 w-32 h-32' },
-  { icon: icons.calm2, text: 'Calm', color: 'bg-buttonBlue-500 w-32 h-32' },
-  { icon: icons.focus, text: 'Focused', color: 'bg-buttonGreen-500 w-32 h-32' },
-  { icon: icons.relax, text: 'Relaxed', color: 'bg-buttonOrange-500 w-32 h-32' },
+  { icon: icons.happy, text: 'Happy', color: 'bg-buttonPink-100 w-32 h-32', mood: 'happy' },
+  { icon: icons.calm2, text: 'Calm', color: 'bg-buttonOrange-500 w-32 h-32', mood: 'calm' },
+  { icon: icons.focus, text: 'Focused', color: 'bg-buttonGreen-500 w-32 h-32', mood: 'focused' },
+  { icon: icons.relax, text: 'Relaxed', color: 'bg-buttonBlue-500 w-32 h-32', mood: 'relaxed' },
 ]
 
 const HomescreenCard = [
@@ -24,7 +28,7 @@ const HomescreenCard = [
     icon: icons.meetup,
     focusIcon: icons.play,
     focusText: "Start Session",
-    onPress: () => router.push('/(hidden)/meditation/meditationAnimation')
+    // onPress: () => router.push('/(hidden)/meditation/')
   },
   {
     title: "Meditation",
@@ -40,6 +44,47 @@ const HomescreenCard = [
 
 export default function RegularHome() {
   const name = getDisplayName() || "friend";
+  const [showPinkOverlay, setShowPinkOverlay] = useState(false);
+  const [showFallingLeaves, setShowFallingLeaves] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const [showRelaxedAnimation, setShowRelaxedAnimation] = useState(false);
+
+  const handleMoodPress = (mood: string) => {
+    switch (mood) {
+      case 'happy':
+        setShowPinkOverlay(true);
+        break;
+      case 'calm':
+        setShowFallingLeaves(true);
+        break;
+      case 'focused':
+        setFocused(true);
+        break;
+      case 'relaxed':
+        setShowRelaxedAnimation(true);
+        console.log("Relaxed mood selected");
+        break;
+      default:
+        break;
+    }
+  };
+
+  const handlePinkOverlayComplete = () => {
+    setShowPinkOverlay(false);
+  };
+
+  const handleFallingLeavesComplete = () => {
+    setShowFallingLeaves(false);
+  };
+
+  const handleFocusComplete = () => {
+    setFocused(false)
+  }
+
+  const handleRelaxedComplete = () => {
+    setShowRelaxedAnimation(false);
+  };
+
   return (
     <View>
       <TopBar title='Home'/>
@@ -65,6 +110,7 @@ export default function RegularHome() {
                   icon={item.icon}
                   text={item.text}
                   color={item.color}
+                  onPress={() => handleMoodPress(item.mood)}
                 />
               </View>
             )}
@@ -92,6 +138,26 @@ export default function RegularHome() {
           showsVerticalScrollIndicator={false}
         />
       </View>
+
+      <PinkOverlay
+        visible={showPinkOverlay}
+        onAnimationComplete={handlePinkOverlayComplete}
+      />
+
+      <FallingLeaves
+        visible={showFallingLeaves}
+        onAnimationComplete={handleFallingLeavesComplete}
+      />
+
+      <FocusAnimation 
+      visible={focused} 
+      onAnimationComplete={handleFocusComplete}
+         />
+
+        <CloudFloatingAnimation
+          visible={showRelaxedAnimation}
+          onAnimationComplete={handleRelaxedComplete}
+        />
     </View>
   );
 }

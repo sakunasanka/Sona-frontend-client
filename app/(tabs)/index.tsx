@@ -1,9 +1,9 @@
+import FirstTimeHome from '@/components/subScreens/firstTimeHome';
+import RegularHome from '@/components/subScreens/regularHome';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
-import FirstTimeHome from '../components/subScreens/firstTimeHome';
-import RegularHome from '../components/subScreens/regularHome';
 
 export default function HomeScreen() {
   const [isLoading, setIsLoading] = useState(true);

@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
-import { Text, View, TextInput, TouchableOpacity, Image, ScrollView, Modal, ActivityIndicator } from 'react-native';
-import { Link, useRouter } from 'expo-router';
-import { Mail, Lock, Eye, EyeOff } from 'lucide-react-native';
-import { PrimaryButton } from '../components/Buttons';
 import { apiRequest } from '@/api/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useRouter } from 'expo-router';
+import { Eye, EyeOff, Lock, Mail } from 'lucide-react-native';
+import React, { useState } from 'react';
+import { ActivityIndicator, Image, Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { PrimaryButton } from '../components/Buttons';
 
 const saveDisplayName = async (name: string) => {
   try {
@@ -31,7 +31,7 @@ export default function SignIn() {
     try {
     const result = await apiRequest({
       method: 'post',
-      path: '/api/auth/signin',
+      path: '/auth/signin',
       data: {
         email: formData.email,
         password: formData.password,
@@ -56,8 +56,8 @@ export default function SignIn() {
     <View className="flex-1 bg-slate-50">
       {/* Background Decorative Elements */}
       <View className="absolute inset-0 overflow-hidden">
-        <View className="absolute w-80 h-80 rounded-full bg-blue-300 opacity-60 -bottom-24 -left-24" />
-        <View className="absolute w-80 h-80 rounded-full bg-red-300 opacity-60 top-48 -right-36" />
+        <View className="absolute w-144 h-144 rounded-full bg-blue-300 opacity-90 -bottom-4 -left-64" />
+        <View className="absolute w-128 h-128 rounded-full bg-red-300 opacity-60 top-128 -right-52" />
       </View>
 
       <ScrollView 
@@ -66,31 +66,33 @@ export default function SignIn() {
         showsVerticalScrollIndicator={false}
       >
         {/* Logo and Header */}
-        <View className="items-center mb-8">
+        <View className="items-center mb-8 mt-20">
           <View className="mb-2">
             <Image
               source={require('../../assets/images/sona-long-logo.png')}
-              className="w-52 h-16 opacity-75"
+              className="w-80 h-20 opacity-75 mr-10"
               resizeMode="contain"
             />
           </View>
-          <Text className="text-sm text-gray-500 text-center">
+          <Text className=" text-gray-500 text-center font-alegreya text-lg">
             Wellness Starts With A Conversation
           </Text>
+          <View className="mt-2" />
+          <Image
+            source={require('../../assets/images/homescreen-cloud.png')}
+            className="w-28 h-28 opacity-75"
+            resizeMode="contain"
+          />
         </View>
 
-        {/* Subtitle */}
-        <Text className="text-base text-gray-500 text-center mb-8 leading-6">
-          Welcome back! Sign in to continue your{' '}
-          <Text className="text-purple-600 font-semibold">wellness</Text> journey.
-        </Text>
+
 
         {/* Form */}
         <View className="mb-6">
           <View className="mb-5">
             <Text className="text-sm font-medium text-gray-700 mb-2">Email Address</Text>
-            <View className="flex-row items-center bg-white rounded-xl border border-gray-200 px-4 py-3 shadow-sm">
-              <Mail size={20} className="mr-3 text-gray-400" />
+            <View className="flex-row items-center bg-white rounded-xl border border-gray-300 px-4 py-3 opacity-90">
+              <Mail size={20} className="mr-3 text-gray-400 opacity-50" />
               <View className="mr-4"/>
              <TextInput
               className="flex-1 text-base"
@@ -108,8 +110,8 @@ export default function SignIn() {
 
           <View className="mb-5">
             <Text className="text-sm font-medium text-gray-700 mb-2">Password</Text>
-            <View className="flex-row items-center bg-white rounded-xl border border-gray-200 px-4 py-3 shadow-sm">
-              <Lock size={20} className="mr-3 text-gray-400" />
+            <View className="flex-row items-center bg-white rounded-xl border border-gray-300 px-4 py-3 opacity-90">
+              <Lock size={20} className="mr-3 text-gray-400 opacity-50" />
               <View className="mr-4"/>
               <TextInput
                   className="flex-1 text-base text-gray-900"
@@ -135,11 +137,9 @@ export default function SignIn() {
 
           {/* Forgot Password Link */}
           <View className="mb-6 items-end">
-            <Link href="/forgot-password" asChild>
-              <TouchableOpacity>
+              <TouchableOpacity onPress={() => router.push('/(auth)/forgot-password')}>
                 <Text className="text-sm text-primary font-medium">Forgot Password?</Text>
               </TouchableOpacity>
-            </Link>
           </View>
 
           <View className="mt-2">

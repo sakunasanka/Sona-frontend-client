@@ -1,18 +1,40 @@
-import React, { useState } from 'react';
-import { Text, View, TextInput, TouchableOpacity, Image, ScrollView } from 'react-native';
+import { apiRequest } from '@/api/api'; // Adjust the import path as necessary
 import { Link } from 'expo-router';
+import LottieView from 'lottie-react-native';
 import { Mail } from 'lucide-react-native';
+import React, { useState } from 'react';
+import { Image, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { PrimaryButton } from '../components/Buttons';
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState('');
   const [submitted, setSubmitted] = useState(false);
+   const [isLoading, setIsLoading] = useState(false);
 
-  const handleResetPassword = () => {
-    // Add your password reset logic here
-    console.log('Reset password for:', email);
+  const handleResetPassword = async () => {
+    setIsLoading(true);
+    if (!email) {
+      console.error('Email is required');
+      setIsLoading(false);
+      return;
+    }
+    try {
+      const result = await apiRequest({
+        method: 'post',
+        path: '/auth/reset-password',
+        data: {
+          email: email,
+          },
+        });
+
+    console.log('Reset password for:', result);
     setSubmitted(true);
-  };
+  } catch (error) {
+    console.error('Error sending reset link:', error);
+    setIsLoading(false);
+  }
+  setIsLoading(false);
+}
 
   return (
     <View className="flex-1 bg-slate-50">
@@ -48,7 +70,7 @@ export default function ForgotPassword() {
               Forgot Password
             </Text>
             <Text className="text-base text-gray-500 text-center mb-8 leading-6">
-              Enter your email and we'll send you a link to reset your password
+              Enter your email and we&apos;ll send you a link to reset your password
             </Text>
 
             {/* Email Input */}
@@ -96,11 +118,11 @@ export default function ForgotPassword() {
                 Check Your Email
               </Text>
               <Text className="text-base text-gray-500 text-center mb-4 leading-6">
-                We've sent a password reset link to{' '}
+                We&apos;ve sent a password reset link to{' '}
                 <Text className="font-semibold">{email}</Text>
               </Text>
               <Text className="text-sm text-gray-400 text-center">
-                Didn't receive the email? Check your spam folder or{' '}
+                Didn&apos;t receive the email? Check your spam folder or{' '}
                 <Text 
                   className="text-primary font-medium"
                   onPress={() => setSubmitted(false)}
@@ -116,7 +138,26 @@ export default function ForgotPassword() {
               </Link>
             </View>
           </>
+          
         )}
+
+        {isLoading && (
+  <View style={{
+    position: 'absolute',
+    top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: 'rgba(255,255,255,0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 999
+  }}>
+    <LottieView
+      source={require('@/assets/images/loadings/Animation - 1751005726286.json')}
+      autoPlay
+      loop
+      style={{ width: 120, height: 120 }}
+    />
+  </View>
+)}
       </ScrollView>
     </View>
   );

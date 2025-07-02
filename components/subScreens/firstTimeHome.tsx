@@ -1,10 +1,10 @@
-import React from 'react';
-import { View, Text, StyleSheet, SafeAreaView } from 'react-native';
-import { useNavigation, useNavigationState } from '@react-navigation/native';
-import CustomButton from '@/components/Iconbutton';
-import {icons} from '../../../constants/icons';
 import GradientText from '@/components/Gradient';
+import CustomButton from '@/components/Iconbutton';
+import { icons } from '@/constants/icons';
+import { useNavigation, useNavigationState } from '@react-navigation/native';
 import { router } from 'expo-router';
+import React from 'react';
+import { SafeAreaView, StyleSheet, Text, View } from 'react-native';
 
 const FirstTimeHome = () => {
   const navigation = useNavigation();

@@ -292,11 +292,34 @@ export default function BookSessionScreen() {
 
   const selectedSession = SESSION_TYPES.find(type => type.id === selectedSessionType);
 
+  // State to track validation errors for highlighting sections
+  const [validationErrors, setValidationErrors] = useState<{
+    timeSlot?: boolean;
+    paymentMethod?: boolean;
+  }>({});
+
   const handleBookSession = async () => {
+    // Reset validation errors
+    const errors: {timeSlot?: boolean; paymentMethod?: boolean} = {};
+    
+    // Validate time slot selection
     if (!selectedTime) {
-      Alert.alert('Time Required', 'Please select a time slot for your session.');
+      errors.timeSlot = true;
+      Alert.alert('Time Slot Required', 'Please select an available time slot to continue.');
+      setValidationErrors(errors);
       return;
     }
+    
+    // Validate payment method selection
+    if (!selectedPaymentMethod) {
+      errors.paymentMethod = true;
+      Alert.alert('Payment Method Required', 'Please select a payment method to continue.');
+      setValidationErrors(errors);
+      return;
+    }
+    
+    // Clear any validation errors
+    setValidationErrors({});
 
     try {
       // Format the date for the API request without timezone issues
@@ -605,8 +628,11 @@ export default function BookSessionScreen() {
 
         {/* Time Selection */}
         <View className="mt-6">
-          <Text className="text-lg font-semibold text-gray-900 px-5 mb-3">Available Times</Text>
-          <View className="px-5">
+          <View className="flex-row items-center justify-between px-5 mb-3">
+            <Text className="text-lg font-semibold text-gray-900">Available Times</Text>
+
+          </View>
+          <View className={`px-5`}>
             {isLoadingSlots ? (
               <View className="py-8 items-center">
                 <ActivityIndicator size="large" color="#6366F1" />
@@ -617,6 +643,24 @@ export default function BookSessionScreen() {
                 <View className="flex-row flex-wrap">
                   {timeSlots
                     .filter(slot => slot.available && !slot.isBooked)
+                    .sort((a, b) => {
+                      // Sort by time in ascending order (earlier times first)
+                      // Extract hours and minutes from time strings (assuming format like "09:00" or "9:00 AM")
+                      const getTimeValue = (timeStr: string) => {
+                        const [hourStr, minuteStr] = timeStr.split(':');
+                        let hour = parseInt(hourStr, 10);
+                        const isPM = timeStr.toLowerCase().includes('pm');
+                        
+                        // Convert to 24-hour format if AM/PM is specified
+                        if (isPM && hour < 12) hour += 12;
+                        if (!isPM && hour === 12) hour = 0;
+                        
+                        const minute = parseInt(minuteStr, 10) || 0;
+                        return hour * 60 + minute;  // Convert to minutes for comparison
+                      };
+                      
+                      return getTimeValue(a.time) - getTimeValue(b.time);
+                    })
                     .map((slot) => (
                       <TimeSlot key={slot.id} slot={slot} />
                     ))}
@@ -651,8 +695,15 @@ export default function BookSessionScreen() {
 
         {/* Payment Method */}
         <View className="mt-6">
-          <Text className="text-lg font-semibold text-gray-900 px-5 mb-3">Payment Method</Text>
-          <View className="px-5">
+          <View className="flex-row items-center justify-between px-5 mb-3">
+            <Text className="text-lg font-semibold text-gray-900">Payment Method</Text>
+            {(!selectedPaymentMethod || validationErrors.paymentMethod) && (
+              <Text className={`text-sm ${validationErrors.paymentMethod ? 'text-red-500 font-medium' : 'text-orange-500'}`}>
+                {validationErrors.paymentMethod ? 'Required' : 'Please select a payment method'}
+              </Text>
+            )}
+          </View>
+          <View className={`px-5 ${validationErrors.paymentMethod ? 'bg-red-50 py-2 rounded-xl' : ''}`}>
             {/* Add Payment Method Button */}
             <TouchableOpacity
               onPress={() => Alert.alert('Add Payment Method', 'This feature is coming soon!')}
@@ -722,6 +773,22 @@ export default function BookSessionScreen() {
 
         {/* Book Button */}
         <View className="p-5 pb-8">
+          {/* Add specific helper messages for missing fields */}
+          {(!selectedTime && !selectedPaymentMethod) && (
+            <Text className="text-center text-orange-500 mb-2 text-sm">
+              Please select a time slot and payment method
+            </Text>
+          )}
+          {(!selectedTime && selectedPaymentMethod) && (
+            <Text className="text-center text-orange-500 mb-2 text-sm">
+              Please select a time slot
+            </Text>
+          )}
+          {(selectedTime && !selectedPaymentMethod) && (
+            <Text className="text-center text-orange-500 mb-2 text-sm">
+              Please select a payment method
+            </Text>
+          )}
           <PrimaryButton
             title="Book Session - $80"
             onPress={handleBookSession}

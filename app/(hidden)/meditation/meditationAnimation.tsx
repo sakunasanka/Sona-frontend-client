@@ -1,29 +1,25 @@
-import React, { useState, useEffect, useRef } from 'react';
-import {
-  View,
-  Text,
-  Image,
-  TouchableOpacity,
-  StyleSheet,
-  Dimensions,
-  StatusBar,
-  SafeAreaView,
-} from 'react-native';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  withRepeat,
-  withSequence,
-  runOnJS,
-  interpolate,
-  Easing,
-} from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  Image,
+  Platform,
+  SafeAreaView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import Animated, {
+  Easing,
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withSequence,
+  withTiming,
+} from 'react-native-reanimated';
 import { icons } from '../../../constants/icons'; // Adjust the path as necessary
-
-const { width, height } = Dimensions.get('window');
 
 const MeditationApp = () => {
   const [isActive, setIsActive] = useState(false);
@@ -55,7 +51,12 @@ const MeditationApp = () => {
   };
 
   const triggerHaptic = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    // Android haptic feedback may not be as reliable, so we add a fallback
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    } catch (error) {
+      console.log('Haptic feedback not available:', error);
+    }
   };
 
   const startBreathingCycle = () => {
@@ -105,7 +106,11 @@ const MeditationApp = () => {
   };
 
   const startMeditation = async () => {
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    try {
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    } catch (error) {
+      console.log('Haptic feedback not available:', error);
+    }
     
     setIsActive(true);
     
@@ -158,14 +163,22 @@ const MeditationApp = () => {
   };
 
   const pauseMeditation = async () => {
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    try {
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    } catch (error) {
+      console.log('Haptic feedback not available:', error);
+    }
     setIsBreathing(false);
     if (intervalRef.current) clearInterval(intervalRef.current);
     if (breathIntervalRef.current) clearInterval(breathIntervalRef.current);
   };
 
   const stopMeditation = async () => {
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    try {
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    } catch (error) {
+      console.log('Haptic feedback not available:', error);
+    }
     
     setIsActive(false);
     setIsBreathing(false);
@@ -187,7 +200,11 @@ const MeditationApp = () => {
   };
 
   const setTimer = async (minutes: number) => {
-    await Haptics.selectionAsync();
+    try {
+      await Haptics.selectionAsync();
+    } catch (error) {
+      console.log('Haptic feedback not available:', error);
+    }
     const seconds = minutes * 60;
     setSelectedTime(seconds);
     setTimeLeft(seconds);
@@ -241,7 +258,11 @@ const MeditationApp = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle={isActive ? "light-content" : "dark-content"} />
+      <StatusBar 
+        barStyle={isActive ? "light-content" : "dark-content"} 
+        backgroundColor={isActive ? "#000000" : "#ffffff"}
+        translucent={false}
+      />
       
       {/* Dark Background Overlay */}
       <Animated.View style={[styles.darkOverlay, backgroundStyle]} />
@@ -277,6 +298,8 @@ const MeditationApp = () => {
                     selectedTime === minutes * 60 && styles.timerButtonActive
                   ]}
                   onPress={() => setTimer(minutes)}
+                  activeOpacity={0.7}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                 >
                   <Text style={[
                     styles.timerButtonText,
@@ -290,7 +313,12 @@ const MeditationApp = () => {
             <Text style={styles.selectedTime}>{formatTime(timeLeft)}</Text>
           </View>
 
-          <TouchableOpacity style={styles.startButton} onPress={startMeditation}>
+          <TouchableOpacity 
+            style={styles.startButton} 
+            onPress={startMeditation}
+            activeOpacity={0.8}
+            hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+          >
             <LinearGradient
               colors={['#F09E54', '#F09A59']}
               style={styles.startButtonGradient}
@@ -342,10 +370,17 @@ const MeditationApp = () => {
           <TouchableOpacity 
             style={styles.controlButton} 
             onPress={isBreathing ? pauseMeditation : startMeditation}
+            activeOpacity={0.7}
+            hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
           >     
             <Image source={isBreathing ? icons.pause : icons.play} style={{ width: 24, height: 24 }} />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.controlButton} onPress={stopMeditation}>
+          <TouchableOpacity 
+            style={styles.controlButton} 
+            onPress={stopMeditation}
+            activeOpacity={0.7}
+            hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+          >
             <Text style={styles.controlButtonText}>⟲</Text>
           </TouchableOpacity>
         </View>
@@ -367,6 +402,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     backgroundColor: '#000000',
     zIndex: 1,
+    pointerEvents: 'none', // Allow touch events to pass through to underlying components
   },
   setupContainer: {
     alignItems: 'center',
@@ -404,11 +440,18 @@ const styles = StyleSheet.create({
     borderRadius: 60,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#F09E54',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    // iOS shadows
+    ...Platform.select({
+      ios: {
+        shadowColor: '#F09E54',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 8,
+      },
+    }),
   },
   iconInner: {
     width: 80,
@@ -436,19 +479,27 @@ const styles = StyleSheet.create({
     color: '#666666',
     marginBottom: 40,
     textAlign: 'center',
+    lineHeight: 22, // Better text rendering on Android
   },
   timerCard: {
     backgroundColor: '#ffffff',
     borderRadius: 16,
     padding: 24,
     marginBottom: 40,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
     borderWidth: 2,
     borderColor: '#f0f0f0',
+    // Platform-specific shadows
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
   },
   timerTitle: {
     fontSize: 18,
@@ -461,8 +512,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
-    gap: 12,
     marginBottom: 20,
+    // Use margin instead of gap for better Android compatibility
+    marginHorizontal: -6,
   },
   timerButton: {
     width: 60,
@@ -473,6 +525,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#ffffff',
+    marginHorizontal: 6,
+    marginVertical: 6,
+    // Ensure minimum touch target for Android
+    minHeight: 44,
+    minWidth: 44,
   },
   timerButtonActive: {
     backgroundColor: '#F09E54',
@@ -482,9 +539,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#333333',
     fontWeight: '500',
+    textAlign: 'center', // Better text alignment on Android
   },
   timerButtonTextActive: {
     color: '#ffffff',
+    textAlign: 'center',
   },
   selectedTime: {
     fontSize: 24,
@@ -494,11 +553,21 @@ const styles = StyleSheet.create({
   },
   startButton: {
     borderRadius: 30,
-    shadowColor: '#F09E54',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    // Ensure minimum touch target
+    minHeight: 48,
+    minWidth: 200,
+    // Platform-specific shadows
+    ...Platform.select({
+      ios: {
+        shadowColor: '#F09E54',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 8,
+      },
+    }),
   },
   startButtonGradient: {
     paddingHorizontal: 32,
@@ -510,6 +579,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: '#ffffff',
+    textAlign: 'center',
   },
   meditationContainer: {
     position: 'absolute',
@@ -557,20 +627,26 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#ffffff',
     marginBottom: 8,
+    textAlign: 'center',
   },
   breathSubtext: {
     fontSize: 18,
     color: '#cccccc',
+    textAlign: 'center',
   },
   timerDisplay: {
     fontSize: 36,
     fontWeight: 'bold',
     color: '#ffffff',
     marginBottom: 40,
+    textAlign: 'center',
   },
   controls: {
     flexDirection: 'row',
-    gap: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    // Replace gap with margin for Android compatibility
+    marginHorizontal: -8,
   },
   controlButton: {
     width: 60,
@@ -581,10 +657,15 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
+    marginHorizontal: 8,
+    // Ensure proper touch target
+    minHeight: 60,
+    minWidth: 60,
   },
   controlButtonText: {
     fontSize: 24,
     color: '#ffffff',
+    textAlign: 'center',
   },
 });
 

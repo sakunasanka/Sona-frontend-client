@@ -276,6 +276,8 @@ const fetchMonthlyAvailability = async (counsellorId: string, year: number, mont
 
 // We're no longer using generateDates as we're using the BookingCalendar component
 
+// We'll use a simpler approach to find the error
+
 export default function BookSessionScreen() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedTime, setSelectedTime] = useState<string>('');
@@ -630,7 +632,6 @@ export default function BookSessionScreen() {
         <View className="mt-6">
           <View className="flex-row items-center justify-between px-5 mb-3">
             <Text className="text-lg font-semibold text-gray-900">Available Times</Text>
-
           </View>
           <View className={`px-5`}>
             {isLoadingSlots ? (
@@ -774,21 +775,19 @@ export default function BookSessionScreen() {
         {/* Book Button */}
         <View className="p-5 pb-8">
           {/* Add specific helper messages for missing fields */}
-          {(!selectedTime && !selectedPaymentMethod) && (
+          {!selectedTime && !selectedPaymentMethod ? (
             <Text className="text-center text-orange-500 mb-2 text-sm">
               Please select a time slot and payment method
             </Text>
-          )}
-          {(!selectedTime && selectedPaymentMethod) && (
+          ) : !selectedTime ? (
             <Text className="text-center text-orange-500 mb-2 text-sm">
               Please select a time slot
             </Text>
-          )}
-          {(selectedTime && !selectedPaymentMethod) && (
+          ) : !selectedPaymentMethod ? (
             <Text className="text-center text-orange-500 mb-2 text-sm">
               Please select a payment method
             </Text>
-          )}
+          ) : null}
           <PrimaryButton
             title="Book Session - $80"
             onPress={handleBookSession}

@@ -1,37 +1,33 @@
-import React, { useState, useRef, useEffect } from 'react';
 import {
-  View,
+  ArrowLeft,
+  Check,
+  Clock,
+  Mic,
+  MoreVertical,
+  Paperclip,
+  Pause,
+  Phone,
+  Play,
+  Send,
+  Video
+} from 'lucide-react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  ActionSheetIOS,
+  Alert,
+  Animated,
+  Image,
+  Keyboard,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
   Text,
   TextInput,
   TouchableOpacity,
-  ScrollView,
-  Image,
-  SafeAreaView,
-  Animated,
-  StatusBar,
   Vibration,
-  Keyboard,
-  Alert,
-  ActionSheetIOS,
-  Platform,
+  View,
 } from 'react-native';
-import { 
-  ArrowLeft, 
-  Phone, 
-  Video, 
-  Send, 
-  Paperclip, 
-  Mic,
-  Play,
-  Pause,
-  MoreVertical,
-  Clock,
-  Camera,
-  ImageIcon,
-  FileText,
-  MapPin,
-  Check
-} from 'lucide-react-native';
 
 interface Message {
   id: string;
@@ -476,6 +472,9 @@ export default function CounselorChat() {
   return (
     <SafeAreaView className="flex-1 bg-white">
       <StatusBar barStyle="dark-content" backgroundColor="white" />
+      
+      {/* Added extra padding at the top to avoid notch overlap */}
+      <View className="pt-6"></View>
       
       {/* Header */}
       <View className="flex-row items-center px-4 py-4 bg-white shadow-sm border-b border-gray-100">

@@ -4,8 +4,9 @@ import { Platform } from 'react-native';
 
 let API_BASE_URL = '';
 let PORT = process.env.PORT || 5001;
+let LOCAL_IP = process.env.LOCAL_IP || '192.168.1.18';
 if (Platform.OS === 'android') {
-  API_BASE_URL = 'http://' + process.env.LOCAL_IP + ':' + PORT + '/api';
+  API_BASE_URL = 'http://' + LOCAL_IP + ':' + PORT + '/api';
 } else if (Platform.OS === 'ios') {
   API_BASE_URL = 'http://localhost:' + PORT + '/api';
 } else {

@@ -251,6 +251,9 @@ export default function CounselorsScreen() {
     <SafeAreaView className="flex-1 bg-primary">
       <StatusBar barStyle="light-content" backgroundColor="#2563EB" />
 
+      {/* Added extra padding at the top to avoid notch overlap */}
+      <View className="pt-6"></View>
+
       <View className="flex-row items-center justify-between px-5 py-4">
         <TouchableOpacity onPress={() => router.back()}>
           <ArrowLeft size={24} color="white" />

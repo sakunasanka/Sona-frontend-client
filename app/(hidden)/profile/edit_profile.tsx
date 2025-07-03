@@ -1,17 +1,17 @@
-import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  TextInput, 
-  TouchableOpacity, 
-  SafeAreaView, 
-  Image, 
-  ScrollView,
-  ImageSourcePropType
-} from 'react-native';
-import { ArrowLeft, Check, Camera } from 'lucide-react-native';
 import { router } from 'expo-router';
-import {PrimaryButton} from '../../components/Buttons';
+import { ArrowLeft, Camera, Check } from 'lucide-react-native';
+import React, { useState } from 'react';
+import {
+  Image,
+  ImageSourcePropType,
+  SafeAreaView,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
+} from 'react-native';
+import { PrimaryButton } from '../../components/Buttons';
 
 interface UserData {
   name: string;
@@ -39,6 +39,9 @@ export default function EditProfile() {
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
+      {/* Added extra padding at the top to avoid notch overlap */}
+      <View className="pt-6"></View>
+      
       <ScrollView 
         contentContainerStyle={{ paddingBottom: 40 }}
         showsVerticalScrollIndicator={false}

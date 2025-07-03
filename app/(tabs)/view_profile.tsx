@@ -1,8 +1,8 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, ScrollView, SafeAreaView, Image } from 'react-native';
-import { ArrowLeft, Edit, Bookmark, HelpCircle, LogOut, Shield, BadgeCheck } from 'lucide-react-native';
 import { Link, router } from 'expo-router';
-import {LogoutButton} from '../components/Buttons';
+import { ArrowLeft, BadgeCheck, Bookmark, Edit, HelpCircle, LogOut, Shield } from 'lucide-react-native';
+import React from 'react';
+import { Image, SafeAreaView, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { LogoutButton } from '../components/Buttons';
 
 export default function Profile() {
   const userData = {
@@ -18,6 +18,9 @@ export default function Profile() {
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
+      {/* Added extra padding at the top to avoid notch overlap */}
+      <View className="pt-6"></View>
+      
       <ScrollView 
         contentContainerStyle={{ paddingBottom: 40 }}
         showsVerticalScrollIndicator={false}

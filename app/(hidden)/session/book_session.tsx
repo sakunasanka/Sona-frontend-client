@@ -181,8 +181,9 @@ import { Platform } from 'react-native';
 // Setup API base URL
 let API_BASE_URL = '';
 let PORT = process.env.PORT || 5001;
+let LOCAL_IP = process.env.LOCAL_IP || '192.168.1.18';
 if (Platform.OS === 'android') {
-  API_BASE_URL = 'http://' + process.env.LOCAL_IP + ':' + PORT + '/api';
+  API_BASE_URL = 'http://' + LOCAL_IP + ':' + PORT + '/api';
 } else if (Platform.OS === 'ios') {
   API_BASE_URL = 'http://localhost:' + PORT + '/api';
 } else {
@@ -569,6 +570,9 @@ export default function BookSessionScreen() {
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
       <StatusBar barStyle="dark-content" backgroundColor="#F9FAFB" />
+
+      {/* Added extra padding at the top to avoid notch overlap */}
+      <View className="pt-6"></View>
 
       {/* Header */}
       <View className="flex-row items-center justify-between px-5 py-4 bg-white border-b border-gray-100">

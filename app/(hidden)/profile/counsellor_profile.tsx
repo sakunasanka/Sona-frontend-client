@@ -1,15 +1,15 @@
+import { Link, router } from 'expo-router';
+import { ArrowLeft, Award, Calendar, Clock, DollarSign, Globe, MapPin, MessageSquare, Star } from 'lucide-react-native';
 import React from 'react';
 import {
-  View,
+  Image,
+  Linking,
+  SafeAreaView,
+  ScrollView,
   Text,
   TouchableOpacity,
-  ScrollView,
-  SafeAreaView,
-  Image,
-  Linking
+  View
 } from 'react-native';
-import { ArrowLeft, MessageSquare, Phone, Calendar, Star, MapPin, Award, Clock, DollarSign, Globe } from 'lucide-react-native';
-import { Link, router } from 'expo-router';
 import { PrimaryButton, SecondaryButton } from '../../components/Buttons';
 
 export default function CounsellorProfile() {
@@ -59,6 +59,9 @@ export default function CounsellorProfile() {
 
   return (
     <SafeAreaView className="flex-1 bg-white">
+      {/* Added extra padding at the top to avoid notch overlap */}
+      <View className="pt-6"></View>
+      
       <ScrollView
         contentContainerStyle={{ paddingBottom: 40 }}
         showsVerticalScrollIndicator={false}
@@ -124,9 +127,9 @@ export default function CounsellorProfile() {
             />
             
             <PrimaryButton
-              title="Call Now"
-              onPress={handleCall}
-              icon={Phone}
+              title="Book Session"
+              onPress={() => router.push('/session/book_session')}
+              icon={Calendar}
             />
           </View>
         </View>

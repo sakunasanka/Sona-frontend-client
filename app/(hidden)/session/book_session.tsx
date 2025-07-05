@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { ArrowLeft, CreditCard, MessageCircle, Phone, Video } from 'lucide-react-native';
+import { ArrowLeft, MessageCircle, Phone, Video } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -94,30 +94,23 @@ const PAYMENT_METHODS: PaymentMethod[] = [
   }
 ];
 
-// Fetch time slots from backend API
 const fetchTimeSlots = async (counsellorId: string, date: Date): Promise<TimeSlot[]> => {
-  // Prevent timezone issues by formatting the date explicitly from year, month, day components
   const year = date.getFullYear();
   const month = date.getMonth() + 1; // getMonth() is 0-indexed
   const day = date.getDate();
   const formattedDate = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
   
   try {
-    // When called from monthly availability check, we use a shorter timeout
-    // to avoid blocking the calendar for too long
     const isCalendarCheck = !!(new Error()).stack?.includes('fetchMonthlyAvailability');
     const timeoutMs = isCalendarCheck ? 3000 : 10000; // 3s for calendar checks, 10s for direct user selection
     
-    // Use the correct API URL 
     const apiUrl = `${API_BASE_URL}/sessions/timeslots/${counsellorId}/${formattedDate}`;
     console.log(`[API] Fetching timeslots for ${formattedDate}${isCalendarCheck ? ' (calendar check)' : ''}`);
     
-    // Create a timeout promise
     const timeoutPromise = new Promise<Response>((_, reject) => {
       setTimeout(() => reject(new Error(`Timeout after ${timeoutMs}ms`)), timeoutMs);
     });
     
-    // Use Promise.race to implement timeout
     const response = await Promise.race([
       fetch(apiUrl),
       timeoutPromise
@@ -129,22 +122,17 @@ const fetchTimeSlots = async (counsellorId: string, date: Date): Promise<TimeSlo
     
     const data = await response.json();
     
-    // Handle different response structures
     let slotsArray = data;
     
-    // If the response is wrapped in an object, extract the array
     if (data && typeof data === 'object' && !Array.isArray(data)) {
-      // Try common property names for the slots array
       slotsArray = data.slots || data.timeSlots || data.data || data.timeslots || [];
     }
     
-    // Ensure we have an array
     if (!Array.isArray(slotsArray)) {
       console.warn(`API response for ${formattedDate} is not an array:`, slotsArray);
       return [];
     }
     
-    // Transform API response to TimeSlot format
     const formattedSlots = slotsArray.map((slot: any) => ({
       id: slot.id || `time-${slot.time}`,
       time: slot.time,
@@ -152,7 +140,6 @@ const fetchTimeSlots = async (counsellorId: string, date: Date): Promise<TimeSlo
       isBooked: slot.isBooked || false
     }));
     
-    // For monthly calendar check, just log count; for individual day selection, log details
     if (isCalendarCheck) {
       console.log(`[API] Found ${formattedSlots.length} slots for ${formattedDate}, ${formattedSlots.filter(s => s.available).length} available`);
     } else {
@@ -161,36 +148,28 @@ const fetchTimeSlots = async (counsellorId: string, date: Date): Promise<TimeSlo
     
     return formattedSlots;
   } catch (error) {
-    // For calendar availability check, we want to fail silently
     const isCalendarCheck = !!(new Error()).stack?.includes('fetchMonthlyAvailability');
     
     if (isCalendarCheck) {
       console.warn(`[API] Error fetching time slots for ${formattedDate} (availability check):`, error);
-      return []; // Return empty array for availability checks to avoid breaking the calendar
+      return []; 
     } else {
       console.error(`[API] Error fetching time slots for ${formattedDate}:`, error);
-      // For direct user selection, throw the error so UI can handle it
       throw error;
     }
   }
 };
 
-// Import API base URL
 import { Platform } from 'react-native';
 
-// Setup API base URL
 let API_BASE_URL = '';
 let PORT = process.env.PORT || 5001;
 let LOCAL_IP = process.env.LOCAL_IP || '192.168.1.18';
 if (Platform.OS === 'android') {
   API_BASE_URL = 'http://' + LOCAL_IP + ':' + PORT + '/api';
-} else if (Platform.OS === 'ios') {
-  API_BASE_URL = 'http://localhost:' + PORT + '/api';
 } else {
   API_BASE_URL = 'http://localhost:' + PORT + '/api';
 }
-
-// Helper function to format date keys consistently with the BookingCalendar component
 const formatMonthKey = (year: number, month: number): string => {
   return `${year}-${String(month + 1).padStart(2, '0')}`;
 };
@@ -270,42 +249,30 @@ const fetchMonthlyAvailability = async (counsellorId: string, year: number, mont
     return formattedData;
   } catch (error) {
     console.error('Error fetching monthly availability:', error);
-    // Instead of returning mock data, throw the error so UI can handle it
     throw error;
   }
 };
-
-// We're no longer using generateDates as we're using the BookingCalendar component
-
-// We'll use a simpler approach to find the error
 
 export default function BookSessionScreen() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedTime, setSelectedTime] = useState<string>('');
   const [selectedSessionType, setSelectedSessionType] = useState<string>('video');
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('1');
   const [concerns, setConcerns] = useState<string>('');
   const [imageError, setImageError] = useState(false);
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [isLoadingSlots, setIsLoadingSlots] = useState<boolean>(false);
   const [monthlyAvailability, setMonthlyAvailability] = useState<{[dateKey: string]: {isAvailable: boolean, hasImmediateSlot?: boolean}}>({});
   const [isLoadingAvailability, setIsLoadingAvailability] = useState<boolean>(false);
-  // Add a cache to store availability data for months we've already fetched
   const [monthCache, setMonthCache] = useState<{[key: string]: {[dateKey: string]: {isAvailable: boolean, hasImmediateSlot?: boolean}}}>({});
 
   const selectedSession = SESSION_TYPES.find(type => type.id === selectedSessionType);
-
-  // State to track validation errors for highlighting sections
   const [validationErrors, setValidationErrors] = useState<{
     timeSlot?: boolean;
-    paymentMethod?: boolean;
   }>({});
 
   const handleBookSession = async () => {
-    // Reset validation errors
-    const errors: {timeSlot?: boolean; paymentMethod?: boolean} = {};
+    const errors: {timeSlot?: boolean} = {};
     
-    // Validate time slot selection
     if (!selectedTime) {
       errors.timeSlot = true;
       Alert.alert('Time Slot Required', 'Please select an available time slot to continue.');
@@ -313,24 +280,13 @@ export default function BookSessionScreen() {
       return;
     }
     
-    // Validate payment method selection
-    if (!selectedPaymentMethod) {
-      errors.paymentMethod = true;
-      Alert.alert('Payment Method Required', 'Please select a payment method to continue.');
-      setValidationErrors(errors);
-      return;
-    }
-    
-    // Clear any validation errors
     setValidationErrors({});
 
     try {
-      // Format the date for the API request without timezone issues
       const year = selectedDate.getFullYear();
-      const month = selectedDate.getMonth(); // getMonth() is 0-indexed
+      const month = selectedDate.getMonth(); 
       const day = selectedDate.getDate();
       
-      // Format as YYYY-MM-DD using our helper
       const formattedDate = formatDateKey(year, month, day);
       
       // Make the API call to book the session
@@ -352,7 +308,8 @@ export default function BookSessionScreen() {
       }
       
       const data = await response.json();
-      
+
+      // Show booking confirmation
       Alert.alert(
         'Booking Confirmed',
         `Your session has been booked for ${selectedDate.toLocaleDateString()} at ${selectedTime}.`,
@@ -393,20 +350,16 @@ export default function BookSessionScreen() {
     }
     
     try {
-      // Use the counselor's ID from the mock data for now
       const availability = await fetchMonthlyAvailability(MOCK_COUNSELOR.id, year, month);
       console.log(`[Calendar] Loaded availability for ${Object.keys(availability).length} days in ${year}-${month+1}`);
       
-      // Count available days for user feedback
       const availableDays = Object.values(availability).filter(day => day.isAvailable).length;
       console.log(`[Calendar] Found ${availableDays} available days in ${year}-${month+1}`);
       
       if (availableDays === 0) {
-        // Optionally inform the user when no availability is found
         console.log(`[Calendar] No availability found for ${year}-${month+1}`);
       }
       
-      // Cache the fetched availability data
       console.log(`[Calendar] Caching data for ${cacheKey} with ${Object.keys(availability).length} days and ${Object.values(availability).filter(day => day.isAvailable).length} available days`);
       
       setMonthCache(prevCache => {
@@ -426,39 +379,26 @@ export default function BookSessionScreen() {
         'Could not load counselor availability. Please check your connection and try again.',
         [{ text: 'Retry', onPress: () => handleMonthChange(year, month) }]
       );
-      // Set empty availability data
       setMonthlyAvailability({});
     } finally {
       setIsLoadingAvailability(false);
     }
   };
 
-  // Handle date selection from calendar
   const handleDateSelect = (date: Date) => {
-    // Format the date key to match the availability data format without timezone issues
     const year = date.getFullYear();
     const month = date.getMonth() + 1; // getMonth() is 0-indexed
     const day = date.getDate();
     
-    // Format as YYYY-MM-DD using our consistent helper
     const dateKey = formatDateKey(year, month - 1, day); // Subtract 1 from month since we added 1 earlier
     
     console.log(`Selected date: ${date.toLocaleDateString()}, API date key: ${dateKey}`);
     
-    // Update the selected date - we'll load time slots regardless of availability
     setSelectedDate(date);
     
-    // Check if the selected date is available according to our data
     const isAvailable = monthlyAvailability[dateKey]?.isAvailable === true;
-    
-    if (!isAvailable) {
-      // You could add a toast or notification here if needed
-      // For now, the UI will show unavailable dates in red and allow selecting them
-      // but no time slots will be available
-    }
   };
 
-  // Load availability data for current month on component mount
   useEffect(() => {
     const today = new Date();
     const currentYear = today.getFullYear();
@@ -467,17 +407,14 @@ export default function BookSessionScreen() {
     const initialMonthKey = formatMonthKey(currentYear, currentMonth);
     console.log(`[Calendar] Initial load for ${initialMonthKey}`);
     
-    // Just use handleMonthChange to ensure consistent behavior
     handleMonthChange(currentYear, currentMonth);
   }, []);
   
-  // Load time slots when date changes
   useEffect(() => {
     const loadTimeSlots = async () => {
       console.log(`[Calendar] Loading time slots for date: ${selectedDate.toLocaleDateString()}`);
       console.log(`[Calendar] Current availability data has ${Object.keys(monthlyAvailability).length} days with ${Object.values(monthlyAvailability).filter(day => day.isAvailable).length} available`);
       
-      // Format date key for current selected date using our helper
       const year = selectedDate.getFullYear();
       const month = selectedDate.getMonth();
       const day = selectedDate.getDate();
@@ -486,10 +423,9 @@ export default function BookSessionScreen() {
       console.log(`[Calendar] Selected date key: ${dateKey}, isAvailable according to data: ${monthlyAvailability[dateKey]?.isAvailable}`);
       
       setIsLoadingSlots(true);
-      setSelectedTime(''); // Reset selected time when date changes
+      setSelectedTime('');
       
       try {
-        // Use the counselor's ID from the mock data for now
         const slots = await fetchTimeSlots(MOCK_COUNSELOR.id, selectedDate);
         console.log(`[Calendar] Loaded ${slots.length} time slots for ${selectedDate.toDateString()}, ${slots.filter(s => s.available).length} available`);
         setTimeSlots(slots);
@@ -679,7 +615,7 @@ export default function BookSessionScreen() {
           </View>
         </View>
 
-        {/* Session Type removed - we charge for counselor's time, not session type */}
+
 
         {/* Concerns/Notes */}
         <View className="mt-6">
@@ -695,62 +631,6 @@ export default function BookSessionScreen() {
               className="text-gray-900 text-base"
               placeholderTextColor="#9CA3AF"
             />
-          </View>
-        </View>
-
-        {/* Payment Method */}
-        <View className="mt-6">
-          <View className="flex-row items-center justify-between px-5 mb-3">
-            <Text className="text-lg font-semibold text-gray-900">Payment Method</Text>
-            {(!selectedPaymentMethod || validationErrors.paymentMethod) && (
-              <Text className={`text-sm ${validationErrors.paymentMethod ? 'text-red-500 font-medium' : 'text-orange-500'}`}>
-                {validationErrors.paymentMethod ? 'Required' : 'Please select a payment method'}
-              </Text>
-            )}
-          </View>
-          <View className={`px-5 ${validationErrors.paymentMethod ? 'bg-red-50 py-2 rounded-xl' : ''}`}>
-            {/* Add Payment Method Button */}
-            <TouchableOpacity
-              onPress={() => Alert.alert('Add Payment Method', 'This feature is coming soon!')}
-              className="mb-3 p-4 rounded-2xl border border-dashed border-gray-300 bg-gray-50 flex-row items-center"
-            >
-              <View className="p-2 rounded-lg mr-3 bg-gray-200">
-                <CreditCard size={20} color="#6B7280" />
-              </View>
-              <Text className="flex-1 text-gray-700 font-medium">Add Payment Method</Text>
-              <Text className="text-primary font-medium">+</Text>
-            </TouchableOpacity>
-            
-            {PAYMENT_METHODS.map((method) => (
-              <TouchableOpacity
-                key={method.id}
-                onPress={() => setSelectedPaymentMethod(method.id)}
-                className={`mb-3 p-4 rounded-2xl border flex-row items-center ${
-                  selectedPaymentMethod === method.id ? 'border-primary bg-blue-50' : 'border-gray-200 bg-white'
-                }`}
-              >
-                <View className={`p-2 rounded-lg mr-3 ${
-                  selectedPaymentMethod === method.id ? 'bg-primary' : 'bg-gray-100'
-                }`}>
-                  <CreditCard size={20} color={selectedPaymentMethod === method.id ? 'white' : '#6B7280'} />
-                </View>
-                <View className="flex-1">
-                  <Text className={`font-medium ${
-                    selectedPaymentMethod === method.id ? 'text-primary' : 'text-gray-900'
-                  }`}>
-                    {method.brand} •••• {method.last4}
-                  </Text>
-                  {method.isDefault && (
-                    <Text className="text-xs text-gray-500">Default</Text>
-                  )}
-                </View>
-                <View className={`w-6 h-6 rounded-full border-2 ${
-                  selectedPaymentMethod === method.id ? 'border-primary bg-primary' : 'border-gray-300'
-                } items-center justify-center`}>
-                  {selectedPaymentMethod === method.id && <View className="w-2 h-2 bg-white rounded-full" />}
-                </View>
-              </TouchableOpacity>
-            ))}
           </View>
         </View>
 
@@ -778,20 +658,12 @@ export default function BookSessionScreen() {
 
         {/* Book Button */}
         <View className="p-5 pb-8">
-          {/* Add specific helper messages for missing fields */}
-          {!selectedTime && !selectedPaymentMethod ? (
-            <Text className="text-center text-orange-500 mb-2 text-sm">
-              Please select a time slot and payment method
-            </Text>
-          ) : !selectedTime ? (
+          {/* Add specific helper message for missing time slot */}
+          {!selectedTime && (
             <Text className="text-center text-orange-500 mb-2 text-sm">
               Please select a time slot
             </Text>
-          ) : !selectedPaymentMethod ? (
-            <Text className="text-center text-orange-500 mb-2 text-sm">
-              Please select a payment method
-            </Text>
-          ) : null}
+          )}
           <PrimaryButton
             title="Book Session - $80"
             onPress={handleBookSession}

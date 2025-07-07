@@ -161,12 +161,13 @@ const fetchTimeSlots = async (counsellorId: string, date: Date): Promise<TimeSlo
 };
 
 import { Platform } from 'react-native';
+import { API_PORT, API_URL } from "@/config/env";
 
 let API_BASE_URL = '';
-let PORT = process.env.PORT || 5001;
-let LOCAL_IP = process.env.LOCAL_IP || '192.168.1.18';
+let PORT = API_PORT || 5001;
+let LOCAL_IP = API_URL || '192.168.1.18';
 if (Platform.OS === 'android') {
-  API_BASE_URL = 'http://' + LOCAL_IP + ':' + PORT + '/api';
+  API_BASE_URL = LOCAL_IP + ':' + PORT + '/api';
 } else {
   API_BASE_URL = 'http://localhost:' + PORT + '/api';
 }

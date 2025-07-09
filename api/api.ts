@@ -15,14 +15,18 @@ export interface ApiRequest {
   method: 'get' | 'post' | 'put' | 'delete';
   path: string;
   data?: any;
+  token?: string;
 }
 
-export const apiRequest = async ({ method, path, data }: ApiRequest) => {
+export const apiRequest = async ({ method, path, data, token }: ApiRequest) => {
   try {
     const response = await api.request({
       url: path,
       method,
-      ...(method === 'get' ? { params: data } : { data }),
+      headers: token ? {
+        'Authorization': `Bearer ${token}`
+      } : undefined,
+      ...(method === 'get' ? { token, params: data } : { data }),
     });
 
     return response.data;

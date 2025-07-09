@@ -42,10 +42,16 @@ export default function SignIn() {
       },
     });
 
-    const { displayName } = result;
+    
+    const { displayName } = result.data;
+    await AsyncStorage.setItem('token', result.data.token);
     if (displayName) {
       await saveDisplayName(displayName);
+      
+      
     }
+    console.log('Token from the local storage', await AsyncStorage.getItem('token'));
+
     console.log('Login success:', result);
     setIsLoading(false);
 

@@ -1,23 +1,23 @@
-import { API_URL } from '@/config/env';
+import { API_URL, PORT } from '@/config/env';
 import { AppState } from 'react-native';
 import { io, Socket } from 'socket.io-client';
 
 interface ChatMessage {
   id: number;
-  text: string;
-  userId: number;
+  message: string; // Change from 'text' to 'message' to match backend
+  senderId: number; // Change from 'userId' to 'senderId' to match backend
   userName?: string;
   avatar?: string;
   avatarColor?: string;
-  timestamp: string;
-  chatId: number;
+  createdAt: string; // Change from 'timeStamp' to 'createdAt' to match backend
+  roomId: number; // Change from 'chatId' to 'roomId' to match backend
 }
 
 interface TypingStatus {
   userId: number;
   userName: string;
   isTyping: boolean;
-  chatId: number;
+  roomId: number; // Change from 'chatId' to 'roomId' to match backend
 }
 
 class ChatWebSocketService {
@@ -53,6 +53,7 @@ class ChatWebSocketService {
       }
 
       const socketUrl = API_URL
+      const port = PORT ? PORT : '5001'
 
       console.log('Connecting to Socket.IO server...');
       
@@ -65,18 +66,17 @@ class ChatWebSocketService {
         platform: 'react-native'
       });
 
-      // ✅ Use the EXACT same configuration as your working test
-      this.socket = io(socketUrl, {
+      this.socket = io(`${socketUrl}:${port}`, {
         auth: {
-          token: token  // ✅ Matches your working test
+          token: token  
         },
         query: {
-          token: token  // ✅ Matches your working test
+          token: token 
         },
-        transports: ['polling'], // ✅ Same order as working test
-        timeout: 10000,   // ✅ Same timeout
-        forceNew: true,    // ✅ Same setting
-        upgrade: false,   // ✅ Disable automatic upgrade to websocket
+        transports: ['polling'], 
+        timeout: 10000,  
+        forceNew: true, 
+        upgrade: false,  
       rememberUpgrade: false 
       });
 
@@ -109,8 +109,6 @@ class ChatWebSocketService {
       this.joinRoom(this.currentChatId);
     }
   });
-
-   const socketUrl = 'http://localhost:5001';
 
     this.socket.on('disconnect', (reason, details) => {
     console.log('🔌 Socket.IO disconnected:');
@@ -173,11 +171,11 @@ class ChatWebSocketService {
         // Convert backend format to frontend format
         const message: ChatMessage = {
           id: data.message.id,
-          text: data.message.message, // Backend uses 'message', frontend uses 'text'
-          userId: data.message.senderId,
+          message: data.message.message, // Backend uses 'message', keep as 'message'
+          senderId: data.message.senderId,
           userName: data.message.senderName,
-          timestamp: data.message.createdAt,
-          chatId: data.message.roomId?.toString() || this.currentChatId || '',
+          createdAt: data.message.createdAt,
+          roomId: data.message.roomId || this.currentChatId || 0,
           avatar: data.message.avatar,
           avatarColor: data.message.avatarColor
         };
@@ -192,7 +190,7 @@ class ChatWebSocketService {
         userId: data.userId,
         userName: data.userName,
         isTyping: true,
-        chatId: data.roomId?.toString() || this.currentChatId || ''
+        roomId: data.roomId || this.currentChatId || 0
       });
     });
 
@@ -202,7 +200,7 @@ class ChatWebSocketService {
         userId: data.userId,
         userName: data.userName,
         isTyping: false,
-        chatId: data.roomId?.toString() || this.currentChatId || ''
+        roomId: data.roomId || this.currentChatId || 0
       });
     });
 
@@ -238,12 +236,12 @@ class ChatWebSocketService {
     }
   }
 
-  sendMessage(message: Omit<ChatMessage, 'id' | 'timestamp'>) {
+  sendMessage(message: Omit<ChatMessage, 'id' | 'createdAt'>) {
     if (this.socket?.connected) {
       // Convert frontend format to backend format
       this.socket.emit('send_message', {
-        roomId: message.chatId,
-        content: message.text,
+        roomId: message.roomId,
+        content: message.message,
         type: 'text'
       });
     } else {

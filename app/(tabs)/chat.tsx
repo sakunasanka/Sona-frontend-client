@@ -5,17 +5,19 @@ import React, { useEffect, useRef, useState } from "react";
 import { Animated, Image, Keyboard, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-interface Message {
-  id: string; // Changed from number to string
-  text: string;
-  time: string;
-  userId: number;
-  userName?: string;
-  avatar?: string;
-  avatarColor?: string;
-  timestamp: string; // Add timestamp field
-  chatId: number; // Add chatId field
-}
+// This interface is no longer needed since we're using the ChatMessage from useChat hook
+// interface Message {
+//   id: number; 
+//   message: string; 
+//   time?: string; 
+//   senderId: number; 
+//   userName?: string;
+//   avatar?: string;
+//   avatarColor?: string;
+//   createdAt?: string; 
+//   roomId: number; 
+//   messageType?: 'text' | 'image' | 'file'; 
+// }
 
 // const SAMPLE_MESSAGES: Message[] = [
 //   {
@@ -180,6 +182,7 @@ const Chat = () => {
     isLoading,
     hasMoreMessages,
     isLoadingMore,
+    isSending,
     sendMessage: sendChatMessage,
     loadOlderMessages,
     startTyping,
@@ -250,15 +253,20 @@ const Chat = () => {
     }
   };
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (inputText.trim()) {
-      sendChatMessage(inputText.trim()); // Use the hook's send function
-      setInputText('');
-      
-      // Scroll to bottom after sending
-      setTimeout(() => {
-        scrollViewRef.current?.scrollToEnd({ animated: true });
-      }, 100);
+      try {
+        await sendChatMessage(inputText.trim()); // Use the hook's send function
+        setInputText('');
+        
+        // Scroll to bottom after sending
+        setTimeout(() => {
+          scrollViewRef.current?.scrollToEnd({ animated: true });
+        }, 100);
+      } catch (error) {
+        console.error('Error sending message:', error);
+        // You can add error handling here (show toast, etc.)
+      }
     }
   };
 
@@ -271,16 +279,32 @@ const Chat = () => {
     }
   };
 
-  const formatMessageTime = (timestamp: string) => {
-    try {
-      return new Date(timestamp).toLocaleTimeString([], { 
-        hour: '2-digit', 
-        minute: '2-digit' 
-      });
-    } catch {
-      return ''; // Fallback for invalid timestamps
+  const formatMessageTime = (timestamp: string | undefined) => {
+  try {
+    if (!timestamp) {
+      console.warn('No timestamp provided');
+      return '';
     }
-  };
+    
+    console.log('Formatting timestamp:', timestamp); // Debug log
+    
+    const date = new Date(timestamp);
+    
+    // Check if date is valid
+    if (isNaN(date.getTime())) {
+      console.warn('Invalid timestamp:', timestamp);
+      return '';
+    }
+    
+    return date.toLocaleTimeString([], { 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    });
+  } catch (error) {
+    console.error('Error formatting timestamp:', error, 'Timestamp:', timestamp);
+    return ''; // Fallback for invalid timestamps
+  }
+};
 
   if (!isTokenLoaded) {
     return (
@@ -372,28 +396,32 @@ const Chat = () => {
 
           {messages.map((message, index) => {
             const prevMessage = index > 0 ? messages[index - 1] : null;
-            const isSameUser = prevMessage && prevMessage.userId === message.userId;
-            const isCurrentUser = message.userId === currentUserId; // Use dynamic current user
+            const isSameUser = prevMessage && prevMessage.senderId === message.senderId;
+            const isCurrentUser = message.senderId === currentUserId; // Use dynamic current user
             const marginTop = isSameUser ? 4 : 16;
+            
+            // Check if this is an optimistic message (temporary ID)
+            // Optimistic messages have timestamp-based IDs and are from current user
+            const isOptimistic = isCurrentUser && message.id > Date.now() - 60000 && message.id.toString().length >= 13;
             
             return (
               <View key={message.id} className={`${!isCurrentUser ? 'flex-row items-end' : 'items-end'}`}
                     style={{ marginTop }}>
-                {/* Avatar for other users */}
-                {!isCurrentUser && !isSameUser && message.avatar && (
+                {/* Avatar for other users - only show for first message */}
+                {!isCurrentUser && !isSameUser && (
                   <View 
                     className="w-8 h-8 rounded-full items-center justify-center mr-2 mb-1"
-                    style={{ backgroundColor: message.avatarColor }}
+                    style={{ backgroundColor: message.avatarColor || '#6B7280' }}
                   >
                     <Text className="text-white font-bold text-xs">
-                      {message.avatar}
+                      {message.avatar || message.userName?.charAt(0).toUpperCase() || 'U'}
                     </Text>
                   </View>
                 )}
                 
-                {/* Spacer for avatar when same user */}
+                {/* Spacer for consecutive messages from same user - match avatar width + margin */}
                 {!isCurrentUser && isSameUser && (
-                  <View className="w-8 mr-2" />
+                  <View className="w-10" />
                 )}
                 
                 {/* Message bubble */}
@@ -403,7 +431,10 @@ const Chat = () => {
                       ? 'bg-white border border-gray-200 rounded-bl-sm' 
                       : 'bg-gradient-to-r from-purple-500 to-pink-500 rounded-br-sm'
                   }`}
-                  style={isCurrentUser ? { backgroundColor: '#8B5CF6' } : {}}
+                  style={{
+                    backgroundColor: isCurrentUser ? '#8B5CF6' : undefined,
+                    opacity: isOptimistic ? 0.7 : 1 // Slightly transparent for optimistic messages
+                  }}
                   >
                     {/* User name for first message */}
                     {!isCurrentUser && !isSameUser && message.userName && (
@@ -412,13 +443,18 @@ const Chat = () => {
                       </Text>
                     )}
                     <Text className={!isCurrentUser ? 'text-gray-800' : 'text-white'}>
-                      {message.text}
+                      {message.message}
                     </Text>
-                    <Text className={`text-xs mt-1 ${
-                      !isCurrentUser ? 'text-gray-400' : 'text-purple-100'
-                    }`}>
-                      {formatMessageTime(message.timestamp)}
-                    </Text>
+                    <View className="flex-row items-center justify-between mt-1">
+                      <Text className={`text-xs ${
+                        !isCurrentUser ? 'text-gray-400' : 'text-purple-100'
+                      }`}>
+                        {formatMessageTime(message.createdAt ?? '')}
+                      </Text>
+                      {isOptimistic && isCurrentUser && (
+                        <Text className="text-purple-200 text-xs ml-2">⏳</Text>
+                      )}
+                    </View>
                   </View>
                 </View>
               </View>
@@ -502,16 +538,18 @@ const Chat = () => {
                 onPress={handleSendMessage} // Use new handler
                 className="w-12 h-12 rounded-full items-center justify-center"
                 style={{ 
-                  backgroundColor: inputText.trim() ? '#8B5CF6' : '#D1D5DB', // Visual feedback
+                  backgroundColor: (inputText.trim() && !isSending) ? '#8B5CF6' : '#D1D5DB', // Visual feedback
                   shadowColor: '#8B5CF6',
                   shadowOffset: { width: 0, height: 2 },
                   shadowOpacity: isKeyboardVisible ? 0.3 : 0.15,
                   shadowRadius: isKeyboardVisible ? 8 : 4,
                   elevation: isKeyboardVisible ? 5 : 2,
                 }}
-                disabled={!inputText.trim() || !isConnected} // Disable if disconnected
+                disabled={!inputText.trim() || !isConnected || isSending} // Disable if disconnected or sending
               >
-                <Text className="text-white font-bold text-lg">→</Text>
+                <Text className="text-white font-bold text-lg">
+                  {isSending ? '⏳' : '→'}
+                </Text>
               </TouchableOpacity>
             </Animated.View>
           </Animated.View>

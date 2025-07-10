@@ -1,5 +1,5 @@
-import { Link } from 'expo-router';
-import { ArrowLeft, Clock, Filter, MessageCircle, Star, Video } from 'lucide-react-native';
+import { router } from 'expo-router';
+import { ArrowLeft, Clock, Filter, Star, Video } from 'lucide-react-native';
 import React, { useMemo, useState } from 'react';
 import {
   FlatList,
@@ -10,10 +10,9 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
-import SpecialtyTabs from '../../components/SpecialtyTabs';
+import { PrimaryButton } from '../../components/Buttons';
 import SearchBar from '../../components/SearchBar';
-import { PrimaryButton, SecondaryButton } from '../../components/Buttons';
-import { router } from "expo-router";
+import SpecialtyTabs from '../../components/SpecialtyTabs';
 
 interface Counselor {
   id: string;
@@ -188,7 +187,7 @@ export default function CounselorsScreen() {
       <StatusBar barStyle="light-content" backgroundColor="#2563EB" />
 
       <View className="flex-row items-center justify-between px-5 py-4">
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={() => router.replace('/(tabs)')}>
           <ArrowLeft size={24} color="white" />
         </TouchableOpacity>
 

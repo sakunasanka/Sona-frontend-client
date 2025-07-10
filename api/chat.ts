@@ -7,11 +7,27 @@ interface ChatMessage {
   userName?: string;
   avatar?: string;
   avatarColor?: string;
-  timestamp: string;
+  createdAt: string;
   chatId: number;
 }
 
+interface ChatResponse {
+  success: string;
+  message: string;
+  data: {
+    message: ChatMessage[];  // ✅ Your backend returns data.message (array)
+    pagination?: {
+      page: number;
+      limit: number;
+      total: number;
+      hasMore: boolean;
+    };
+  };
+}
+
 interface PaginatedResponse<T> {
+  success: string;
+  message: string;
   data: T[];
   pagination: {
     page: number;
@@ -27,7 +43,7 @@ export const getChatMessages = async (
   page: number = 1, 
   limit: number = 50,
   token?: string
-): Promise<PaginatedResponse<ChatMessage>> => {
+): Promise<ChatResponse> => {
   try {
     console.log('Fetch chat messages:', { chatId, page, limit, token });
     const response = await apiRequest({
@@ -46,7 +62,7 @@ export const getChatMessages = async (
 // Get older messages for pagination
 export const getOlderMessages = async (
   chatId: number, 
-  beforeMessageId: string, 
+  beforeMessageId: number, 
   limit: number = 50
 ): Promise<PaginatedResponse<ChatMessage>> => {
   try {
@@ -61,7 +77,33 @@ export const getOlderMessages = async (
   }
 };
 
-// Send message via REST (fallback)
+// Send message via HTTP request
+export const sendChatMessage = async (
+  message: {
+    userId: string;
+    roomId: string;
+    message: string;
+    messageType: string;
+  },
+  token?: string
+): Promise<any> => {
+  try {
+    console.log('Sending message via HTTP:', message);
+    const response = await apiRequest({
+      method: 'post',
+      path: 'chat/messages',
+      data: message,
+      token
+    });
+    console.log('Message sent successfully:', response);
+    return response;
+  } catch (error) {
+    console.error('Error sending message via HTTP:', error);
+    throw error;
+  }
+};
+
+// Send message via REST (fallback) - keeping original for backward compatibility
 export const sendMessage = async (
   chatId: number, 
   message: Omit<ChatMessage, 'id' | 'timestamp' | 'chatId'>

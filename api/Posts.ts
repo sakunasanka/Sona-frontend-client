@@ -1,12 +1,13 @@
 // api/Posts.ts
+import { API_URL, PORT } from '@/config/env';
 import axios from 'axios';
 import { Platform } from 'react-native';
 
 let API_BASE_URL = '';
 if (Platform.OS === 'android') {
-  API_BASE_URL = 'http://' + process.env.LOCAL_IP + ':' + process.env.PORT + '/api';
+  API_BASE_URL = API_URL + ':' + PORT + '/api';
 } else if (Platform.OS === 'ios') {
-  API_BASE_URL = 'http://localhost:' + process.env.PORT + '/api';
+  API_BASE_URL = API_URL + ':' + PORT + '/api';
 } else {
   API_BASE_URL = 'http://localhost:' + process.env.PORT + '/api';
 }

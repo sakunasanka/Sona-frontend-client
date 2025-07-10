@@ -30,6 +30,7 @@ export default function TabsLayout() {
         options={{
           title: 'Counsellor',
           tabBarIcon: ({ color }) => <PersonStanding color={color} />,
+          tabBarStyle: { display: 'none' }, // Hide this tab's screen
         }}
       />
       <Tabs.Screen

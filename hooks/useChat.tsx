@@ -1,16 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { getChatMessages, getOlderMessages } from '../api/chat';
+import { getChatMessages, getOlderMessages, sendChatMessage } from '../api/chat';
 import { chatWebSocketService } from '../api/websocket';
 
 interface ChatMessage {
   id: number;
-  text: string;
-  userId: number;
+  roomId: number;
+  senderId: number;
+  message: string;
+  messageType?: 'text' | 'image' | 'file';
   userName?: string;
   avatar?: string;
   avatarColor?: string;
-  timestamp: string;
-  chatId: number;
+  createdAt: string;
 }
 
 interface TypingUser {
@@ -30,8 +31,28 @@ export const useChat = (
   const [isLoading, setIsLoading] = useState(false);
   const [hasMoreMessages, setHasMoreMessages] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [isSending, setIsSending] = useState(false);
   
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const transformMessage = (backendMessage: any): ChatMessage => {
+    console.log('🔧 Transforming message:', backendMessage); // Debug log
+    
+    const transformed = {
+      id: Number(backendMessage.id),                   
+      roomId: Number(backendMessage.roomId),           
+      senderId: Number(backendMessage.senderId),        
+      message: backendMessage.message || backendMessage.text, // Handle both 'message' and 'text' fields
+      messageType: backendMessage.messageType || 'text',
+      userName: backendMessage.userName || backendMessage.senderName,
+      avatar: backendMessage.avatar,
+      avatarColor: backendMessage.avatarColor,
+      createdAt: backendMessage.createdAt || backendMessage.timeStamp, // Handle both 'createdAt' and 'timeStamp' fields
+    };
+    
+    console.log('✅ Transformed message:', transformed); // Debug log
+    return transformed;
+  };
 
   // Initialize chat
   useEffect(() => {
@@ -39,59 +60,45 @@ export const useChat = (
       setIsLoading(true);
       try {
         // Load initial messages
-      const response = await getChatMessages(chatId, 1, 30, token);
-      console.log('Raw API response:', response);
-      console.log('Response type:', typeof response);
-      console.log('Is array:', Array.isArray(response));
-      
-      // Handle different response structures
-      let messages: ChatMessage[] = [];
-      let hasMore = false;
-      
-      if (Array.isArray(response)) {
-        // If response is directly an array: [{}, {}, {}]
-        messages = response;
-        hasMore = false;
-        console.log('Response is array with', messages.length, 'messages');
-      } else if (response && response.data && response.data.message && Array.isArray(response.data.message)) {
-        // ✅ YOUR ACTUAL STRUCTURE: response.data.message contains the array
-        messages = response.data.message;
-        hasMore = response.data.pagination?.hasMore || false;
-        console.log('Response has data.message property with', messages.length, 'messages');
-      } else if (response && response.data && Array.isArray(response.data)) {
-        // Alternative structure: { data: [{}, {}], pagination: {...} }
-        messages = response.data;
-        hasMore = response.pagination?.hasMore || false;
-        console.log('Response has data property with', messages.length, 'messages');
-      } else {
-        console.warn('Unexpected response structure:', response);
-        console.log('Available keys:', response ? Object.keys(response) : 'none');
-        if (response?.data) {
-          console.log('Data keys:', Object.keys(response.data));
+        const response = await getChatMessages(chatId, 1, 30, token);
+        console.log('Raw API response:', response);
+        console.log('Response type:', typeof response);
+        
+        // Handle different response structures
+        let messages: ChatMessage[] = [];
+        let hasMore = false;
+
+        if (response && response.success && response.data && response.data.message && Array.isArray(response.data.message)) {
+          // ✅ Your actual structure: response.data.message contains the array
+          messages = response.data.message.map(transformMessage);
+          hasMore = response.data.pagination?.hasMore || false;
+          console.log('✅ Successfully processed', messages.length, 'messages');
+        } else {
+          console.warn('❌ Unexpected response structure:', response);
+          messages = [];
+          hasMore = false;
         }
-        messages = [];
-        hasMore = false;
-      }
 
-      console.log('Processed messages:', {
-        count: messages.length,
-        hasMore,
-        firstMessage: messages[0],
-        lastMessage: messages[messages.length - 1]
-      });
+        console.log('Processed messages:', {
+          count: messages.length,
+          hasMore,
+          firstMessage: messages[0],
+          lastMessage: messages[messages.length - 1],
+          messageOrder: messages.map(m => ({ id: m.id, senderId: m.senderId, createdAt: m.createdAt }))
+        });
 
-      if (messages.length === 0) {
-        console.warn('No messages found for chat:', chatId);
-      }
+        if (messages.length === 0) {
+          console.warn('No messages found for chat:', chatId);
+        }
 
-      // Reverse messages to show newest at bottom (only if we have messages)
-      setMessages(messages.length > 0 ? [...messages].reverse() : []);
-      setHasMoreMessages(hasMore);
+        // Don't reverse messages - they should be displayed in the order received (ascending by time)
+        setMessages(messages);
+        setHasMoreMessages(hasMore);
 
-      if (!token) {
-        console.warn('No token provided, WebSocket connection may not be authenticated.');
-      } else {
-        console.log('WebSocket token:', token);
+        if (!token) {
+          console.warn('No token provided, WebSocket connection may not be authenticated.');
+        } else {
+          console.log('WebSocket token:', token);
         }
         
         // Connect to WebSocket
@@ -107,11 +114,30 @@ export const useChat = (
 
     // WebSocket event listeners
     const unsubscribeMessage = chatWebSocketService.onMessage((message) => {
-      // Avoid duplicate messages (check if message already exists)
       setMessages(prev => {
-        const messageExists = prev.some(msg => msg.id === message.id);
+        const messageExists = prev.some(msg => Number(msg.id) === Number(message.id));
         if (messageExists) return prev;
-        return [...prev, message];
+        
+        const transformed = transformMessage(message);
+        
+        // Check if this is a confirmation of an optimistic message
+        // Look for optimistic messages with same content and sender
+        const optimisticIndex = prev.findIndex(msg => 
+          msg.senderId === transformed.senderId && 
+          msg.message === transformed.message &&
+          msg.id > Date.now() - 60000 // Temporary ID from last 60 seconds
+        );
+        
+        if (optimisticIndex !== -1) {
+          // Replace optimistic message with confirmed message
+          const updated = [...prev];
+          updated[optimisticIndex] = transformed;
+          console.log('✅ Replaced optimistic message with confirmed message');
+          return updated;
+        }
+        
+        // Add new message if no optimistic match found
+        return [...prev, transformed];
       });
     });
 
@@ -127,7 +153,7 @@ export const useChat = (
       });
     });
 
-   const unsubscribeConnection = chatWebSocketService.onConnectionChange((connected) => {
+    const unsubscribeConnection = chatWebSocketService.onConnectionChange((connected) => {
       setIsConnected(connected);
     });
 
@@ -154,7 +180,12 @@ export const useChat = (
       const oldestMessageId = messages[0]?.id;
       const response = await getOlderMessages(chatId, oldestMessageId);
       
-      setMessages(prev => [...response.data.reverse(), ...prev]);
+      // Add older messages to the beginning of the array
+      // Assuming older messages API returns them in ascending order (oldest first)
+      setMessages(prev => [
+        ...response.data.map(transformMessage),
+        ...prev
+      ]);
       setHasMoreMessages(response.pagination.hasMore);
     } catch (error) {
       console.error('Error loading older messages:', error);
@@ -164,22 +195,81 @@ export const useChat = (
   }, [chatId, hasMoreMessages, isLoadingMore, messages]);
 
   // Send message
-  const sendMessage = useCallback((text: string) => {
-    if (!text.trim()) return; // Don't send empty messages
+  const sendMessage = useCallback(async (text: string) => {
+    if (!text.trim() || isSending) return; // Don't send empty messages or while sending
     
-    const message = {
-      text: text.trim(),
-      userId: currentUserId,
+    setIsSending(true);
+    
+    // Create temporary message ID for optimistic update
+    const tempId = Date.now();
+    
+    // Create optimistic message to show immediately
+    const optimisticMessage: ChatMessage = {
+      id: tempId,
+      roomId: chatId,
+      senderId: currentUserId,
+      message: text.trim(),
+      messageType: 'text',
       userName: currentUserName,
-      chatId
+      createdAt: new Date().toISOString(),
+      avatar: undefined,
+      avatarColor: undefined
     };
-
-    // Send via WebSocket (real-time)
-    chatWebSocketService.sendMessage(message);
+    
+    // Add message immediately to UI (optimistic update)
+    setMessages(prev => [...prev, optimisticMessage]);
+    
+    try {
+      // Send via HTTP request
+      const response = await sendChatMessage({
+        userId: currentUserId.toString(),
+        roomId: chatId.toString(),
+        message: text.trim(),
+        messageType: 'text'
+      }, token);
+      
+      console.log('✅ Message sent successfully via HTTP');
+      
+      // If the HTTP response contains the message, replace the optimistic message
+      if (response && response.success && response.data) {
+        const confirmedMessage = transformMessage(response.data);
+        setMessages(prev => {
+          const optimisticIndex = prev.findIndex(msg => msg.id === tempId);
+          if (optimisticIndex !== -1) {
+            const updated = [...prev];
+            updated[optimisticIndex] = confirmedMessage;
+            console.log('✅ Replaced optimistic message with HTTP response');
+            return updated;
+          }
+          return prev;
+        });
+      }
+      
+      // Also send via WebSocket for real-time updates to other users
+      const wsMessage = {
+        message: text.trim(),
+        senderId: currentUserId,
+        userName: currentUserName,
+        roomId: chatId,
+      };
+      chatWebSocketService.sendMessage(wsMessage);
+      
+    } catch (error) {
+      console.error('❌ Error sending message:', error);
+      
+      // Remove optimistic message on error
+      setMessages(prev => prev.filter(msg => msg.id !== tempId));
+      
+      // Optionally show error message
+      // You can add error state and show a toast/alert here
+      throw error;
+    } finally {
+      setIsSending(false);
+    }
     
     // Stop typing when message is sent
-    stopTyping();
-  }, [chatId, currentUserId, currentUserName]);
+    chatWebSocketService.sendTypingStatus(false, chatId, currentUserId, currentUserName);
+  }, [chatId, currentUserId, currentUserName, token, isSending]);
 
   // Typing indicators
   const startTyping = useCallback(() => {
@@ -221,6 +311,7 @@ export const useChat = (
     isLoading,
     hasMoreMessages,
     isLoadingMore,
+    isSending,
     sendMessage,
     loadOlderMessages,
     startTyping,

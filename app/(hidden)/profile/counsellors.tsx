@@ -149,7 +149,7 @@ const CounselorCard = ({ counselor }: { counselor: Counselor }) => {
           /> */}
         <PrimaryButton 
             title="Book Session" 
-            onPress={() => {}} 
+            onPress={() => {router.push('../session/bookSessions')}} 
             icon={Video}
           />
       </View>
@@ -187,7 +187,7 @@ export default function CounselorsScreen() {
       <StatusBar barStyle="light-content" backgroundColor="#2563EB" />
 
       <View className="flex-row items-center justify-between px-5 py-4">
-        <TouchableOpacity onPress={() => router.replace('/(tabs)')}>
+        <TouchableOpacity onPress={() => router.back()}>
           <ArrowLeft size={24} color="white" />
         </TouchableOpacity>
 

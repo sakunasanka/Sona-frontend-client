@@ -1,9 +1,8 @@
 // components/TopBar.tsx
-import React from 'react';
-import { View, Text, TouchableOpacity, Image } from 'react-native';
 import { router, useNavigation } from 'expo-router';
-import { ArrowLeft } from 'lucide-react-native'; // or any icon lib you use
 import { StatusBar } from 'expo-status-bar';
+import React from 'react';
+import { Image, Text, TouchableOpacity, View } from 'react-native';
 
 const TopBar: React.FC<{ title?: string }> = ({title}) => {
   const navigation = useNavigation();
@@ -15,7 +14,7 @@ const TopBar: React.FC<{ title?: string }> = ({title}) => {
     <View className="flex-row justify-between items-center px-5 py-4 border-b border-gray-200">
         <Text className="font-bold text-gray-900 font-alegreyaBold text-3xl">{title}</Text>
         <View className="flex-row items-center">
-            <TouchableOpacity onPress={() => router.push('/view_profile')} >
+            <TouchableOpacity onPress={() => router.push('/(hidden)/profile/view_profile')} >
                 <Image 
                   source={{ uri: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=100&h=100' }} 
                   style={{ width: 32, height: 32, borderRadius: 16 }}

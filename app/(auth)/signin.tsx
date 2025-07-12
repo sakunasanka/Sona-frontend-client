@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { Eye, EyeOff, Lock, Mail } from 'lucide-react-native';
 import React, { useState } from 'react';
-import { ActivityIndicator, Image, Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Image, Keyboard, Modal, ScrollView, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
 import { PrimaryButton } from '../components/Buttons';
 
 const saveDisplayName = async (name: string) => {
@@ -26,6 +26,10 @@ export default function SignIn() {
 
   const handleSignIn = async () => {
     if (isLoading) return; // Prevent multiple submissions
+    
+    // Dismiss keyboard before processing
+    Keyboard.dismiss();
+    
     setIsLoading(true);
     console.log('Sign in pressed', formData);
     try {
@@ -38,10 +42,16 @@ export default function SignIn() {
       },
     });
 
-    const { displayName } = result;
+    
+    const { displayName } = result.data;
+    await AsyncStorage.setItem('token', result.data.token);
     if (displayName) {
       await saveDisplayName(displayName);
+      
+      
     }
+    console.log('Token from the local storage', await AsyncStorage.getItem('token'));
+
     console.log('Login success:', result);
     setIsLoading(false);
 
@@ -53,18 +63,20 @@ export default function SignIn() {
   };
 
   return (
-    <View className="flex-1 bg-slate-50">
-      {/* Background Decorative Elements */}
-      <View className="absolute inset-0 overflow-hidden">
-        <View className="absolute w-144 h-144 rounded-full bg-blue-300 opacity-90 -bottom-4 -left-64" />
-        <View className="absolute w-128 h-128 rounded-full bg-red-300 opacity-60 top-128 -right-52" />
-      </View>
+    <TouchableWithoutFeedback onPress={() => Keyboard.dismiss()}>
+      <View className="flex-1 bg-slate-50">
+        {/* Background Decorative Elements */}
+        <View className="absolute inset-0 overflow-hidden">
+          <View className="absolute w-144 h-144 rounded-full bg-blue-300 opacity-90 -bottom-4 -left-64" />
+          <View className="absolute w-128 h-128 rounded-full bg-red-300 opacity-60 top-128 -right-52" />
+        </View>
 
-      <ScrollView 
-        className="flex-1 z-10"
-        contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 64, paddingBottom: 32 }}
-        showsVerticalScrollIndicator={false}
-      >
+        <ScrollView 
+          className="flex-1 z-10"
+          contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 64, paddingBottom: 32 }}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
         {/* Logo and Header */}
         <View className="items-center mb-8 mt-20">
           <View className="mb-2">
@@ -104,6 +116,11 @@ export default function SignIn() {
               autoCorrect={false}
               autoComplete="email"
               textContentType="emailAddress"
+              returnKeyType="next"
+              onSubmitEditing={() => {
+                // Focus next input or dismiss keyboard
+                Keyboard.dismiss();
+              }}
             />
             </View>
           </View>
@@ -121,6 +138,13 @@ export default function SignIn() {
                   secureTextEntry={!showPassword}
                   autoComplete="password"
                   textContentType="password"
+                  returnKeyType="done"
+                  onSubmitEditing={() => {
+                    Keyboard.dismiss();
+                    if (formData.email && formData.password) {
+                      handleSignIn();
+                    }
+                  }}
                 />
               <TouchableOpacity
                 onPress={() => setShowPassword(!showPassword)}
@@ -171,13 +195,14 @@ export default function SignIn() {
               <Text className="text-sm text-primary font-semibold">Sign up</Text>
             </TouchableOpacity>
         </View>
-      </ScrollView>
-      <Modal visible={isLoading} transparent animationType="fade">
-        <View className="flex-1 justify-center items-center bg-black/50">
-          <ActivityIndicator size="large" color="#fff" />
-          <Text className="mt-4 text-white">Sign in...</Text>
-        </View>
-      </Modal>
-    </View>
+        </ScrollView>
+        <Modal visible={isLoading} transparent animationType="fade">
+          <View className="flex-1 justify-center items-center bg-black/50">
+            <ActivityIndicator size="large" color="#fff" />
+            <Text className="mt-4 text-white">Sign in...</Text>
+          </View>
+        </Modal>
+      </View>
+    </TouchableWithoutFeedback>
   );
 }

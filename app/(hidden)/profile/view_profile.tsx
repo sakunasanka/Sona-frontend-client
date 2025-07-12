@@ -1,9 +1,9 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, ScrollView, SafeAreaView, Image } from 'react-native';
-import { ArrowLeft, Edit, Bookmark, HelpCircle, LogOut, Shield, BadgeCheck } from 'lucide-react-native';
-import { router } from 'expo-router';
-import {LogoutButton} from '../components/Buttons';
 import { getDisplayName } from '@/util/asyncName';
+import { router } from 'expo-router';
+import { ArrowLeft, BadgeCheck, Bookmark, Edit, HelpCircle, LogOut, Shield } from 'lucide-react-native';
+import React from 'react';
+import { Image, SafeAreaView, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { LogoutButton } from '../../components/Buttons';
 
 export default function Profile() {
   const userData = {

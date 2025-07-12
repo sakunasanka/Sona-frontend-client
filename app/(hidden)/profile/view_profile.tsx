@@ -1,6 +1,6 @@
 import { getDisplayName } from '@/util/asyncName';
 import { router } from 'expo-router';
-import { ArrowLeft, BadgeCheck, Bookmark, Edit, HelpCircle, LogOut, Shield } from 'lucide-react-native';
+import { ArrowLeft, BadgeCheck, Bookmark, Edit, HelpCircle, History, LogOut, Shield } from 'lucide-react-native';
 import React from 'react';
 import { Image, SafeAreaView, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { LogoutButton } from '../../components/Buttons';
@@ -99,6 +99,15 @@ export default function Profile() {
         {/* Actions Section */}
         <View className="p-5">
           <Text className="text-lg font-semibold text-gray-900 mb-4">Account</Text>
+          <TouchableOpacity 
+            className="flex-row items-center py-4 border-b border-gray-100"
+            onPress={() => router.push('/session/sessionHistory')}
+          >
+            <View className="w-9 h-9 rounded-full bg-blue-50 justify-center items-center mr-4">
+              <History size={20} color="#2563EB" />
+            </View>
+            <Text className="text-base text-gray-900">Counselling sessions</Text>
+          </TouchableOpacity>
           
           <TouchableOpacity className="flex-row items-center py-4 border-b border-gray-100">
             <View className="w-9 h-9 rounded-full bg-blue-50 justify-center items-center mr-4">

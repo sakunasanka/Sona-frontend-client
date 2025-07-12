@@ -27,7 +27,7 @@ export default function SignUp() {
     try { 
     const result = await apiRequest({
       method: 'post',
-      path: '/api/auth/signup',
+      path: '/auth/signup',
       data: {
         displayName: formData.name,
         // nickname: formData.nickname,

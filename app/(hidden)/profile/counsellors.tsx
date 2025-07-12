@@ -1,5 +1,5 @@
-import { Link } from 'expo-router';
-import { ArrowLeft, Clock, Filter, MessageCircle, Star, Video } from 'lucide-react-native';
+import { router } from 'expo-router';
+import { ArrowLeft, Clock, Filter, Star, Video } from 'lucide-react-native';
 import React, { useMemo, useState } from 'react';
 import {
   FlatList,
@@ -10,10 +10,9 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
-import SpecialtyTabs from '../../components/SpecialtyTabs';
+import { PrimaryButton } from '../../components/Buttons';
 import SearchBar from '../../components/SearchBar';
-import { PrimaryButton, SecondaryButton } from '../../components/Buttons';
-import { router } from "expo-router";
+import SpecialtyTabs from '../../components/SpecialtyTabs';
 
 interface Counselor {
   id: string;
@@ -150,7 +149,7 @@ const CounselorCard = ({ counselor }: { counselor: Counselor }) => {
           /> */}
         <PrimaryButton 
             title="Book Session" 
-            onPress={() => {}} 
+            onPress={() => {router.push('../session/bookSessions')}} 
             icon={Video}
           />
       </View>

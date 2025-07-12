@@ -42,3 +42,6 @@ babel.config.js
 app-example
 ios/*
 android/*
+
+config/env.ts
+config/env.ts

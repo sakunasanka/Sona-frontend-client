@@ -1,24 +1,20 @@
 // app/(tabs)/feed.tsx
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  ScrollView, 
-  TouchableOpacity, 
-  Image, 
-  StatusBar,
-  TextInput,
-  RefreshControl,
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import {
   ActivityIndicator,
   Alert,
-  Modal
+  Image,
+  RefreshControl,
+  ScrollView,
+  StatusBar,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
-import BottomNavigation from '../components/BottomNavigation';
-import FeedCard from '../components/FeedCard';
-import TopBar from '../components/TopBar';
-import AddPostModal from '../components/AddPostModal';
 import { fetchPosts, likePost, Post } from '../../api/Posts';
-import { router } from 'expo-router';
+import TopBar from '../../components/TopBar';
+import AddPostModal from '../components/AddPostModal';
+import FeedCard from '../components/FeedCard';
 
 export default function Feed() {
   const [activeTab, setActiveTab] = useState<'Recent' | 'Popular'>('Recent');
@@ -203,7 +199,7 @@ export default function Feed() {
                 className="flex-1 bg-gray-100 rounded-full px-4 py-2"
                 onPress={handleCreatePost}
               >
-                <Text className="text-gray-500">What's on your mind?</Text>
+                <Text className="text-gray-500">What&apos;s on your mind?</Text>
               </TouchableOpacity>
             </View>
           </View>

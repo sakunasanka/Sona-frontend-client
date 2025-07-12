@@ -1,10 +1,11 @@
+import { API_URL } from '@/config/env';
 import axios from 'axios';
 
-const BASE_URL = 'http://172.20.10.14:5001'
+const BASE_URL = API_URL
 
 const api = axios.create({
-  baseURL: BASE_URL,
-  timeout: 5000,
+  baseURL: BASE_URL + ':5001/api',
+  timeout: 6000,
   headers: {
     'Content-Type': 'application/json',
   },  

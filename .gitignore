@@ -40,3 +40,5 @@ babel.config.js
 *.tsbuildinfo
 
 app-example
+ios/*
+android/*

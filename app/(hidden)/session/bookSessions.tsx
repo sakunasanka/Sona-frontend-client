@@ -19,6 +19,7 @@ import {
 } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { PrimaryButton } from '../../components/Buttons';
+import { API_URL, PORT } from "@/config/env";
 
 interface SessionType {
   id: string;
@@ -181,7 +182,7 @@ export default function BookSessionScreen() {
     }, authToken)
 
     setIsCreatingPayment(true);
-    setPaymentPageUrl('http://192.168.1.94:5001/payment-loader');
+    setPaymentPageUrl(API_URL + ':' + PORT + '/payment-loader');
 
     try {
         const hash = response.data.userhash;
@@ -193,7 +194,7 @@ export default function BookSessionScreen() {
             orderId
         })
 
-      setPaymentPageUrl(`http://192.168.1.94:5001/payment-loader?hash=${hash}&orderId=${orderId}&amount=${amount}`);
+      setPaymentPageUrl(API_URL + ':' + PORT + `/payment-loader?hash=${hash}&orderId=${orderId}&amount=${amount}`);
       setShowWebView(true);
 
 

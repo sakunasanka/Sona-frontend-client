@@ -22,15 +22,6 @@ import { WebView } from 'react-native-webview';
 import BookingCalendar from '../../../components/BookingCalendar';
 import { PrimaryButton } from '../../components/Buttons';
 
-interface SessionType {
-  id: string;
-  name: string;
-  icon: React.ComponentType<any>;
-  description: string;
-  duration: string;
-  price: number;
-}
-
 interface TimeSlot {
   id: string;
   time: string;
@@ -46,33 +37,6 @@ interface PaymentMethod {
   brand?: string;
   isDefault: boolean;
 }
-
-const SESSION_TYPES: SessionType[] = [
-  {
-    id: 'video',
-    name: 'Video Call',
-    icon: Video,
-    description: 'Secure video session from anywhere',
-    duration: '50 min',
-    price: 80
-  },
-  {
-    id: 'phone',
-    name: 'Phone Call',
-    icon: Phone,
-    description: 'Traditional phone consultation',
-    duration: '50 min',
-    price: 75
-  },
-  {
-    id: 'chat',
-    name: 'Text Chat',
-    icon: MessageCircle,
-    description: 'Secure messaging session',
-    duration: '50 min',
-    price: 65
-  }
-];
 
 const MOCK_COUNSELOR = {
   id: '1',
@@ -257,8 +221,6 @@ export default function BookSessionScreen() {
   const [paymentPageUrl, setPaymentPageUrl] = useState<string>('');
   const [currentOrderId, setCurrentOrderId] = useState<string>('');
   const [isCreatingPayment, setIsCreatingPayment] = useState(false);
-
-  const selectedSession = SESSION_TYPES.find(type => type.id === selectedSessionType);
   const [validationErrors, setValidationErrors] = useState<{
     timeSlot?: boolean;
   }>({});
@@ -274,13 +236,8 @@ export default function BookSessionScreen() {
     }
     
     setValidationErrors({});
-    
-    if (!selectedSession) {
-      Alert.alert('Error', 'Please select a session type.');
-      return;
-    }
 
-    const amount = selectedSession.price;
+    const amount = 3000; // Default amount if not specified
     setIsCreatingPayment(true);
     setPaymentPageUrl(API_URL + ':' + PORT + '/payment-loader');
 
@@ -465,37 +422,6 @@ export default function BookSessionScreen() {
         >
           {slot.time}
         </Text>
-      </TouchableOpacity>
-    );
-  };
-
-  const SessionTypeCard = ({ sessionType, isSelected }: { sessionType: SessionType; isSelected: boolean }) => {
-    const IconComponent = sessionType.icon;
-    
-    return (
-      <TouchableOpacity
-        onPress={() => setSelectedSessionType(sessionType.id)}
-        className={`mb-3 p-4 rounded-2xl border ${
-          isSelected ? 'border-primary bg-blue-50' : 'border-gray-200 bg-white'
-        }`}
-      >
-        <View className="flex-row items-center">
-          <View className={`p-3 rounded-xl mr-4 ${isSelected ? 'bg-primary' : 'bg-gray-100'}`}>
-            <IconComponent size={24} color={isSelected ? 'white' : '#6B7280'} />
-          </View>
-          <View className="flex-1">
-            <Text className={`text-lg font-semibold ${isSelected ? 'text-primary' : 'text-gray-900'}`}>
-              {sessionType.name}
-            </Text>
-            <Text className="text-sm text-gray-500 mb-1">{sessionType.description}</Text>
-            <Text className="text-sm text-gray-600">{sessionType.duration} • ${sessionType.price}</Text>
-          </View>
-          <View className={`w-6 h-6 rounded-full border-2 ${
-            isSelected ? 'border-primary bg-primary' : 'border-gray-300'
-          } items-center justify-center`}>
-            {isSelected && <View className="w-2 h-2 bg-white rounded-full" />}
-          </View>
-        </View>
       </TouchableOpacity>
     );
   };
@@ -758,7 +684,7 @@ export default function BookSessionScreen() {
             title={
               isCreatingPayment 
                 ? "Processing..." 
-                : `Book Session - $${selectedSession?.price || 3000}`
+                : `Book Session - Rs.3000`
             }
             onPress={() => {
               if (!isCreatingPayment) {

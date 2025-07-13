@@ -9,18 +9,23 @@ if (Platform.OS === 'android') {
 } else if (Platform.OS === 'ios') {
   API_BASE_URL = API_URL + ':' + PORT + '/api';
 } else {
-  API_BASE_URL = 'http://localhost:' + process.env.PORT + '/api';
+  API_BASE_URL = 'http://localhost:' + PORT + '/api';
 }
 
-interface Author {
+interface User {
+  id: number;
+  firebaseId: string;
   name: string;
-  avatar: string;
-  badge: 'User' | 'Premium';
+  email: string;
+  avatar?: string;
+  role: 'Client' | 'Counselor' | 'Admin' | 'Psychiatrist' | 'MT-Team';
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 export interface Post {
   id: string;
-  author: Author;
+  author: User;
   timeAgo: string;
   content: string;
   hashtags: string[];
@@ -48,9 +53,12 @@ export const fetchPosts = async (): Promise<Post[]> => {
     return response.data.data.posts.map((post: any) => ({
       id: post.id || post._id || Math.random().toString(36).substr(2, 9),
       author: {
+        id: post.author?.id || 0,
+        firebaseId: post.author?.firebaseId || '',
         name: post.author?.name || 'Anonymous',
+        email: post.author?.email || 'user@example.com',
         avatar: post.author?.avatar || 'https://i.imgur.com/5fhM5oV.png',
-        badge: post.author?.badge === 'Premium' ? 'Premium' : 'User'
+        role: post.author?.role || 'Client'
       },
       timeAgo: post.timeAgo || 'Just now',
       content: post.content || '',
@@ -85,7 +93,7 @@ export const createPost = async (postData: CreatePostData): Promise<Post> => {
     const payload = {
       content: postData.content,
       hashtags: postData.tags || [],
-      backgroundColor: postData.backgroundColor || '#FFFFFF',
+      backgroundColor: postData.backgroundColor, // This will be set by our color cycling utility
       image: postData.image || undefined,
       location: postData.location || undefined
     };
@@ -99,9 +107,12 @@ export const createPost = async (postData: CreatePostData): Promise<Post> => {
     return {
       id: createdPost.id || createdPost._id || Date.now().toString(),
       author: {
+        id: createdPost.author?.id || 0,
+        firebaseId: createdPost.author?.firebaseId || '',
         name: createdPost.author?.name || 'Anonymous',
+        email: createdPost.author?.email || 'user@example.com',
         avatar: createdPost.author?.avatar || 'https://i.imgur.com/5fhM5oV.png',
-        badge: createdPost.author?.badge === 'Premium' ? 'Premium' : 'User'
+        role: createdPost.author?.role || 'Client',
       },
       timeAgo: createdPost.timeAgo || 'Just now',
       content: createdPost.content || '',
@@ -122,9 +133,12 @@ export const createPost = async (postData: CreatePostData): Promise<Post> => {
     const mockPost: Post = {
       id: Date.now().toString(),
       author: {
+        id: 0,
+        firebaseId: 'mock-firebase-id',
         name: 'John Doe', // This would come from user context
+        email: 'john.doe@example.com',
         avatar: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg',
-        badge: 'User'
+        role: 'Client'
       },
       timeAgo: 'Just now',
       content: postData.content,
@@ -134,7 +148,7 @@ export const createPost = async (postData: CreatePostData): Promise<Post> => {
         likes: 0,
         comments: 0
       },
-      backgroundColor: postData.backgroundColor || '#FFFFFF',
+      backgroundColor: postData.backgroundColor || '#F0F4F8', // Use the color from our cycling utility with a fallback
       liked: false,
       image: postData.image || undefined
     };
@@ -160,9 +174,12 @@ export const updatePost = async (postId: string, updates: Partial<CreatePostData
     return {
       id: updatedPost.id || updatedPost._id,
       author: {
+        id: updatedPost.author?.id || 0,
+        firebaseId: updatedPost.author?.firebaseId || '',
         name: updatedPost.author?.name || 'Anonymous',
+        email: updatedPost.author?.email || 'user@example.com',
         avatar: updatedPost.author?.avatar || 'https://i.imgur.com/5fhM5oV.png',
-        badge: updatedPost.author?.badge === 'Premium' ? 'Premium' : 'User'
+        role: updatedPost.author?.role || 'Client'
       },
       timeAgo: updatedPost.timeAgo || 'Just now',
       content: updatedPost.content || '',

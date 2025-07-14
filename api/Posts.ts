@@ -93,7 +93,7 @@ export const createPost = async (postData: CreatePostData): Promise<Post> => {
     const payload = {
       content: postData.content,
       hashtags: postData.tags || [],
-      backgroundColor: postData.backgroundColor, // This will be set by our color cycling utility
+      backgroundColor: postData.backgroundColor || '#FFFFFF',
       image: postData.image || undefined,
       location: postData.location || undefined
     };
@@ -148,7 +148,7 @@ export const createPost = async (postData: CreatePostData): Promise<Post> => {
         likes: 0,
         comments: 0
       },
-      backgroundColor: postData.backgroundColor || '#F0F4F8', // Use the color from our cycling utility with a fallback
+      backgroundColor: postData.backgroundColor || '#FFFFFF',
       liked: false,
       image: postData.image || undefined
     };

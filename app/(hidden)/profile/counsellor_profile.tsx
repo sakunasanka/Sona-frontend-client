@@ -1,15 +1,14 @@
+import { router } from 'expo-router';
+import { ArrowLeft, Award, Calendar, Clock, DollarSign, Globe, MapPin, MessageSquare, Star } from 'lucide-react-native';
 import React from 'react';
 import {
-  View,
+  Image,
+  SafeAreaView,
+  ScrollView,
   Text,
   TouchableOpacity,
-  ScrollView,
-  SafeAreaView,
-  Image,
-  Linking
+  View
 } from 'react-native';
-import { ArrowLeft, MessageSquare, Phone, Calendar, Star, MapPin, Award, Clock, DollarSign, Globe } from 'lucide-react-native';
-import { Link, router } from 'expo-router';
 import { PrimaryButton, SecondaryButton } from '../../components/Buttons';
 
 export default function CounsellorProfile() {
@@ -30,18 +29,40 @@ export default function CounsellorProfile() {
   };
 
   const handleBookAppointment = () => {
-    router.push('/booking/select_date');
+    // For now, show an alert since we don't have the booking page path
+    alert(`Book a session with ${counsellorData.name}`);
+    // Once you have a booking page, use:
+    // router.push({
+    //     pathname: '/(hidden)/session/booking',
+    //     params: { counselorId: 'counselorId' }
+    // });
   };
 
-  const handleCall = () => {
-    Linking.openURL('tel:+11234567890');
+  const handleBookSession = () => {
+    // For now, show an alert since we don't have the booking page path
+    alert(`Book a session with ${counsellorData.name}`);
+    // Once you have a booking page, use:
+    // router.push({
+    //     pathname: '/(hidden)/session/booking',
+    //     params: { counselorId: 'counselorId' }
+    // });
   };
 
   const handleMessage = () => {
-    router.push('/messages/new');
+    router.push({
+      pathname: '/(hidden)/profile/counsellor-chat',
+      params: { counselorId: 'counselorId' }
+    });
   };
 
-  const DetailItem = ({ icon: Icon, label, value, iconColor = "#6366F1" }) => (
+  interface DetailItemProps {
+    icon: React.ElementType;
+    label: string;
+    value: string;
+    iconColor?: string;
+  }
+  
+  const DetailItem = ({ icon: Icon, label, value, iconColor = "#6366F1" }: DetailItemProps) => (
     <View className="flex-row items-start py-3 px-4 bg-gray-50 rounded-xl mb-3">
       <View className="w-10 h-10 bg-white rounded-full items-center justify-center mr-4 shadow-sm">
         <Icon size={18} color={iconColor} />
@@ -66,11 +87,12 @@ export default function CounsellorProfile() {
       >
         {/* Header */}
         <View className="flex-row items-center justify-between px-6 py-4 bg-white border-b border-gray-100">
-          <Link href="/counsellors" asChild>
-            <TouchableOpacity className="w-10 h-10 items-center justify-center rounded-full bg-gray-50">
-              <ArrowLeft size={20} color="#374151" />
-            </TouchableOpacity>
-          </Link>
+          <TouchableOpacity 
+            className="w-10 h-10 items-center justify-center rounded-full bg-gray-50"
+            onPress={() => router.back()}
+          >
+            <ArrowLeft size={20} color="#374151" />
+          </TouchableOpacity>
           <Text className="text-lg font-bold text-gray-900">Counselor Profile</Text>
           <View className="w-10" />
         </View>
@@ -118,15 +140,15 @@ export default function CounsellorProfile() {
         <View className="px-6 pb-6">
           <View className="flex-row gap-3">
             <SecondaryButton
-              title="Message"
+              title="Chat"
               onPress={handleMessage}
               icon={MessageSquare}
             />
             
             <PrimaryButton
-              title="Call Now"
-              onPress={handleCall}
-              icon={Phone}
+              title="Book Session"
+              onPress={handleBookSession}
+              icon={Calendar}
             />
           </View>
         </View>

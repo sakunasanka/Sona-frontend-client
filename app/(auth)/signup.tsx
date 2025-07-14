@@ -33,7 +33,11 @@ export default function SignUp() {
         // nickname: formData.nickname,
         email: formData.email,
         password: formData.password,
-        confirmPassword: formData.confirmPassword
+        confirmPassword: formData.confirmPassword,
+        userType: 'Client', // Default user type,
+        additionalData: {
+          isStudent: false
+        }
       }
     });
     setIsLoading(false);

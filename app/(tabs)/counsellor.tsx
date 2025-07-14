@@ -10,9 +10,9 @@ const Counsellor = () => {
       setIsRedirecting(true);
       
       // Optional: Add a small delay to show loading state
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // await new Promise(resolve => setTimeout(resolve, 500));
       
-      router.push("/(hidden)/profile/counsellors");
+      router.replace("/(hidden)/profile/counsellors");
     };
 
     redirect();

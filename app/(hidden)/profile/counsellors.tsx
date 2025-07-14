@@ -187,7 +187,7 @@ export default function CounselorsScreen() {
       <StatusBar barStyle="light-content" backgroundColor="#2563EB" />
 
       <View className="flex-row items-center justify-between px-5 py-4">
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={() => router.push('/(tabs)')}>
           <ArrowLeft size={24} color="white" />
         </TouchableOpacity>
 

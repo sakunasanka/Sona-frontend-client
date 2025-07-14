@@ -3,20 +3,20 @@ import { createPaymentLink } from "@/api/payment";
 import { API_URL, PORT } from "@/config/env";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
-import { ArrowLeft, MessageCircle, Phone, Video } from 'lucide-react-native';
+import { ArrowLeft } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
-    Modal,
-    SafeAreaView,
-    ScrollView,
-    StatusBar,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  Alert,
+  Image,
+  Modal,
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { WebView } from 'react-native-webview';
 import BookingCalendar from '../../../components/BookingCalendar';
@@ -439,16 +439,82 @@ export default function BookSessionScreen() {
     if (navState.url.includes('/payment-success')) {
       console.log('✅ Payment success detected');
       setShowWebView(false);
-      Alert.alert(
-        'Payment Successful! 🎉',
-        `Your session with ${MOCK_COUNSELOR.name} has been booked for ${selectedDate.toLocaleDateString()} at ${selectedTime}.\n\nOrder ID: ${navState.url.split('orderId=')[1] || 'N/A'}`,
-        [
-          {
-            text: 'OK',
-            onPress: () => router.back()
+      
+      // Extract the order ID from the URL
+      const orderId = navState.url.split('orderId=')[1]?.split('&')[0] || currentOrderId || 'N/A';
+      console.log('📝 Order ID extracted:', orderId);
+      
+      // Make API call to book the session
+      const bookSession = async () => {
+        try {
+          // Get the authentication token from AsyncStorage
+          const authToken = await AsyncStorage.getItem('token') || '';
+          console.log('🔑 Auth token present:', !!authToken);
+          
+          // Prepare the request body
+          const bookingRequestBody = {
+            counselorId: MOCK_COUNSELOR.id,
+            date: `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`,
+            timeSlot: selectedTime,
+            duration: 50, // 50 minute session
+            price: 3000 // Fixed price of 3000 LKR
+          };
+          
+          console.log('📤 Sending booking request to API:', bookingRequestBody);
+          console.log('🔗 API URL:', `${API_BASE_URL}/sessions/book`);
+          
+          // Set up a timeout for the fetch request
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+          
+          // Call the session booking API
+          const bookingResponse = await fetch(`${API_BASE_URL}/sessions/book`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${authToken}`,
+              'Accept': 'application/json'
+            },
+            body: JSON.stringify(bookingRequestBody),
+            signal: controller.signal
+          });
+          
+          // Clear the timeout
+          clearTimeout(timeoutId);
+          
+          console.log('📥 API Response Status:', bookingResponse.status);
+          
+          if (!bookingResponse.ok) {
+            // Get more details about the error
+            const errorText = await bookingResponse.text();
+            console.error('🚫 API Error Response:', errorText);
+            throw new Error(`API error: ${bookingResponse.status}, ${errorText}`);
           }
-        ]
-      );
+          
+          const bookingData = await bookingResponse.json();
+          console.log('✅ Session booking successful:', bookingData);
+          
+          // Show success message
+          Alert.alert(
+            'Session Booked Successfully! 🎉',
+            `Your session with ${MOCK_COUNSELOR.name} has been booked for ${selectedDate.toLocaleDateString()} at ${selectedTime}.\n\nOrder ID: ${orderId}`,
+            [{ text: 'OK', onPress: () => router.back() }]
+          );
+        } catch (error) {
+          console.error('❌ Error booking session:', error);
+          
+          // Even if booking API call fails, the payment was successful
+          Alert.alert(
+            'Payment Successful',
+            `Your payment was successful, but there was an issue finalizing your booking. Our team will contact you to confirm your session.\n\nOrder ID: ${orderId}`,
+            [{ text: 'OK', onPress: () => router.back() }]
+          );
+        }
+      };
+      
+      // Execute the booking function
+      bookSession();
+      
     } else if (navState.url.includes('/payment-cancel') || navState.url.includes('/payment-failed')) {
       console.log('❌ Payment failed/cancelled');
       setShowWebView(false);

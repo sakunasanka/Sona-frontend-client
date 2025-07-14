@@ -274,6 +274,20 @@ export default function SessionHistory() {
                             No sessions found for this date
                         </Text>
                     </View>
+                    
+                    {/* Student Package Button */}
+                    <TouchableOpacity
+                        onPress={() => router.push('/session/StudentPackageApply')}
+                        className="mt-6 bg-indigo-100 p-4 rounded-lg border border-indigo-200"
+                    >
+                        <View className="flex-row justify-between items-center">
+                            <View>
+                                <Text className="text-indigo-800 font-bold text-lg">Free Student Package</Text>
+                                <Text className="text-indigo-600 mt-1">Apply with your university credentials</Text>
+                            </View>
+                            <Ionicons name="arrow-forward-circle" size={28} color="#4f46e5" />
+                        </View>
+                    </TouchableOpacity>
                 </View>
                 <TouchableOpacity
                     onPress={() => router.replace('/(tabs)')}

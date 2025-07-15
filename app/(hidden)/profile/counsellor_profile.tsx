@@ -24,7 +24,7 @@ export default function CounsellorProfile() {
     availability: 'Mon-Fri, 9am-5pm',
     location: 'Virtual or 123 Therapy St, Boston',
     education: 'PhD in Clinical Psychology, Harvard University',
-    price: '$120 per session',
+    price: 'Rs.4000 per session',
     image: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=880&q=80'
   };
 
@@ -209,9 +209,6 @@ export default function CounsellorProfile() {
               <View>
                 <Text className="text-sm font-medium text-gray-600 mb-1">Session Price</Text>
                 <Text className="text-3xl font-bold text-gray-900">{counsellorData.price}</Text>
-              </View>
-              <View className="w-12 h-12 bg-blue-100 rounded-full items-center justify-center">
-                <DollarSign size={24} color="#6366F1" />
               </View>
             </View>
           </View>

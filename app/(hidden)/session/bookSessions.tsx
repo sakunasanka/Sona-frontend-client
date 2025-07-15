@@ -58,7 +58,7 @@ const fetchTimeSlots = async (counsellorId: string, date: Date): Promise<TimeSlo
     const timeoutMs = isCalendarCheck ? 3000 : 10000; // 3s for calendar checks, 10s for direct user selection
     
     const apiUrl = `${API_BASE_URL}/sessions/timeslots/${counsellorId}/${formattedDate}`;
-    console.log(`[API] Fetching timeslots for ${formattedDate}${isCalendarCheck ? ' (calendar check)' : ''}`);
+    // console.log(`[API] Fetching timeslots for ${formattedDate}${isCalendarCheck ? ' (calendar check)' : ''}`);
     
     const timeoutPromise = new Promise<Response>((_, reject) => {
       setTimeout(() => reject(new Error(`Timeout after ${timeoutMs}ms`)), timeoutMs);
@@ -66,7 +66,6 @@ const fetchTimeSlots = async (counsellorId: string, date: Date): Promise<TimeSlo
     
     const response = await Promise.race([
       fetch(apiUrl),
-      timeoutPromise
     ]) as Response;
     
     if (!response.ok) {
@@ -82,7 +81,7 @@ const fetchTimeSlots = async (counsellorId: string, date: Date): Promise<TimeSlo
     }
     
     if (!Array.isArray(slotsArray)) {
-      console.warn(`API response for ${formattedDate} is not an array:`, slotsArray);
+      // console.warn(`API response for ${formattedDate} is not an array:`, slotsArray);
       return [];
     }
     
@@ -93,21 +92,21 @@ const fetchTimeSlots = async (counsellorId: string, date: Date): Promise<TimeSlo
       isBooked: slot.isBooked || false
     }));
     
-    if (isCalendarCheck) {
-      console.log(`[API] Found ${formattedSlots.length} slots for ${formattedDate}, ${formattedSlots.filter(s => s.available).length} available`);
-    } else {
-      console.log(`[API] Timeslots for ${formattedDate}:`, formattedSlots);
-    }
+    // if (isCalendarCheck) {
+    //   console.log(`[API] Found ${formattedSlots.length} slots for ${formattedDate}, ${formattedSlots.filter(s => s.available).length} available`);
+    // } else {
+    //   console.log(`[API] Timeslots for ${formattedDate}:`, formattedSlots);
+    // }
     
     return formattedSlots;
   } catch (error) {
     const isCalendarCheck = !!(new Error()).stack?.includes('fetchMonthlyAvailability');
     
     if (isCalendarCheck) {
-      console.warn(`[API] Error fetching time slots for ${formattedDate} (availability check):`, error);
+      // console.warn(`[API] Error fetching time slots for ${formattedDate} (availability check):`, error);
       return []; 
     } else {
-      console.error(`[API] Error fetching time slots for ${formattedDate}:`, error);
+      // console.error(`[API] Error fetching time slots for ${formattedDate}:`, error);
       throw error;
     }
   }
@@ -139,14 +138,14 @@ const fetchMonthlyAvailability = async (counsellorId: string, year: number, mont
   const monthForApi = month + 1;
   const monthString = String(monthForApi).padStart(2, '0');
   
-  console.log(`[API] Fetching counselor availability for ${year}-${monthString}`);
+  // console.log(`[API] Fetching counselor availability for ${year}-${monthString}`);
   
   try {
     // Get the number of days in the month
     const daysInMonth = new Date(year, monthForApi, 0).getDate();
     const formattedData: { [dateKey: string]: { isAvailable: boolean, hasImmediateSlot?: boolean } } = {};
     
-    console.log(`[API] Checking availability for ${daysInMonth} days in ${year}-${monthString}`);
+    // console.log(`[API] Checking availability for ${daysInMonth} days in ${year}-${monthString}`);
     
     // Create an array of promises for fetching timeslots for each day
     const dayPromises = Array.from({ length: daysInMonth }, (_, i) => {
@@ -179,12 +178,12 @@ const fetchMonthlyAvailability = async (counsellorId: string, year: number, mont
             })
           };
           
-          console.log(`[API] Day ${dateKey}: ${hasAvailableSlot ? 'Available' : 'Not Available'} (${slots.length} slots, ${slots.filter(s => s.available).length} available)`);
+          // console.log(`[API] Day ${dateKey}: ${hasAvailableSlot ? 'Available' : 'Not Available'} (${slots.length} slots, ${slots.filter(s => s.available).length} available)`);
           
           return formattedData[dateKey];
         })
         .catch(error => {
-          console.warn(`[API] Failed to fetch timeslots for ${dateKey}:`, error);
+          // console.warn(`[API] Failed to fetch timeslots for ${dateKey}:`, error);
           // If we fail to fetch for a specific day, mark it as unavailable
           formattedData[dateKey] = { isAvailable: false };
           return formattedData[dateKey];
@@ -199,7 +198,7 @@ const fetchMonthlyAvailability = async (counsellorId: string, year: number, mont
     
     return formattedData;
   } catch (error) {
-    console.error('Error fetching monthly availability:', error);
+    // console.error('Error fetching monthly availability:', error);
     throw error;
   }
 };
@@ -269,7 +268,7 @@ export default function BookSessionScreen() {
       setCurrentOrderId(orderId);
 
     } catch (error: any) {
-      console.error('Payment initiation error:', error);
+      // console.error('Payment initiation error:', error);
       
       if (error.message?.includes('Network')) {
         Alert.alert('Network Error', 'Please check your internet connection and try again.');
@@ -327,7 +326,7 @@ export default function BookSessionScreen() {
       
       setMonthlyAvailability(availability);
     } catch (error) {
-      console.error('Failed to load monthly availability:', error);
+      // console.error('Failed to load monthly availability:', error);
       Alert.alert(
         'Error Loading Availability',
         'Could not load counselor availability. Please check your connection and try again.',
@@ -384,7 +383,7 @@ export default function BookSessionScreen() {
         console.log(`[Calendar] Loaded ${slots.length} time slots for ${selectedDate.toDateString()}, ${slots.filter(s => s.available).length} available`);
         setTimeSlots(slots);
       } catch (error) {
-        console.error('Failed to load time slots:', error);
+        // console.error('Failed to load time slots:', error);
         Alert.alert(
           'Error Loading Time Slots', 
           'Could not load available times for this date. Please try again.',
@@ -487,7 +486,7 @@ export default function BookSessionScreen() {
           if (!bookingResponse.ok) {
             // Get more details about the error
             const errorText = await bookingResponse.text();
-            console.error('🚫 API Error Response:', errorText);
+            // console.error('🚫 API Error Response:', errorText);
             throw new Error(`API error: ${bookingResponse.status}, ${errorText}`);
           }
           
@@ -501,7 +500,7 @@ export default function BookSessionScreen() {
             [{ text: 'OK', onPress: () => router.back() }]
           );
         } catch (error) {
-          console.error('❌ Error booking session:', error);
+          // console.error('❌ Error booking session:', error);
           
           // Even if booking API call fails, the payment was successful
           Alert.alert(
@@ -532,17 +531,17 @@ export default function BookSessionScreen() {
   // Handle WebView errors with detailed logging
   const handleWebViewError = (syntheticEvent: any) => {
     const { nativeEvent } = syntheticEvent;
-    console.error('WebView Error Details:', {
-      code: nativeEvent?.code,
-      description: nativeEvent?.description,
-      url: nativeEvent?.url,
-      domain: nativeEvent?.domain,
-      canGoBack: nativeEvent?.canGoBack,
-      canGoForward: nativeEvent?.canGoForward,
-      loading: nativeEvent?.loading,
-      title: nativeEvent?.title,
-      navigationType: nativeEvent?.navigationType,
-    });
+    // console.error('WebView Error Details:', {
+    //   code: nativeEvent?.code,
+    //   description: nativeEvent?.description,
+    //   url: nativeEvent?.url,
+    //   domain: nativeEvent?.domain,
+    //   canGoBack: nativeEvent?.canGoBack,
+    //   canGoForward: nativeEvent?.canGoForward,
+    //   loading: nativeEvent?.loading,
+    //   title: nativeEvent?.title,
+    //   navigationType: nativeEvent?.navigationType,
+    // });
     
     // Attempt to close WebView on error to prevent being stuck
     setShowWebView(false);
@@ -796,7 +795,7 @@ export default function BookSessionScreen() {
             onError={handleWebViewError}
             onHttpError={(syntheticEvent) => {
               const { nativeEvent } = syntheticEvent;
-              console.warn('WebView HTTP Error:', nativeEvent.statusCode, nativeEvent.description);
+              // console.warn('WebView HTTP Error:', nativeEvent.statusCode, nativeEvent.description);
             }}
             onLoadStart={(syntheticEvent) => {
               const { nativeEvent } = syntheticEvent;

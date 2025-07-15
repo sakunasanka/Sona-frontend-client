@@ -83,7 +83,7 @@ class ChatWebSocketService {
 
       this.setupEventListeners();
     } catch (error) {
-      console.error('Error connecting to Socket.IO:', error);
+      // console.error('Error connecting to Socket.IO:', error);
     }
   }
 
@@ -124,43 +124,43 @@ class ChatWebSocketService {
 
   // ✅ Enhanced error event logging
   this.socket.on('error', (error) => {
-    console.error('❌ SOCKET ERROR EVENT:');
-    console.error('Error:', error);
-    console.error('Error type:', typeof error);
-    console.error('Error constructor:', error?.constructor?.name);
+    // console.error('❌ SOCKET ERROR EVENT:');
+    // console.error('Error:', error);
+    // console.error('Error type:', typeof error);
+    // console.error('Error constructor:', error?.constructor?.name);
     
     if (error instanceof Error) {
-      console.error('Error name:', error.name);
-      console.error('Error message:', error.message);
-      console.error('Error stack:', error.stack);
+      // console.error('Error name:', error.name);
+      // console.error('Error message:', error.message);
+      // console.error('Error stack:', error.stack);
     }
     
-    console.error('Full error JSON:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
+    // console.error('Full error JSON:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
   });
 
   // ✅ Add engine error listeners
   this.socket.on('connect_timeout', () => {
-    console.error('❌ Connection timeout after', this.socket?.io?.opts?.timeout, 'ms');
+    // console.error('❌ Connection timeout after', this.socket?.io?.opts?.timeout, 'ms');
   });
 
   this.socket.on('reconnect_error', (error) => {
-    console.error('❌ Reconnection error:', error);
+    // console.error('❌ Reconnection error:', error);
   });
 
   this.socket.on('reconnect_failed', () => {
-    console.error('❌ Reconnection failed after maximum attempts');
+    // console.error('❌ Reconnection failed after maximum attempts');
   });
 
   // ✅ Transport-level error logging
   if (this.socket.io?.engine) {
     this.socket.io.engine.on('error', (error) => {
-      console.error('❌ ENGINE ERROR:');
-      console.error('Engine error:', error);
-      console.error('Transport name:', this.socket?.io?.engine?.transport?.name);
+      // console.error('❌ ENGINE ERROR:');
+      // console.error('Engine error:', error);
+      // console.error('Transport name:', this.socket?.io?.engine?.transport?.name);
     });
 
     this.socket.io.engine.on('close', (reason, description) => {
-      console.log('🔌 Engine closed:', { reason, description });
+      // console.log('🔌 Engine closed:', { reason, description });
     });
   }
 
@@ -219,7 +219,7 @@ class ChatWebSocketService {
 
     // Error handling
     this.socket.on('error', (error) => {
-      console.error('❌ Socket.IO error:', error);
+      // console.error('❌ Socket.IO error:', error);
     });
 
     // Test events
@@ -245,7 +245,7 @@ class ChatWebSocketService {
         type: 'text'
       });
     } else {
-      console.warn('Socket.IO not connected, cannot send message');
+      // console.warn('Socket.IO not connected, cannot send message');
     }
   }
 

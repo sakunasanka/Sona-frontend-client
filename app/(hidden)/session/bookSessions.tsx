@@ -118,7 +118,7 @@ let API_BASE_URL = '';
 if (Platform.OS === 'android') {
   API_BASE_URL = API_URL + ':' + PORT + '/api';
 } else {
-  API_BASE_URL = 'http://localhost:' + PORT + '/api';
+  API_BASE_URL = API_URL + ':' + PORT + '/api';
 }
 const formatMonthKey = (year: number, month: number): string => {
   return `${year}-${String(month + 1).padStart(2, '0')}`;
@@ -327,11 +327,11 @@ export default function BookSessionScreen() {
       setMonthlyAvailability(availability);
     } catch (error) {
       // console.error('Failed to load monthly availability:', error);
-      Alert.alert(
-        'Error Loading Availability',
-        'Could not load counselor availability. Please check your connection and try again.',
-        [{ text: 'Retry', onPress: () => handleMonthChange(year, month) }]
-      );
+      // Alert.alert(
+      //   'Error Loading Availability',
+      //   'Could not load counselor availability. Please check your connection and try again.',
+      //   [{ text: 'Retry', onPress: () => handleMonthChange(year, month) }]
+      // );
       setMonthlyAvailability({});
     } finally {
       setIsLoadingAvailability(false);
@@ -384,11 +384,11 @@ export default function BookSessionScreen() {
         setTimeSlots(slots);
       } catch (error) {
         // console.error('Failed to load time slots:', error);
-        Alert.alert(
-          'Error Loading Time Slots', 
-          'Could not load available times for this date. Please try again.',
-          [{ text: 'OK' }]
-        );
+        // Alert.alert(
+        //   'Error Loading Time Slots', 
+        //   'Could not load available times for this date. Please try again.',
+        //   [{ text: 'OK' }]
+        // );
         setTimeSlots([]);
       } finally {
         setIsLoadingSlots(false);

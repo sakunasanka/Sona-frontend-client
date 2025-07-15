@@ -7,11 +7,11 @@ import { LogoutButton } from '../../components/Buttons';
 
 export default function Profile() {
   const userData = {
-    name: 'Sakuna Sanka',
+    name: 'hiruna',
     nickname: 'John',
     dob: '23/05/2003',
-    email: 'john.s@example.com',
-    joinDate: 'January 2023',
+    email: 'hiruna.pramuthitha1@gmail.com',
+    joinDate: 'July 2025',
     checkins: 24,
     goals: 18,
     streak: 36

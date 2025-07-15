@@ -202,11 +202,6 @@ export default function CounselorsScreen() {
       </View>
     
       <View className="flex-1 bg-gray-50 rounded-t-3xl pt-6">
-        <SearchBar 
-          placeholder="Search by name or specialty..."
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
     
         <FlatList
           data={filteredCounselors}

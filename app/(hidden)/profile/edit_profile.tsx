@@ -22,7 +22,7 @@ interface UserData {
 
 export default function EditProfile() {
   const [user, setUser] = useState<UserData>({
-    name: 'Sakuna Sanka',
+    name: 'hiruna',
     nickname: 'John',
     dob: '23/05/2003',
     email: 'john.s@example.com'

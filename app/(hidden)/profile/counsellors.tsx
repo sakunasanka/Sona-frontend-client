@@ -1,18 +1,24 @@
+import { checkIsStudent } from '@/api/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
-import { ArrowLeft, Clock, Filter, Star, Video } from 'lucide-react-native';
-import React, { useMemo, useState } from 'react';
+import { ArrowLeft, Clock, GraduationCap, Star, Video } from 'lucide-react-native';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
-  FlatList,
-  Image,
-  SafeAreaView,
-  StatusBar,
-  Text,
-  TouchableOpacity,
-  View
+    Dimensions,
+    FlatList,
+    Image,
+    SafeAreaView,
+    ScrollView,
+    StatusBar,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { PrimaryButton } from '../../components/Buttons';
-import SearchBar from '../../components/SearchBar';
 import SpecialtyTabs from '../../components/SpecialtyTabs';
+
+// Get screen dimensions for proper sizing
+const { width: screenWidth } = Dimensions.get('window');
 
 interface Counselor {
   id: string;
@@ -27,6 +33,8 @@ interface Counselor {
   isOnline: boolean;
   nextAvailable: string;
   languages: string[];
+  counselorType: 'free' | 'paid_with_free_student' | 'paid_only'; // Type of counselor pricing model
+  providesStudentSessions: boolean; // Indicates if this counselor provides free sessions for students
 }
 
 const COUNSELORS_DATA: Counselor[] = [
@@ -43,6 +51,8 @@ const COUNSELORS_DATA: Counselor[] = [
     isOnline: true,
     nextAvailable: 'Available now',
     languages: ['English', 'Spanish'],
+    counselorType: 'paid_with_free_student',
+    providesStudentSessions: true,
   },
   {
     id: '2',
@@ -57,6 +67,8 @@ const COUNSELORS_DATA: Counselor[] = [
     isOnline: false,
     nextAvailable: 'Tomorrow 2:00 PM',
     languages: ['English', 'Mandarin'],
+    counselorType: 'paid_only',
+    providesStudentSessions: false,
   },
   {
     id: '3',
@@ -71,11 +83,71 @@ const COUNSELORS_DATA: Counselor[] = [
     isOnline: true,
     nextAvailable: 'Available in 30 min',
     languages: ['English'],
+    counselorType: 'paid_with_free_student',
+    providesStudentSessions: true,
   },
+  {
+    id: '4',
+    name: 'Dr. Priya Kumar',
+    title: 'Student Counselor',
+    specialties: ['Academic Stress', 'Career Guidance', 'Student Wellbeing'],
+    rating: 4.9,
+    reviews: 112,
+    experience: '5 years',
+    price: 'Free',
+    avatar: 'https://images.pexels.com/photos/3760583/pexels-photo-3760583.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&fit=crop',
+    isOnline: true,
+    nextAvailable: 'Available now',
+    languages: ['English', 'Hindi', 'Tamil'],
+    counselorType: 'free',
+    providesStudentSessions: true,
+  },
+  {
+    id: '5',
+    name: 'Dr. James Wilson',
+    title: 'University Mental Health Specialist',
+    specialties: ['Exam Anxiety', 'Student Life', 'Stress Management'],
+    rating: 4.8,
+    reviews: 94,
+    experience: '7 years',
+    price: 'Free',
+    avatar: 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&fit=crop',
+    isOnline: false,
+    nextAvailable: 'Today 4:00 PM',
+    languages: ['English'],
+    counselorType: 'free',
+    providesStudentSessions: true,
+  }
 ];
 
-const CounselorCard = ({ counselor }: { counselor: Counselor }) => {
+const CounselorCard = ({ counselor, isUserStudent, freeSessionsRemaining }: { counselor: Counselor, isUserStudent: boolean, freeSessionsRemaining: number }) => {
   const [imageError, setImageError] = useState(false);
+
+  // Determine the pricing display based on counselor type and student status
+  const getPriceDisplay = () => {
+    if (counselor.counselorType === 'free') {
+      return (
+        <View>
+          <Text className="text-green-600 font-semibold">Free for All</Text>
+          <Text className="text-xs text-gray-500">Volunteer Counselor</Text>
+        </View>
+      );
+    } else if (counselor.counselorType === 'paid_with_free_student' && isUserStudent && freeSessionsRemaining > 0) {
+      return (
+        <View>
+          <Text className="text-gray-500 line-through text-xs">{counselor.price}</Text>
+          <Text className="text-green-600 font-semibold">Free for Students</Text>
+        </View>
+      );
+    } else {
+      return (
+        <View>
+          <Text className="text-green font-semibold">{counselor.price}</Text>
+          <Text className="text-xs text-gray-500">{counselor.experience}</Text>
+        </View>
+      );
+    }
+  };
 
   return (
     <View className="bg-white rounded-2xl p-5 mb-4 shadow">
@@ -115,8 +187,7 @@ const CounselorCard = ({ counselor }: { counselor: Counselor }) => {
           </View>
         </View>
         <View className="items-end justify-start">
-          <Text className="text-green font-semibold">{counselor.price}</Text>
-          <Text className="text-xs text-gray-500">{counselor.experience}</Text>
+          {getPriceDisplay()}
         </View>
       </View>
 
@@ -129,6 +200,19 @@ const CounselorCard = ({ counselor }: { counselor: Counselor }) => {
             {specialty}
           </Text>
         ))}
+        
+        {/* Show appropriate counselor type badge */}
+        {counselor.counselorType === 'free' ? (
+          <View className="flex-row items-center bg-green-100 px-3 py-1 rounded-xl">
+            <GraduationCap size={12} color="#059669" className="mr-1" />
+            <Text className="text-xs text-green-700 font-medium">Free Counselor</Text>
+          </View>
+        ) : counselor.providesStudentSessions && isUserStudent ? (
+          <View className="flex-row items-center bg-indigo-100 px-3 py-1 rounded-xl">
+            <GraduationCap size={12} color="#4F46E5" className="mr-1" />
+            <Text className="text-xs text-indigo-700 font-medium">Student Sessions</Text>
+          </View>
+        ) : null}
       </View>
 
       <View className="flex-row items-center mb-2">
@@ -141,15 +225,33 @@ const CounselorCard = ({ counselor }: { counselor: Counselor }) => {
         <Text className="text-sm text-gray-700">{counselor.languages.join(', ')}</Text>
       </View>
 
+      {/* Show free session badge for students with remaining sessions */}
+      {isUserStudent && counselor.providesStudentSessions && freeSessionsRemaining > 0 ? (
+        <View className="mb-3 bg-green-50 p-2 rounded-lg">
+          <Text className="text-green-700 text-xs font-medium">
+            {counselor.counselorType === 'free' 
+              ? "✓ Free sessions available for everyone" 
+              : `✓ ${freeSessionsRemaining} free student sessions remaining this month`}
+          </Text>
+        </View>
+      ) : isUserStudent && counselor.providesStudentSessions && freeSessionsRemaining === 0 ? (
+        <View className="mb-3 bg-yellow-50 p-2 rounded-lg">
+          <Text className="text-yellow-700 text-xs font-medium">
+            ⓘ No free student sessions left this month
+          </Text>
+        </View>
+      ) : null}
+
       <View className="flex-row gap-3">
-        {/* <SecondaryButton 
-            title="Message" 
-            onPress={() => {}} 
-            icon={MessageCircle}
-          /> */}
         <PrimaryButton 
             title="Book Session" 
-            onPress={() => {router.push('../session/bookSessions')}} 
+            onPress={() => {
+              // Pass the counselor ID to the booking screen
+              router.push({
+                pathname: '../session/bookSessions',
+                params: { counselorId: counselor.id }
+              });
+            }} 
             icon={Video}
           />
       </View>
@@ -158,29 +260,87 @@ const CounselorCard = ({ counselor }: { counselor: Counselor }) => {
 };
 
 export default function CounselorsScreen() {
-  const [searchQuery, setSearchQuery] = useState('');
   const [selectedSpecialty, setSelectedSpecialty] = useState('All');
+  const [isStudent, setIsStudent] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [selectedTab, setSelectedTab] = useState<string>('all');
+  const [freeSessionsRemaining, setFreeSessionsRemaining] = useState<number>(4); // Default to 4 free sessions per month
+
+  // Check if user is a student when component mounts
+  useEffect(() => {
+    const checkStudentStatus = async () => {
+      try {
+        const token = await AsyncStorage.getItem('token');
+        if (token) {
+          const studentStatus = await checkIsStudent(token);
+          setIsStudent(studentStatus);
+          
+          // If student, fetch remaining free sessions
+          if (studentStatus) {
+            // In a real app, you would fetch this from an API
+            // For now, we'll mock 4 free sessions per month for students
+            setFreeSessionsRemaining(4);
+          }
+        }
+      } catch (error) {
+        console.error('Error checking student status:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    checkStudentStatus();
+  }, []);
+
+  // Simple filter tabs for Free and Paid counselors
+  const tabFilters = [
+    { id: 'all', label: 'All Counselors' },
+    { id: 'free', label: 'Free Counselors' },
+    { id: 'paid', label: 'Paid Counselors' }
+  ];
 
   const filteredCounselors = useMemo(() => {
     let filtered = COUNSELORS_DATA;
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (counselor) =>
-          counselor.name.toLowerCase().includes(query) ||
-          counselor.title.toLowerCase().includes(query) ||
-          counselor.specialties.some((specialty) => specialty.toLowerCase().includes(query))
-      );
-    }
+    
+    // Filter by specialty
     if (selectedSpecialty !== 'All') {
       filtered = filtered.filter((counselor) => counselor.specialties.includes(selectedSpecialty));
     }
+    
+    // Filter by tab selection
+    if (selectedTab !== 'all') {
+      if (selectedTab === 'free') {
+        // For free tab, include:
+        // 1. Counselors that are free for everyone
+        // 2. For students, also include counselors that offer free student sessions (if they have sessions remaining)
+        filtered = filtered.filter((counselor) => 
+          counselor.counselorType === 'free' || 
+          (isStudent && counselor.providesStudentSessions && freeSessionsRemaining > 0)
+        );
+      } else if (selectedTab === 'paid') {
+        // For paid tab, include:
+        // 1. Paid-only counselors
+        // 2. Paid counselors with student sessions, but only if:
+        //    - User is not a student, OR
+        //    - User is a student but has no free sessions remaining
+        filtered = filtered.filter((counselor) => 
+          counselor.counselorType === 'paid_only' || 
+          (counselor.counselorType === 'paid_with_free_student' && 
+            (!isStudent || (isStudent && freeSessionsRemaining === 0)))
+        );
+      }
+    }
+    
+    // Sort the filtered counselors
     return filtered.sort((a, b) => {
+      // Prioritize online counselors
       if (a.isOnline && !b.isOnline) return -1;
       if (!a.isOnline && b.isOnline) return 1;
+      
+      // Then by rating
       return b.rating - a.rating;
     });
-  }, [searchQuery, selectedSpecialty]);
+  }, [selectedSpecialty, selectedTab, isStudent, freeSessionsRemaining]);
 
   return (
     <SafeAreaView className="flex-1 bg-primary">
@@ -192,23 +352,95 @@ export default function CounselorsScreen() {
         </TouchableOpacity>
 
         <Text className="text-white text-lg font-semibold">Find a Counselor</Text>
-        <TouchableOpacity>
-          <Filter size={24} color="white" />
-        </TouchableOpacity>
+        <View className="w-6" />
       </View>
 
+      {/* Specialty tabs remain in the blue header */}
       <View className="py-2 bg-primary">
         <SpecialtyTabs selected={selectedSpecialty} onSelect={setSelectedSpecialty} />
       </View>
     
-      <View className="flex-1 bg-gray-50 rounded-t-3xl pt-6">
-    
+      <View className="flex-1 bg-gray-50 rounded-t-3xl">
+        {/* Added proper padding at the top */}
+        <View className="pt-6">
+          {/* Student badge at the top if user is a student */}
+          {isStudent && (
+            <View className="mx-5 mb-4 bg-indigo-50 p-3 rounded-xl flex-row items-center">
+              <GraduationCap size={20} color="#4F46E5" />
+              <View className="ml-3 flex-1">
+                <Text className="text-indigo-900 font-semibold">Student Benefits Active</Text>
+                <Text className="text-indigo-700 text-sm">
+                  {freeSessionsRemaining > 0 
+                    ? `You have ${freeSessionsRemaining} free counseling sessions remaining this month` 
+                    : "You've used all your free sessions this month"}
+                </Text>
+              </View>
+            </View>
+          )}
+          
+          {/* Counselor type filters in a ScrollView with fixed height to prevent overlap */}
+          <View className="h-10 mb-4">
+            <ScrollView 
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ paddingHorizontal: 16 }}
+            >
+              {tabFilters.map((filter) => {
+                const isActive = selectedTab === filter.id;
+                return (
+                  <TouchableOpacity
+                    key={filter.id}
+                    onPress={() => setSelectedTab(filter.id)}
+                    style={{ 
+                      height: 26,
+                      paddingHorizontal: 12,
+                      paddingVertical: 4,
+                      marginRight: 8,
+                      borderRadius: 9999,
+                      borderWidth: 1,
+                      borderColor: isActive ? '#2563EB' : '#D1D5DB',
+                      backgroundColor: isActive ? '#2563EB' : '#FFFFFF'
+                    }}
+                  >
+                    <Text 
+                      style={{ 
+                        fontSize: 12,
+                        fontWeight: '500',
+                        color: isActive ? '#FFFFFF' : '#4B5563'
+                      }}
+                    >
+                      {filter.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+        </View>
+      
+        {/* Counselor list with proper width and padding */}
         <FlatList
           data={filteredCounselors}
           keyExtractor={(item) => item.id}
-          renderItem={({ item }) => <CounselorCard counselor={item} />}
-          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 20 }}
+          renderItem={({ item }) => (
+            <View className="px-5 w-full">
+              <CounselorCard 
+                counselor={item} 
+                isUserStudent={isStudent} 
+                freeSessionsRemaining={freeSessionsRemaining} 
+              />
+            </View>
+          )}
+          contentContainerStyle={{ paddingBottom: 20 }}
           showsVerticalScrollIndicator={false}
+          ListEmptyComponent={() => (
+            <View className="items-center justify-center py-12 px-5">
+              <Text className="text-gray-500 text-lg font-medium">No counselors found</Text>
+              <Text className="text-gray-400 text-center mt-2 px-8">
+                Try adjusting your filters
+              </Text>
+            </View>
+          )}
         />
       </View>
     </SafeAreaView>

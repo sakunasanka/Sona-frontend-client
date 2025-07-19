@@ -1,12 +1,13 @@
+import { checkIsStudent } from '@/api/api';
 import { API_URL, PORT } from '@/config/env';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
-import { ArrowLeft, Calendar, Check, ChevronDown, Clock, ExternalLink, Filter, MessageCircle, Search, Star, User } from 'lucide-react-native';
+import { ArrowLeft, Calendar, Check, ChevronDown, Clock, ExternalLink, Filter, GraduationCap, MessageCircle, Search, User } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Image, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 // Define types
-type SessionStatus = 'upcoming' | 'today' | 'past' | 'all';
+type SessionStatus = 'upcoming' | 'today' | 'past' | 'all' | 'student' | 'free';
 type FilterOption = {
     label: string;
     value: string;
@@ -26,6 +27,8 @@ type Session = {
     status: SessionStatus;
     timeSlot?: string;
     sessionStatus?: string;
+    isStudentSession?: boolean; // Indicates if this is a free student session
+    isFreeForAll?: boolean; // Indicates if this session is free for everyone
 };
 
 let API_BASE_URL = '';
@@ -47,6 +50,24 @@ export default function SessionHistory() {
     const [showCounselorDropdown, setShowCounselorDropdown] = useState<boolean>(false);
     const [searchTerm, setSearchTerm] = useState<string>('');
     const [dateSearchTerm, setDateSearchTerm] = useState<string>('');
+    const [isStudent, setIsStudent] = useState<boolean>(false);
+
+    // Check if user is a student
+    useEffect(() => {
+        const checkStudentStatus = async () => {
+            try {
+                const token = await AsyncStorage.getItem('token');
+                if (token) {
+                    const studentStatus = await checkIsStudent(token);
+                    setIsStudent(studentStatus);
+                }
+            } catch (error) {
+                console.error('Error checking student status:', error);
+            }
+        };
+        
+        checkStudentStatus();
+    }, []);
 
     // Extract fetchSessions to reuse it
     const fetchSessions = async () => {
@@ -112,6 +133,12 @@ export default function SessionHistory() {
                     // Format according to the new API structure
                     const counselor = session.counselor || {};
                     
+                    // Check if this is a student session (price is 0 and user is a student)
+                    const isStudentSession = (session.price === 0 || session.fee === 0) && isStudent && session.counselorType === 'paid_with_free_student';
+                    
+                    // Check if this is a free for all session (counselor type is 'free')
+                    const isFreeForAll = session.counselorType === 'free';
+                    
                     return {
                         id: session.id?.toString() || '',
                         date: `${session.date}T${session.timeSlot || '00:00'}:00`, // Combine date and time
@@ -125,7 +152,9 @@ export default function SessionHistory() {
                         rating: 5, // Default rating if not provided
                         status: getSessionStatus(`${session.date}T${session.timeSlot || '00:00'}:00`),
                         timeSlot: session.timeSlot || '',
-                        sessionStatus: session.status || 'scheduled'
+                        sessionStatus: session.status || 'scheduled',
+                        isStudentSession: isStudentSession,
+                        isFreeForAll: isFreeForAll
                     };
                 } catch (err) {
                     console.error('Error processing session:', err, session);
@@ -217,12 +246,31 @@ export default function SessionHistory() {
         }
     };
     
-    // Filter sessions based on selected filters
+    // Simplified filter options
+    const filterOptions = [
+        { id: 'all', label: 'All Sessions' },
+        { id: 'upcoming', label: 'Upcoming' },
+        { id: 'past', label: 'Past' }
+    ];
+    
+    // Add free sessions filter if user is a student
+    if (isStudent) {
+        filterOptions.push({ id: 'student', label: 'Student Free Sessions' });
+    }
+    
+    // Add general free sessions filter
+    filterOptions.push({ id: 'free', label: 'Free Sessions' });
+
+    // Update the filtered sessions to include free session filter
     const filteredSessions = React.useMemo(() => {
         return sessions.filter(session => {
             if (!session.date || !session.counselorId) return false;
             
-            if (activeFilter !== 'all' && session.status !== activeFilter) {
+            if (activeFilter === 'student' && !session.isStudentSession) {
+                return false;
+            } else if (activeFilter === 'free' && !session.isFreeForAll) {
+                return false;
+            } else if (activeFilter !== 'all' && activeFilter !== 'student' && activeFilter !== 'free' && session.status !== activeFilter) {
                 return false;
             }
             
@@ -421,12 +469,7 @@ export default function SessionHistory() {
                 </View>
                 
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-4">
-                    {[
-                        { id: 'all', label: 'All Sessions' },
-                        { id: 'upcoming', label: 'Upcoming' },
-                        { id: 'today', label: 'Today' },
-                        { id: 'past', label: 'Past' }
-                    ].map((tab) => (
+                    {filterOptions.map((tab) => (
                         <TouchableOpacity
                             key={tab.id}
                             onPress={() => setActiveFilter(tab.id as SessionStatus)}
@@ -515,160 +558,134 @@ export default function SessionHistory() {
                     )}
                 </View>
                 
-                {sessions.length === 0 ? (
-                    <View className="bg-white rounded-lg p-6 shadow-sm items-center justify-center">
-                        <Calendar size={40} color="#CBD5E0" />
-                        <Text className="text-gray-800 font-medium text-center mt-3 text-lg">
-                            No Sessions Found
+                {filteredSessions.length === 0 ? (
+                    <View className="items-center justify-center py-12">
+                        <Calendar size={48} color="#9CA3AF" />
+                        <Text className="text-gray-500 text-lg font-medium mt-4">No sessions found</Text>
+                        <Text className="text-gray-400 text-center mt-2 px-8">
+                            {activeFilter === 'upcoming' 
+                                ? "You don't have any upcoming sessions. Book a session with a counselor to get started."
+                                : activeFilter === 'student'
+                                ? "You don't have any free student sessions. Book a session with a counselor that offers free student sessions."
+                                : activeFilter === 'free'
+                                ? "You don't have any free sessions. Book a session with a free counselor."
+                                : "No sessions match your current filters. Try adjusting your filters or search terms."}
                         </Text>
-                        <Text className="text-gray-500 text-center mt-1 text-base">
-                            You haven't booked any sessions yet.
-                        </Text>
-                        <TouchableOpacity
-                            onPress={() => router.push('/(tabs)/counsellor')}
-                            className="mt-4 bg-primary px-6 py-3 rounded-md"
-                        >
-                            <Text className="text-white font-medium">Find a Counsellor</Text>
-                        </TouchableOpacity>
-                    </View>
-                ) : filteredSessions.length === 0 ? (
-                    <View className="bg-white rounded-lg p-6 shadow-sm items-center justify-center">
-                        <Filter size={40} color="#CBD5E0" />
-                        <Text className="text-gray-800 font-medium text-center mt-3 text-lg">
-                            No Matching Sessions
-                        </Text>
-                        <Text className="text-gray-500 text-center mt-1 text-base">
-                            No sessions found with the current filters
-                        </Text>
-                        <TouchableOpacity
-                            onPress={() => {
-                                setActiveFilter('all');
-                                setSelectedCounselor('all');
-                                setSearchTerm('');
-                                setDateSearchTerm('');
-                            }}
-                            className="mt-3 bg-primary px-4 py-2 rounded-md"
-                        >
-                            <Text className="text-white font-medium">Reset Filters</Text>
-                        </TouchableOpacity>
+                        {activeFilter === 'upcoming' && (
+                            <TouchableOpacity 
+                                className="mt-6 bg-primary px-6 py-3 rounded-lg"
+                                onPress={() => router.push('/(hidden)/profile/counsellors')}
+                            >
+                                <Text className="text-white font-medium">Find a Counselor</Text>
+                            </TouchableOpacity>
+                        )}
                     </View>
                 ) : (
-                    filteredSessions.map((session) => (
-                        <View key={session.id} className="bg-white rounded-xl shadow-sm mb-4 overflow-hidden">
-                            <View className={`px-4 py-2 flex-row justify-between items-center ${
-                                session.status === 'upcoming' ? 'bg-blue-600' : 
-                                session.status === 'today' ? 'bg-green-600' : 'bg-primary'
-                            }`}>
-                                <View className="flex-row items-center">
-                                    <Calendar size={16} color="white" />
-                                    <Text className="text-white font-medium ml-2">
-                                        {formatSessionDate(session.date)}
-                                    </Text>
-                                </View>
-                                <View className="flex-row items-center">
-                                    <View className={`rounded-full px-3 py-1 ${
-                                        session.status === 'upcoming' ? 'bg-blue-800' : 
-                                        session.status === 'today' ? 'bg-green-800' : 'bg-primary/80'
-                                    }`}>
-                                        <Text className="text-white text-xs font-semibold">
-                                            {session.status === 'upcoming' ? 'Upcoming' : 
-                                             session.status === 'today' ? 'Today' : 'Past'}
+                    <View>
+                        {filteredSessions.map((session) => (
+                            <View 
+                                key={session.id} 
+                                className={`bg-white rounded-xl p-4 mb-4 shadow-sm ${
+                                    session.status === 'today' ? 'border-l-4 border-primary' : ''
+                                }`}
+                            >
+                                <View className="flex-row items-center justify-between mb-3">
+                                    <View className="flex-row items-center">
+                                        <View className="w-2 h-2 rounded-full mr-2 bg-primary" />
+                                        <Text className="text-primary font-medium">
+                                            {session.status === 'past' ? 'Completed' : 'Scheduled'}
                                         </Text>
                                     </View>
-                                    {session.sessionStatus && (
-                                        <View className="rounded-full px-3 py-1 bg-gray-700 ml-2">
-                                            <Text className="text-white text-xs font-semibold capitalize">
-                                                {session.sessionStatus}
-                                            </Text>
+                                    
+                                    {/* Show appropriate session badge */}
+                                    {session.isFreeForAll ? (
+                                        <View className="flex-row items-center bg-green-100 px-2 py-1 rounded-lg">
+                                            <GraduationCap size={12} color="#059669" />
+                                            <Text className="text-xs text-green-700 font-medium ml-1">Free Session</Text>
                                         </View>
-                                    )}
+                                    ) : session.isStudentSession ? (
+                                        <View className="flex-row items-center bg-indigo-100 px-2 py-1 rounded-lg">
+                                            <GraduationCap size={12} color="#4F46E5" />
+                                            <Text className="text-xs text-indigo-700 font-medium ml-1">Free Student Session</Text>
+                                        </View>
+                                    ) : null}
                                 </View>
-                            </View>
-                            
-                            <View className="p-4">
-                                <View className="flex-row items-center mb-3">
-                                    <Image 
-                                        source={{ 
-                                            uri: session.counselorImage && session.counselorImage.startsWith('http')
-                                                ? session.counselorImage
-                                                : 'https://via.placeholder.com/100' 
-                                        }}
-                                        className="w-12 h-12 rounded-full"
-                                        defaultSource={require('@/assets/images/icon.png')}
-                                    />
-                                    <View className="ml-3 flex-1">
-                                        <Text className="font-semibold text-gray-800">
-                                            {session.counselorName || 'Unknown Counselor'}
+                                
+                                <View className="flex-row mb-4">
+                                    <View className="w-12 h-12 rounded-full bg-gray-200 overflow-hidden mr-3">
+                                        {session.counselorImage ? (
+                                            <Image 
+                                                source={{ uri: session.counselorImage }}
+                                                className="w-full h-full"
+                                                resizeMode="cover"
+                                            />
+                                        ) : (
+                                            <View className="w-full h-full bg-gray-300 justify-center items-center">
+                                                <User size={24} color="#9CA3AF" />
+                                            </View>
+                                        )}
+                                    </View>
+                                    <View className="flex-1">
+                                        <Text className="text-lg font-semibold text-gray-900">
+                                            {session.counselorName}
                                         </Text>
                                         <View className="flex-row items-center">
-                                            <Star size={14} color="#F59E0B" />
-                                            <Text className="text-gray-600 text-sm ml-1">
-                                                {session.rating || '0'} · {Array.isArray(session.specialties) && session.specialties.length > 0 
-                                                ? session.specialties.join(', ') 
-                                                : 'General Counseling'}
+                                            <Clock size={14} color="#6B7280" className="mr-1" />
+                                            <Text className="text-gray-500">
+                                                {formatSessionDate(session.date)} • {formatSessionTime(session.date, session.timeSlot)}
                                             </Text>
                                         </View>
                                     </View>
+                                    <View className="items-end">
+                                        <Text className="text-gray-900 font-semibold">
+                                            {session.isFreeForAll || session.isStudentSession ? 'FREE' : `Rs.${session.fee}`}
+                                        </Text>
+                                        <Text className="text-gray-500 text-sm">{session.duration} min</Text>
+                                    </View>
                                 </View>
                                 
-                                <View className="mb-4">
-                                    <View className="flex-row items-center mb-2">
-                                        <Clock size={16} color="#4B5563" />
-                                        <Text className="text-gray-600 ml-2">
-                                            {formatSessionTime(session.date, session.timeSlot)} · {session.duration} minutes
-                                        </Text>
-                                    </View>
-                                    
-                                    <View className="flex-row items-center mb-2">
-                                        <View className="px-3 py-1 rounded-full bg-green-50">
-                                            <Text className="font-bold text-green-600">
-                                                Rs. {session.fee 
-                                                    ? typeof session.fee === 'number' 
-                                                        ? session.fee.toLocaleString() 
-                                                        : typeof session.fee === 'string' 
-                                                            ? session.fee.replace(/[^0-9]/g, '') || 'N/A'
-                                                            : 'N/A'
-                                                    : 'N/A'
-                                                }
-                                            </Text>
-                                        </View>
-                                    </View>
-                                    
-                                    {session.notes && (
-                                        <Text className="text-gray-700 mt-2" numberOfLines={2}>
-                                            {session.notes}
-                                        </Text>
-                                    )}
-                                </View>
-                                
-                                <View className="flex-row justify-between mt-3 pt-3 border-t border-gray-100">
-                                    <TouchableOpacity 
-                                        className="flex-row items-center justify-center py-2 px-2 bg-gray-100 rounded-lg flex-1 mr-2"
-                                        onPress={() => handleViewCounselorProfile(session.counselorId)}
-                                    >
-                                        <User size={16} color="#4B5563" />
-                                        <Text className="text-gray-700 font-medium ml-1 text-sm">Profile</Text>
-                                    </TouchableOpacity>
-                                    
-                                    <TouchableOpacity 
-                                        className="flex-row items-center justify-center py-2 px-2 bg-blue-500 rounded-lg flex-1 mr-2"
-                                        onPress={() => handleBookSession(session.counselorId)}
-                                    >
-                                        <Calendar size={16} color="white" />
-                                        <Text className="text-white font-medium ml-1 text-sm">Book</Text>
-                                    </TouchableOpacity>
-                                    
-                                    <TouchableOpacity 
-                                        className="flex-row items-center justify-center py-2 px-2 bg-primary rounded-lg flex-1"
+                                <View className="flex-row justify-between mt-2">
+                                    <TouchableOpacity
+                                        className="flex-1 mr-2 py-2 bg-gray-100 rounded-lg items-center justify-center flex-row"
                                         onPress={() => handleChatWithCounselor(session.counselorId)}
                                     >
-                                        <MessageCircle size={16} color="white" />
-                                        <Text className="text-white font-medium ml-1 text-sm">Chat</Text>
+                                        <MessageCircle size={16} color="#4B5563" className="mr-1" />
+                                        <Text className="text-gray-700 font-medium">Message</Text>
                                     </TouchableOpacity>
+                                    
+                                    {session.status !== 'past' ? (
+                                        <TouchableOpacity
+                                            className="flex-1 ml-2 py-2 bg-primary rounded-lg items-center justify-center flex-row"
+                                            onPress={() => {
+                                                // Navigate to join session screen (would be implemented in a real app)
+                                                Alert.alert('Join Session', 'This would navigate to the video call screen in a real app.');
+                                            }}
+                                        >
+                                            <ExternalLink size={16} color="#FFFFFF" className="mr-1" />
+                                            <Text className="text-white font-medium">Join Session</Text>
+                                        </TouchableOpacity>
+                                    ) : (
+                                        <TouchableOpacity
+                                            className="flex-1 ml-2 py-2 bg-primary rounded-lg items-center justify-center flex-row"
+                                            onPress={() => handleBookSession(session.counselorId)}
+                                        >
+                                            <Calendar size={16} color="#FFFFFF" className="mr-1" />
+                                            <Text className="text-white font-medium">Book Again</Text>
+                                        </TouchableOpacity>
+                                    )}
                                 </View>
                             </View>
-                        </View>
-                    ))
+                        ))}
+                    </View>
+                )}
+                
+                {isStudent && (
+                    <View className="mx-4 mt-4 mb-2 bg-indigo-50 p-3 rounded-xl">
+                        <Text className="text-indigo-900 font-semibold">Student Benefits</Text>
+                        <Text className="text-indigo-700 text-sm mt-1">
+                            You get 4 free counseling sessions each month
+                        </Text>
+                    </View>
                 )}
                 
                 <TouchableOpacity

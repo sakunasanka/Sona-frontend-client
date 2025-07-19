@@ -1,9 +1,10 @@
 //16
+import { checkIsStudent } from "@/api/api";
 import { createPaymentLink } from "@/api/payment";
 import { API_URL, PORT } from "@/config/env";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { router } from "expo-router";
-import { ArrowLeft } from 'lucide-react-native';
+import { router, useLocalSearchParams } from "expo-router";
+import { ArrowLeft, GraduationCap } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -38,6 +39,7 @@ interface PaymentMethod {
   isDefault: boolean;
 }
 
+// Update the MOCK_COUNSELOR interface to include counselor type
 const MOCK_COUNSELOR = {
   id: '1',
   name: 'Dr. Ugo David',
@@ -45,6 +47,8 @@ const MOCK_COUNSELOR = {
   avatar: 'https://images.pexels.com/photos/5327585/pexels-photo-5327585.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&fit=crop',
   specialties: ['Anxiety', 'Depression', 'Trauma'],
   rating: 4.9,
+  providesStudentSessions: true, // Indicates if this counselor provides free sessions for students
+  counselorType: 'paid_with_free_student', // Type of counselor pricing model: 'free', 'paid_with_free_student', or 'paid_only'
 };
 
 const fetchTimeSlots = async (counsellorId: string, date: Date): Promise<TimeSlot[]> => {
@@ -204,6 +208,9 @@ const fetchMonthlyAvailability = async (counsellorId: string, year: number, mont
 };
 
 export default function BookSessionScreen() {
+  const params = useLocalSearchParams();
+  const counselorId = params.counselorId as string;
+  
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedTime, setSelectedTime] = useState<string>('');
   const [selectedSessionType, setSelectedSessionType] = useState<string>('video');
@@ -214,6 +221,11 @@ export default function BookSessionScreen() {
   const [monthlyAvailability, setMonthlyAvailability] = useState<{[dateKey: string]: {isAvailable: boolean, hasImmediateSlot?: boolean}}>({});
   const [isLoadingAvailability, setIsLoadingAvailability] = useState<boolean>(false);
   const [monthCache, setMonthCache] = useState<{[key: string]: {[dateKey: string]: {isAvailable: boolean, hasImmediateSlot?: boolean}}}>({});
+  
+  // Student-specific states
+  const [isStudent, setIsStudent] = useState<boolean>(false);
+  const [isCheckingStudentStatus, setIsCheckingStudentStatus] = useState<boolean>(true);
+  const [freeSessionsRemaining, setFreeSessionsRemaining] = useState<number>(0);
 
   // WebView states for payment processing
   const [showWebView, setShowWebView] = useState(false);
@@ -223,6 +235,54 @@ export default function BookSessionScreen() {
   const [validationErrors, setValidationErrors] = useState<{
     timeSlot?: boolean;
   }>({});
+
+  // Check if user is a student when component mounts
+  useEffect(() => {
+    const checkStudentStatus = async () => {
+      try {
+        const token = await AsyncStorage.getItem('token');
+        if (token) {
+          const studentStatus = await checkIsStudent(token);
+          setIsStudent(studentStatus);
+          
+          // If student, fetch remaining free sessions
+          if (studentStatus) {
+            // In a real app, you would fetch this from an API
+            // For now, we'll mock 4 free sessions per month for students
+            setFreeSessionsRemaining(4);
+          }
+        }
+      } catch (error) {
+        console.error('Error checking student status:', error);
+      } finally {
+        setIsCheckingStudentStatus(false);
+      }
+    };
+    
+    checkStudentStatus();
+  }, []);
+
+  // Function to get counselor details based on ID
+  useEffect(() => {
+    // In a real app, you would fetch the counselor details from an API
+    // For now, we'll use the mock data
+    console.log(`Loading counselor details for ID: ${counselorId}`);
+  }, [counselorId]);
+
+  // Function to determine if the session is free
+  const isSessionFree = () => {
+    // Free for everyone if counselor type is 'free'
+    if (MOCK_COUNSELOR.counselorType === 'free') {
+      return true;
+    }
+    
+    // Free for students if counselor provides student sessions and user is a student and has free sessions remaining
+    if (isStudent && MOCK_COUNSELOR.providesStudentSessions && freeSessionsRemaining > 0) {
+      return true;
+    }
+    
+    return false;
+  };
 
   const handleBookSession = async () => {
     const errors: {timeSlot?: boolean} = {};
@@ -236,6 +296,70 @@ export default function BookSessionScreen() {
     
     setValidationErrors({});
 
+    // If session is free (either for everyone or for student)
+    if (isSessionFree()) {
+      try {
+        const authToken = await AsyncStorage.getItem('token') || '';
+        
+        // Book free session directly without payment
+        Alert.alert(
+          MOCK_COUNSELOR.counselorType === 'free' ? 'Free Session' : 'Free Student Session',
+          `You are about to book a free ${MOCK_COUNSELOR.counselorType === 'free' ? '' : 'student '}session with ${MOCK_COUNSELOR.name} on ${selectedDate.toLocaleDateString()} at ${selectedTime}.`,
+          [
+            {
+              text: 'Cancel',
+              style: 'cancel'
+            },
+            {
+              text: 'Confirm',
+              onPress: async () => {
+                try {
+                  // Here you would make an API call to book the free session
+                  // For now, we'll simulate a successful booking
+                  
+                  // Simulate API call delay
+                  setIsCreatingPayment(true);
+                  await new Promise(resolve => setTimeout(resolve, 1500));
+                  
+                  // Update remaining free sessions if it's a student session
+                  if (isStudent && MOCK_COUNSELOR.providesStudentSessions) {
+                    setFreeSessionsRemaining(prev => Math.max(0, prev - 1));
+                  }
+                  
+                  // Show success message
+                  Alert.alert(
+                    'Free Session Booked Successfully! 🎉',
+                    `Your free${MOCK_COUNSELOR.counselorType !== 'free' ? ' student' : ''} session with ${MOCK_COUNSELOR.name} has been booked for ${selectedDate.toLocaleDateString()} at ${selectedTime}.`,
+                    [
+                      {
+                        text: 'View My Sessions',
+                        onPress: () => router.push('/session/sessionHistory')
+                      },
+                      {
+                        text: 'OK',
+                        onPress: () => router.back()
+                      }
+                    ]
+                  );
+                } catch (error) {
+                  console.error('Error booking free session:', error);
+                  Alert.alert('Error', 'Failed to book your free session. Please try again.');
+                } finally {
+                  setIsCreatingPayment(false);
+                }
+              }
+            }
+          ]
+        );
+        return;
+      } catch (error) {
+        console.error('Error handling free session booking:', error);
+        Alert.alert('Error', 'Something went wrong. Please try again.');
+        return;
+      }
+    }
+
+    // Regular paid session flow
     const amount = 3000; // Default amount if not specified
     setIsCreatingPayment(true);
     setPaymentPageUrl(API_URL + ':' + PORT + '/payment-loader');
@@ -406,7 +530,7 @@ export default function BookSessionScreen() {
     return (
       <TouchableOpacity
         onPress={() => setSelectedTime(slot.time)}
-        className={`mr-3 mb-3 px-4 py-3 rounded-xl ${
+        className={`mr-2 mb-2 px-4 py-2 rounded-xl ${
           isSelected 
             ? 'bg-primary' 
             : 'bg-white border border-gray-200'
@@ -584,16 +708,31 @@ export default function BookSessionScreen() {
     );
   };
 
+  // Function to determine the session fee display
+  const getSessionFeeDisplay = () => {
+    if (MOCK_COUNSELOR.counselorType === 'free') {
+      return <Text className="text-lg font-semibold text-green-600">FREE</Text>;
+    } else if (isStudent && MOCK_COUNSELOR.providesStudentSessions && freeSessionsRemaining > 0) {
+      return (
+        <View className="items-end">
+          <Text className="text-gray-500 line-through">Rs.3000</Text>
+          <Text className="text-lg font-semibold text-green-600">FREE</Text>
+        </View>
+      );
+    } else {
+      return <Text className="text-lg font-semibold text-primary">Rs.3000</Text>;
+    }
+  };
+
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
       <StatusBar barStyle="dark-content" backgroundColor="#F9FAFB" />
 
-      {/* Added extra padding at the top to avoid notch overlap */}
-      <View className="pt-6"></View>
-
+      {/* Remove extra padding at the top - it's causing inconsistent spacing */}
+      
       {/* Header */}
       <View className="flex-row items-center justify-between px-5 py-4 bg-white border-b border-gray-100">
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={() => router.back()} className="p-1">
           <ArrowLeft size={24} color="#374151" />
         </TouchableOpacity>
         <Text className="text-gray-900 text-lg font-semibold">Book Session</Text>
@@ -623,9 +762,12 @@ export default function BookSessionScreen() {
             <View className="flex-1 ml-4">
               <Text className="text-lg font-semibold text-gray-900">{MOCK_COUNSELOR.name}</Text>
               <Text className="text-sm text-gray-500">{MOCK_COUNSELOR.title}</Text>
-              <View className="flex-row flex-wrap gap-1 mt-2">
-                {MOCK_COUNSELOR.specialties.map((specialty) => (
-                  <Text key={specialty} className="text-xs bg-blue-100 text-primary px-2 py-1 rounded-lg">
+              <View className="flex-row flex-wrap mt-2">
+                {MOCK_COUNSELOR.specialties.map((specialty, index) => (
+                  <Text 
+                    key={specialty} 
+                    className="text-xs bg-blue-100 text-primary px-2 py-1 rounded-lg mr-1 mb-1"
+                  >
                     {specialty}
                   </Text>
                 ))}
@@ -633,6 +775,43 @@ export default function BookSessionScreen() {
             </View>
           </View>
         </View>
+
+        {/* Student Session Info - Only show if user is a student and counselor provides student sessions */}
+        {isCheckingStudentStatus ? (
+          <View className="bg-white mx-5 mt-4 p-5 rounded-2xl items-center">
+            <ActivityIndicator size="small" color="#2563EB" />
+            <Text className="text-gray-500 mt-2">Checking student status...</Text>
+          </View>
+        ) : MOCK_COUNSELOR.counselorType === 'free' ? (
+          <View className="bg-green-50 mx-5 mt-4 p-5 rounded-2xl">
+            <View className="flex-row items-center mb-3">
+              <GraduationCap size={20} color="#059669" />
+              <Text className="text-lg font-semibold text-green-900 ml-2">Free Counselor</Text>
+            </View>
+            <Text className="text-green-800">
+              This counselor provides free sessions for everyone.
+            </Text>
+          </View>
+        ) : isStudent && MOCK_COUNSELOR.providesStudentSessions ? (
+          <View className="bg-indigo-50 mx-5 mt-4 p-5 rounded-2xl">
+            <View className="flex-row justify-between items-center mb-3">
+              <Text className="text-lg font-semibold text-indigo-900">Student Benefits</Text>
+              <View className="bg-indigo-100 rounded-full px-3 py-1">
+                <Text className="text-indigo-700 font-medium">{freeSessionsRemaining} Free Sessions Left</Text>
+              </View>
+            </View>
+            
+            {freeSessionsRemaining > 0 ? (
+              <Text className="text-indigo-800">
+                As a verified student, you can book free sessions with this counselor.
+              </Text>
+            ) : (
+              <Text className="text-yellow-800">
+                You've used all your free student sessions this month. You can still book a paid session.
+              </Text>
+            )}
+          </View>
+        ) : null}
 
         {/* Date Selection */}
         <View className="mt-6">
@@ -651,52 +830,46 @@ export default function BookSessionScreen() {
 
         {/* Time Selection */}
         <View className="mt-6">
-          <View className="flex-row items-center justify-between px-5 mb-3">
-            <Text className="text-lg font-semibold text-gray-900">Available Times</Text>
-          </View>
-          <View className={`px-5`}>
+          <Text className="text-lg font-semibold text-gray-900 px-5 mb-3">Available Times</Text>
+          <View className="px-5">
             {isLoadingSlots ? (
-              <View className="py-8 items-center">
+              <View className="py-6 items-center">
                 <ActivityIndicator size="large" color="#6366F1" />
                 <Text className="mt-2 text-gray-600">Loading available times...</Text>
               </View>
             ) : timeSlots.filter(slot => slot.available && !slot.isBooked).length > 0 ? (
-              <View>
-                <View className="flex-row flex-wrap">
-                  {timeSlots
-                    .filter(slot => slot.available && !slot.isBooked)
-                    .sort((a, b) => {
-                      // Sort by time in ascending order (earlier times first)
-                      // Extract hours and minutes from time strings (assuming format like "09:00" or "9:00 AM")
-                      const getTimeValue = (timeStr: string) => {
-                        const [hourStr, minuteStr] = timeStr.split(':');
-                        let hour = parseInt(hourStr, 10);
-                        const isPM = timeStr.toLowerCase().includes('pm');
-                        
-                        // Convert to 24-hour format if AM/PM is specified
-                        if (isPM && hour < 12) hour += 12;
-                        if (!isPM && hour === 12) hour = 0;
-                        
-                        const minute = parseInt(minuteStr, 10) || 0;
-                        return hour * 60 + minute;  // Convert to minutes for comparison
-                      };
+              <View className="flex-row flex-wrap">
+                {timeSlots
+                  .filter(slot => slot.available && !slot.isBooked)
+                  .sort((a, b) => {
+                    // Sort by time in ascending order (earlier times first)
+                    // Extract hours and minutes from time strings (assuming format like "09:00" or "9:00 AM")
+                    const getTimeValue = (timeStr: string) => {
+                      const [hourStr, minuteStr] = timeStr.split(':');
+                      let hour = parseInt(hourStr, 10);
+                      const isPM = timeStr.toLowerCase().includes('pm');
                       
-                      return getTimeValue(a.time) - getTimeValue(b.time);
-                    })
-                    .map((slot) => (
-                      <TimeSlot key={slot.id} slot={slot} />
-                    ))}
-                </View>
+                      // Convert to 24-hour format if AM/PM is specified
+                      if (isPM && hour < 12) hour += 12;
+                      if (!isPM && hour === 12) hour = 0;
+                      
+                      const minute = parseInt(minuteStr, 10) || 0;
+                      return hour * 60 + minute;  // Convert to minutes for comparison
+                    };
+                    
+                    return getTimeValue(a.time) - getTimeValue(b.time);
+                  })
+                  .map((slot) => (
+                    <TimeSlot key={slot.id} slot={slot} />
+                  ))}
               </View>
             ) : (
-              <View className="py-8 items-center">
+              <View className="py-6 items-center">
                 <Text className="text-gray-600">No available time slots for this date.</Text>
               </View>
             )}
           </View>
         </View>
-
-
 
         {/* Concerns/Notes */}
         <View className="mt-6">
@@ -709,7 +882,7 @@ export default function BookSessionScreen() {
               multiline
               numberOfLines={4}
               textAlignVertical="top"
-              className="text-gray-900 text-base"
+              className="text-gray-900 min-h-[100px]"
               placeholderTextColor="#9CA3AF"
             />
           </View>
@@ -717,22 +890,22 @@ export default function BookSessionScreen() {
 
         {/* Summary */}
         <View className="mt-6 mx-5 bg-white rounded-2xl p-5">
-          <Text className="text-lg font-semibold text-gray-900 mb-3">Session Summary</Text>
-          <View className="space-y-2">
-            <View className="flex-row justify-between">
+          <Text className="text-lg font-semibold text-gray-900 mb-4">Session Summary</Text>
+          <View className="space-y-3">
+            <View className="flex-row justify-between items-center">
               <Text className="text-gray-600">Date & Time</Text>
-              <Text className="text-gray-900 font-medium">
+              <Text className="text-gray-900 font-medium text-right">
                 {selectedDate.toLocaleDateString()} {selectedTime && `at ${selectedTime}`}
               </Text>
             </View>
-            <View className="flex-row justify-between">
+            <View className="flex-row justify-between items-center">
               <Text className="text-gray-600">Duration</Text>
               <Text className="text-gray-900 font-medium">50 min</Text>
             </View>
             <View className="h-px bg-gray-200 my-3" />
-            <View className="flex-row justify-between">
+            <View className="flex-row justify-between items-center">
               <Text className="text-lg font-semibold text-gray-900">Total</Text>
-              <Text className="text-lg font-semibold text-primary">Rs.3000</Text>
+              {getSessionFeeDisplay()}
             </View>
           </View>
         </View>
@@ -745,11 +918,21 @@ export default function BookSessionScreen() {
               Please select a time slot
             </Text>
           )}
+          {/* Show message if student has no free sessions left */}
+          {isStudent && MOCK_COUNSELOR.providesStudentSessions && freeSessionsRemaining === 0 && (
+            <Text className="text-center text-yellow-500 mb-2 text-sm">
+              You've used all your free sessions this month
+            </Text>
+          )}
           <PrimaryButton
             title={
               isCreatingPayment 
                 ? "Processing..." 
-                : `Book Session - Rs.3000`
+                : MOCK_COUNSELOR.counselorType === 'free'
+                  ? "Book Free Session"
+                  : isStudent && MOCK_COUNSELOR.providesStudentSessions && freeSessionsRemaining > 0
+                    ? "Book Free Student Session"
+                    : "Book Session - Rs.3000"
             }
             onPress={() => {
               if (!isCreatingPayment) {
@@ -775,7 +958,7 @@ export default function BookSessionScreen() {
         <SafeAreaView className="flex-1 bg-white">
           {/* WebView Header */}
           <View className="flex-row items-center justify-between px-5 py-4 bg-white border-b border-gray-200">
-            <TouchableOpacity onPress={handleCloseWebView}>
+            <TouchableOpacity onPress={handleCloseWebView} className="p-1">
               <ArrowLeft size={24} color="#374151" />
             </TouchableOpacity>
             <Text className="text-gray-900 text-lg font-semibold">Secure Payment</Text>

@@ -1,19 +1,46 @@
-import React from 'react';
+import { checkIsStudent } from '@/api/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { router, useLocalSearchParams } from 'expo-router';
+import { ArrowLeft, Award, Calendar, Clock, Globe, GraduationCap, MapPin, MessageSquare, Star } from 'lucide-react-native';
+import React, { useEffect, useState } from 'react';
 import {
-  View,
-  Text,
-  TouchableOpacity,
-  ScrollView,
-  SafeAreaView,
-  Image,
-  Linking
+    ActivityIndicator,
+    Image,
+    SafeAreaView,
+    ScrollView,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native';
-import { ArrowLeft, MessageSquare, Phone, Calendar, Star, MapPin, Award, Clock, DollarSign, Globe } from 'lucide-react-native';
-import { Link, router } from 'expo-router';
 import { PrimaryButton, SecondaryButton } from '../../components/Buttons';
 
 export default function CounsellorProfile() {
+  const params = useLocalSearchParams();
+  const counselorId = params.id as string;
+  const [isStudent, setIsStudent] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  
+  // Check if user is a student when component mounts
+  useEffect(() => {
+    const checkStudentStatus = async () => {
+      try {
+        const token = await AsyncStorage.getItem('token');
+        if (token) {
+          const studentStatus = await checkIsStudent(token);
+          setIsStudent(studentStatus);
+        }
+      } catch (error) {
+        console.error('Error checking student status:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    checkStudentStatus();
+  }, []);
+
   const counsellorData = {
+    id: counselorId || '1',
     name: 'Dr. Sarah Johnson',
     title: 'Licensed Clinical Psychologist',
     specialization: 'Anxiety & Depression',
@@ -25,23 +52,40 @@ export default function CounsellorProfile() {
     availability: 'Mon-Fri, 9am-5pm',
     location: 'Virtual or 123 Therapy St, Boston',
     education: 'PhD in Clinical Psychology, Harvard University',
-    price: '$120 per session',
-    image: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=880&q=80'
+    price: 'Rs.4000 per session',
+    image: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=880&q=80',
+    providesStudentSessions: true // Indicates if this counselor provides free sessions for students
   };
 
   const handleBookAppointment = () => {
-    router.push('/booking/select_date');
+    router.push({
+      pathname: '/(hidden)/session/bookSessions',
+      params: { counselorId: counsellorData.id }
+    });
   };
 
-  const handleCall = () => {
-    Linking.openURL('tel:+11234567890');
+  const handleBookSession = () => {
+    router.push({
+      pathname: '/(hidden)/session/bookSessions',
+      params: { counselorId: counsellorData.id }
+    });
   };
 
   const handleMessage = () => {
-    router.push('/messages/new');
+    router.push({
+      pathname: '/(hidden)/profile/counsellor-chat',
+      params: { counselorId: counsellorData.id }
+    });
   };
 
-  const DetailItem = ({ icon: Icon, label, value, iconColor = "#6366F1" }) => (
+  interface DetailItemProps {
+    icon: React.ElementType;
+    label: string;
+    value: string;
+    iconColor?: string;
+  }
+  
+  const DetailItem = ({ icon: Icon, label, value, iconColor = "#6366F1" }: DetailItemProps) => (
     <View className="flex-row items-start py-3 px-4 bg-gray-50 rounded-xl mb-3">
       <View className="w-10 h-10 bg-white rounded-full items-center justify-center mr-4 shadow-sm">
         <Icon size={18} color={iconColor} />
@@ -66,11 +110,12 @@ export default function CounsellorProfile() {
       >
         {/* Header */}
         <View className="flex-row items-center justify-between px-6 py-4 bg-white border-b border-gray-100">
-          <Link href="/counsellors" asChild>
-            <TouchableOpacity className="w-10 h-10 items-center justify-center rounded-full bg-gray-50">
-              <ArrowLeft size={20} color="#374151" />
-            </TouchableOpacity>
-          </Link>
+          <TouchableOpacity 
+            className="w-10 h-10 items-center justify-center rounded-full bg-gray-50"
+            onPress={() => router.back()}
+          >
+            <ArrowLeft size={20} color="#374151" />
+          </TouchableOpacity>
           <Text className="text-lg font-bold text-gray-900">Counselor Profile</Text>
           <View className="w-10" />
         </View>
@@ -104,6 +149,16 @@ export default function CounsellorProfile() {
                 ({counsellorData.reviews} reviews)
               </Text>
             </View>
+            
+            {/* Student Session Badge */}
+            {counsellorData.providesStudentSessions && (
+              <View className="flex-row items-center bg-indigo-100 px-4 py-2 rounded-full mb-3">
+                <GraduationCap size={16} color="#4F46E5" />
+                <Text className="text-indigo-700 font-medium ml-2">
+                  Provides Free Student Sessions
+                </Text>
+              </View>
+            )}
           </View>
         </View>
 
@@ -114,19 +169,49 @@ export default function CounsellorProfile() {
           </Text>
         </View>
 
+        {/* Student Benefits Section */}
+        {isLoading ? (
+          <View className="px-6 pb-6 items-center">
+            <ActivityIndicator size="small" color="#4F46E5" />
+            <Text className="text-gray-500 mt-2">Checking student status...</Text>
+          </View>
+        ) : isStudent && counsellorData.providesStudentSessions ? (
+          <View className="px-6 pb-6">
+            <View className="bg-indigo-50 p-5 rounded-xl border border-indigo-100">
+              <View className="flex-row items-center mb-3">
+                <GraduationCap size={20} color="#4F46E5" />
+                <Text className="text-lg font-bold text-indigo-900 ml-2">
+                  Student Benefits
+                </Text>
+              </View>
+              <Text className="text-indigo-800 mb-3">
+                As a verified student, you are eligible for free counseling sessions with this counselor.
+              </Text>
+              <View className="bg-white p-3 rounded-lg">
+                <Text className="text-indigo-700 font-medium">Benefits include:</Text>
+                <View className="ml-2 mt-1">
+                  <Text className="text-gray-700 mb-1">• Free sessions (limited per month)</Text>
+                  <Text className="text-gray-700 mb-1">• Priority booking</Text>
+                  <Text className="text-gray-700">• Same quality care as paid sessions</Text>
+                </View>
+              </View>
+            </View>
+          </View>
+        ) : null}
+
         {/* Quick Actions */}
         <View className="px-6 pb-6">
           <View className="flex-row gap-3">
             <SecondaryButton
-              title="Message"
+              title="Chat"
               onPress={handleMessage}
               icon={MessageSquare}
             />
             
             <PrimaryButton
-              title="Call Now"
-              onPress={handleCall}
-              icon={Phone}
+              title="Book Session"
+              onPress={handleBookSession}
+              icon={Calendar}
             />
           </View>
         </View>
@@ -187,9 +272,11 @@ export default function CounsellorProfile() {
               <View>
                 <Text className="text-sm font-medium text-gray-600 mb-1">Session Price</Text>
                 <Text className="text-3xl font-bold text-gray-900">{counsellorData.price}</Text>
-              </View>
-              <View className="w-12 h-12 bg-blue-100 rounded-full items-center justify-center">
-                <DollarSign size={24} color="#6366F1" />
+                {isStudent && counsellorData.providesStudentSessions && (
+                  <Text className="text-sm font-medium text-green-600 mt-1">
+                    Free sessions available with student package
+                  </Text>
+                )}
               </View>
             </View>
           </View>
@@ -198,7 +285,7 @@ export default function CounsellorProfile() {
         {/* Book Appointment Button */}
         <View className="px-6">
           <PrimaryButton
-            title="Book Appointment"
+            title={isStudent && counsellorData.providesStudentSessions ? "Book Session (Student Options Available)" : "Book Appointment"}
             onPress={handleBookAppointment}
             icon={Calendar}
             iconSize={20}

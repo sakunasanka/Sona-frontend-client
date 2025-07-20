@@ -36,3 +36,17 @@ export const apiRequest = async ({ method, path, data, token }: ApiRequest) => {
   }
 };
 
+export const checkIsStudent = async (token: string): Promise<boolean> => {
+  try {
+    const response = await api.get('/users/client/is-student', {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    return response.data.data.isStudent || false;
+  } catch (error: any) {
+    console.error('Error checking student status:', error.response?.data || error.message);
+    return false;
+  }
+};
+

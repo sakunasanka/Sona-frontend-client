@@ -5,129 +5,6 @@ import React, { useEffect, useRef, useState } from "react";
 import { Animated, Image, Keyboard, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-// This interface is no longer needed since we're using the ChatMessage from useChat hook
-// interface Message {
-//   id: number; 
-//   message: string; 
-//   time?: string; 
-//   senderId: number; 
-//   userName?: string;
-//   avatar?: string;
-//   avatarColor?: string;
-//   createdAt?: string; 
-//   roomId: number; 
-//   messageType?: 'text' | 'image' | 'file'; 
-// }
-
-// const SAMPLE_MESSAGES: Message[] = [
-//   {
-//     id: '1',
-//     text: 'Hello everyone! How are you all feeling today?',
-//     time: '10:30 AM',
-//     userId: 'user_dr_sarah',
-//     userName: 'Dr. Sarah Wilson',
-//     avatar: 'SW',
-//     avatarColor: '#10B981', // Green,
-//     timestamp: '2023-03-15T10:30:00Z',
-//     chatId: 'global_chat'
-//   },
-//   // {
-//   //   id: '2',
-//   //   text: 'Hi Dr. Wilson, I\'ve been feeling a bit anxious lately.',
-//   //   time: '10:31 AM',
-//   //   userId: 'current_user',
-//   //   avatar: 'CU',
-//   //   avatarColor: '#FBBF24', // Amber
-//   // },
-//   {
-//     id: '3',
-//     text: 'I think I need some advice on managing it.',
-//     time: '10:31 AM',
-//     userId: 'current_user', // Consecutive current_user (should have small gap)
-//   },
-//   {
-//     id: 4,
-//     text: 'Hey everyone! I\'m doing better this week, thanks for asking 😊',
-//     time: '10:32 AM',
-//     userId: 'user_alex',
-//     userName: 'Alex Chen',
-//     avatar: 'AC',
-//     avatarColor: '#3B82F6' // Blue
-//   },
-//   {
-//     id: 5,
-//     text: 'That\'s great to hear Alex! What helped you feel better?',
-//     time: '10:33 AM',
-//     userId: 'user_dr_sarah',
-//     userName: 'Dr. Sarah Wilson',
-//     avatar: 'SW',
-//     avatarColor: '#10B981' // Green
-//   },
-//   {
-//     id: 6,
-//     text: 'I\'ve been practicing the breathing exercises we discussed',
-//     time: '10:34 AM',
-//     userId: 'user_alex',
-//     userName: 'Alex Chen',
-//     avatar: 'AC',
-//     avatarColor: '#3B82F6' // Blue
-//   },
-//   {
-//     id: 7,
-//     text: 'And doing morning walks really helps my mood',
-//     time: '10:34 AM',
-//     userId: 'user_alex', // Consecutive Alex (should have small gap)
-//     userName: 'Alex Chen',
-//     avatar: 'AC',
-//     avatarColor: '#3B82F6' // Blue
-//   },
-//   {
-//     id: 8,
-//     text: 'Thanks for sharing Alex. I should try those breathing exercises too',
-//     time: '10:37 AM',
-//     userId: 'current_user', // After Alex (should have large gap)
-//   },
-//   {
-//     id: 9,
-//     text: 'I think I\'ll start with 5 minutes a day',
-//     time: '10:38 AM',
-//     userId: 'current_user', // Consecutive current_user (should have small gap)
-//   },
-//   {
-//     id: 10,
-//     text: 'That sounds like a great plan!',
-//     time: '10:38 AM',
-//     userId: 'current_user', // Another consecutive current_user (should have small gap)
-//   },
-//   {
-//     id: 11,
-//     text: 'Joining the conversation! Has anyone tried meditation apps?',
-//     time: '10:39 AM',
-//     userId: 'user_jordan', // After current_user (should have large gap)
-//     userName: 'Jordan Kim',
-//     avatar: 'JK',
-//     avatarColor: '#8B5CF6' // Purple
-//   },
-//   {
-//     id: 12,
-//     text: 'Yes! I use Headspace daily. Really helps with anxiety',
-//     time: '10:40 AM',
-//     userId: 'user_maya',
-//     userName: 'Maya Patel',
-//     avatar: 'MP',
-//     avatarColor: '#F59E0B' // Amber
-//   },
-//   {
-//     id: 13,
-//     text: 'I prefer Calm app personally, but both are great options',
-//     time: '10:41 AM',
-//     userId: 'user_alex',
-//     userName: 'Alex Chen',
-//     avatar: 'AC',
-//     avatarColor: '#3B82F6' // Blue
-//   },
-// ];
-
 const useTabBarHeight = () => {
   const insets = useSafeAreaInsets();
   // Standard tab bar height is usually 49 on iOS and 56 on Android, plus safe area
@@ -167,7 +44,7 @@ const Chat = () => {
        
         setIsTokenLoaded(true);
       } catch (error) {
-        console.error('Error loading token:', error);
+        // console.error('Error loading token:', error);
         setIsTokenLoaded(true); // Mark as loaded even if failed
       }
     };
@@ -264,7 +141,7 @@ const Chat = () => {
           scrollViewRef.current?.scrollToEnd({ animated: true });
         }, 100);
       } catch (error) {
-        console.error('Error sending message:', error);
+        // console.error('Error sending message:', error);
         // You can add error handling here (show toast, etc.)
       }
     }
@@ -282,7 +159,7 @@ const Chat = () => {
   const formatMessageTime = (timestamp: string | undefined) => {
   try {
     if (!timestamp) {
-      console.warn('No timestamp provided');
+      // console.warn('No timestamp provided');
       return '';
     }
     
@@ -292,7 +169,7 @@ const Chat = () => {
     
     // Check if date is valid
     if (isNaN(date.getTime())) {
-      console.warn('Invalid timestamp:', timestamp);
+      // console.warn('Invalid timestamp:', timestamp);
       return '';
     }
     
@@ -301,7 +178,7 @@ const Chat = () => {
       minute: '2-digit' 
     });
   } catch (error) {
-    console.error('Error formatting timestamp:', error, 'Timestamp:', timestamp);
+    // console.error('Error formatting timestamp:', error, 'Timestamp:', timestamp);
     return ''; // Fallback for invalid timestamps
   }
 };

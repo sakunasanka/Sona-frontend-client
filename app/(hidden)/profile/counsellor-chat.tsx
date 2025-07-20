@@ -17,8 +17,6 @@ import {
 } from 'react-native';
 import { 
   ArrowLeft, 
-  Phone, 
-  Video, 
   Send, 
   Paperclip, 
   Mic,
@@ -32,6 +30,7 @@ import {
   MapPin,
   Check
 } from 'lucide-react-native';
+import { router } from 'expo-router';
 
 interface Message {
   id: string;
@@ -58,28 +57,6 @@ export default function CounselorChat() {
       [
         { text: "Cancel", style: "cancel" },
         { text: "Leave", style: "destructive", onPress: () => console.log("Navigate back") }
-      ]
-    );
-  };
-
-  const handlePhoneCall = () => {
-    Alert.alert(
-      "Voice Call",
-      "Start a voice call with Dr. Ugo David?",
-      [
-        { text: "Cancel", style: "cancel" },
-        { text: "Call", onPress: () => console.log("Starting voice call...") }
-      ]
-    );
-  };
-
-  const handleVideoCall = () => {
-    Alert.alert(
-      "Video Call",
-      "Start a video call with Dr. Ugo David?",
-      [
-        { text: "Cancel", style: "cancel" },
-        { text: "Start Video", onPress: () => console.log("Starting video call...") }
       ]
     );
   };
@@ -481,7 +458,7 @@ export default function CounselorChat() {
       <View className="flex-row items-center px-4 py-4 bg-white shadow-sm border-b border-gray-100">
         <TouchableOpacity 
           className="p-2 -ml-2 mr-2"
-          onPress={handleBackPress}
+          onPress={() => router.back()}
         >
           <ArrowLeft size={24} color="#1F2937" />
         </TouchableOpacity>
@@ -501,18 +478,6 @@ export default function CounselorChat() {
         </View>
         
         <View className="flex-row items-center space-x-1">
-          <TouchableOpacity 
-            className="p-3 rounded-full hover:bg-gray-100"
-            onPress={handlePhoneCall}
-          >
-            <Phone size={22} color="#2563EB" />
-          </TouchableOpacity>
-          <TouchableOpacity 
-            className="p-3 rounded-full hover:bg-gray-100"
-            onPress={handleVideoCall}
-          >
-            <Video size={22} color="#2563EB" />
-          </TouchableOpacity>
           <TouchableOpacity 
             className="p-3 rounded-full hover:bg-gray-100"
             onPress={handleMoreOptions}

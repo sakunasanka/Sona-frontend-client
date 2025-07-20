@@ -1,17 +1,18 @@
 import React from 'react';
-import { FlatList, TouchableOpacity, Text } from 'react-native';
+import { FlatList, Text, TouchableOpacity } from 'react-native';
 
-const SPECIALTIES = ['All', 'Anxiety', 'Depression', 'Relationships', 'Trauma', 'ADHD', 'Stress'];
+const DEFAULT_SPECIALTIES = ['All', 'Anxiety', 'Depression', 'Relationships', 'Trauma', 'ADHD', 'Stress'];
 
 interface SpecialtyTabsProps {
   selected: string;
   onSelect: (specialty: string) => void;
+  specialties?: string[];
 }
 
-const SpecialtyTabs = ({ selected, onSelect }: SpecialtyTabsProps) => {
+const SpecialtyTabs = ({ selected, onSelect, specialties = DEFAULT_SPECIALTIES }: SpecialtyTabsProps) => {
   return (
     <FlatList
-      data={SPECIALTIES}
+      data={specialties}
       horizontal
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={{ paddingHorizontal: 16 }}
@@ -21,16 +22,23 @@ const SpecialtyTabs = ({ selected, onSelect }: SpecialtyTabsProps) => {
         return (
           <TouchableOpacity
             onPress={() => onSelect(item)}
-            className={`px-3 py-1 mr-2 rounded-full border ${
-              isActive 
-                ? 'bg-primary border-primary' 
-                : 'bg-white border-gray-300'
-            }`}
+            style={{ 
+              height: 26, // Explicit height to match counselor filters
+              paddingHorizontal: 12,
+              paddingVertical: 4,
+              marginRight: 8,
+              borderRadius: 9999,
+              borderWidth: 1,
+              borderColor: isActive ? '#2563EB' : '#D1D5DB',
+              backgroundColor: isActive ? '#2563EB' : '#FFFFFF'
+            }}
           >
             <Text 
-              className={`text-xs font-medium ${
-                isActive ? 'text-white' : 'text-gray-600'
-              }`}
+              style={{ 
+                fontSize: 12,
+                fontWeight: '500',
+                color: isActive ? '#FFFFFF' : '#4B5563'
+              }}
             >
               {item}
             </Text>

@@ -1,22 +1,22 @@
 // app/components/AddPostModal.tsx
-import { Ionicons } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
-import React, { useCallback, useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
+  View,
+  Text,
+  Modal,
+  TouchableOpacity,
+  TextInput,
+  Image,
   ActivityIndicator,
   Alert,
-  Image,
   KeyboardAvoidingView,
-  Modal,
   Platform,
   ScrollView,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View
+  Dimensions
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { createPost, Post } from '../../api/Posts';
-import { getNextPostColor } from '../../utils/postColors';
 
 interface AddPostModalProps {
   visible: boolean;
@@ -74,14 +74,10 @@ const AddPostModal: React.FC<AddPostModalProps> = ({ visible, onClose, onSubmit 
     try {
       setLoading(true);
       
-      // Get the next background color from our pool
-      const nextColor = getNextPostColor();
-      
       // Create post data
       const postData = {
         content: postText.trim(),
         image: selectedImage,
-        backgroundColor: nextColor, // Use the next color in sequence
       };
 
       // Call API to create post
@@ -157,7 +153,6 @@ const AddPostModal: React.FC<AddPostModalProps> = ({ visible, onClose, onSubmit 
             />
             <View>
               <Text className="font-semibold text-base">John Doe</Text>
-              <Text className="text-gray-500 text-sm">Public</Text>
             </View>
           </View>
 

@@ -54,7 +54,7 @@ export const getChatMessages = async (
     });
     return response;
   } catch (error) {
-    console.error('Error fetching chat messages:', error);
+    // console.error('Error fetching chat messages:', error);
     throw error;
   }
 };
@@ -72,7 +72,7 @@ export const getOlderMessages = async (
     });
     return response;
   } catch (error) {
-    console.error('Error fetching older messages:', error);
+    // console.error('Error fetching older messages:', error);
     throw error;
   }
 };
@@ -98,7 +98,7 @@ export const sendChatMessage = async (
     console.log('Message sent successfully:', response);
     return response;
   } catch (error) {
-    console.error('Error sending message via HTTP:', error);
+    // console.error('Error sending message via HTTP:', error);
     throw error;
   }
 };
@@ -116,7 +116,7 @@ export const sendMessage = async (
     });
     return response;
   } catch (error) {
-    console.error('Error sending message:', error);
+    // console.error('Error sending message:', error);
     throw error;
   }
 };

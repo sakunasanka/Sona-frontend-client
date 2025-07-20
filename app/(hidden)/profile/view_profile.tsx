@@ -1,21 +1,44 @@
+import { checkIsStudent } from '@/api/api';
 import { getDisplayName } from '@/util/asyncName';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
-import { ArrowLeft, BadgeCheck, Bookmark, Edit, HelpCircle, History, LogOut, Shield } from 'lucide-react-native';
-import React from 'react';
-import { Image, SafeAreaView, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ArrowLeft, BadgeCheck, Bookmark, Edit, GraduationCap, HelpCircle, History, LogOut, Shield } from 'lucide-react-native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Image, SafeAreaView, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { LogoutButton } from '../../components/Buttons';
 
 export default function Profile() {
+  const [isStudent, setIsStudent] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  
   const userData = {
-    name: 'Sakuna Sanka',
+    name: 'hiruna',
     nickname: 'John',
     dob: '23/05/2003',
-    email: 'john.s@example.com',
-    joinDate: 'January 2023',
+    email: 'hiruna.pramuthitha1@gmail.com',
+    joinDate: 'July 2025',
     checkins: 24,
     goals: 18,
     streak: 36
   };
+
+  useEffect(() => {
+    const checkStudentStatus = async () => {
+      try {
+        const token = await AsyncStorage.getItem('token');
+        if (token) {
+          const studentStatus = await checkIsStudent(token);
+          setIsStudent(studentStatus);
+        }
+      } catch (error) {
+        console.error('Error checking student status:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    checkStudentStatus();
+  }, []);
 
   const name = getDisplayName() || userData.name;
 
@@ -53,6 +76,16 @@ export default function Profile() {
 
           <Text className="text-2xl font-bold text-gray-900 mb-1">{name}</Text>
           <Text className="text-base text-gray-500 mb-4">@{userData.nickname}</Text>
+          
+          {/* Student Badge */}
+          {isLoading ? (
+            <ActivityIndicator size="small" color="#2563EB" />
+          ) : isStudent && (
+            <View className="flex-row items-center bg-blue-100 px-3 py-1 rounded-full mb-4">
+              <GraduationCap size={16} color="#2563EB" className="mr-1" />
+              <Text className="text-blue-700 font-medium ml-1">Verified Student</Text>
+            </View>
+          )}
           
           <View className="flex-row justify-around w-full px-10 mt-4">
             <View className="items-center">
@@ -130,12 +163,18 @@ export default function Profile() {
             <Text className="text-base text-gray-900">Help & Support</Text>
           </TouchableOpacity>
           
-          <TouchableOpacity className="flex-row items-center py-4 border-b border-gray-100">
-            <View className="w-9 h-9 rounded-full bg-blue-50 justify-center items-center mr-4">
-              <BadgeCheck size={20} color="#2563EB" />
-            </View>
-            <Text className="text-base text-gray-900">Apply for Student Plan</Text>
-          </TouchableOpacity>
+          {/* Only show "Apply for Free Student Package" if user is not already a student */}
+          {!isStudent && (
+            <TouchableOpacity 
+              className="flex-row items-center py-4 border-b border-gray-100"
+              onPress={() => router.push('/session/StudentPackageApply')}
+            >
+              <View className="w-9 h-9 rounded-full bg-blue-50 justify-center items-center mr-4">
+                <BadgeCheck size={20} color="#2563EB" />
+              </View>
+              <Text className="text-base text-gray-900">Apply for Free Student Package</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Logout Button */}

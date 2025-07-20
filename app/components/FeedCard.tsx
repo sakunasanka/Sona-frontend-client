@@ -1,6 +1,6 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, Image } from 'react-native';
 import { Eye, Heart, MessageCircle, MoreHorizontal } from 'lucide-react-native';
+import React from 'react';
+import { Image, Text, TouchableOpacity, View } from 'react-native';
 
 interface FeedCardProps {
   post: {
@@ -8,7 +8,8 @@ interface FeedCardProps {
     author: {
       name: string;
       avatar: string;
-      role: 'Client' | 'Counselor' | 'Admin' | 'Psychiatrist' | 'MT-Team';
+      badge: 'User' | 'Premium';
+      role: string;
     };
     timeAgo: string;
     content: string;
@@ -43,7 +44,7 @@ const FeedCard: React.FC<FeedCardProps> = ({ post, onLikePress }) => {
             <Text className="text-sm text-gray-500 mt-0.5">{post.timeAgo}</Text>
           </View>
         </View>
-        <View className={`px-3 py-1.5 rounded-xl ${post.author.role === 'Client' ? 'bg-amber-400' : 'bg-blue-400'}`}>
+        <View className={`px-3 py-1.5 rounded-xl ${post.author.badge === 'Premium' ? 'bg-amber-400' : 'bg-blue-400'}`}>
           <Text className="text-xs font-semibold text-white">{post.author.role}</Text>
         </View>
         <TouchableOpacity className="ml-2">

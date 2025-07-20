@@ -456,16 +456,16 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
           <View className="flex-row justify-center mt-4 space-x-4">
             <View className="flex-row items-center">
               <View className="w-3 h-3 rounded-full bg-green-500 mr-1" />
-              <Text className="text-xs text-gray-600">Available</Text>
+              <Text className="text-xs text-gray-600 mr-2">Available</Text>
             </View>
             <View className="flex-row items-center">
               <View className="w-3 h-3 rounded-lg bg-red-50 mr-1" />
-              <Text className="text-xs text-gray-600">Unavailable</Text>
+              <Text className="text-xs text-gray-600 mr-2">Unavailable</Text>
             </View>
             {selectedDate && (
               <View className="flex-row items-center">
                 <View className="w-3 h-3 rounded-lg bg-primary mr-1" />
-                <Text className="text-xs text-gray-600">Selected</Text>
+                <Text className="text-xs text-gray-600 mr-2">Selected</Text>
               </View>
             )}
           </View>

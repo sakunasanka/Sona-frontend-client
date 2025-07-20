@@ -1,17 +1,18 @@
 import React from 'react';
 import { FlatList, Text, TouchableOpacity } from 'react-native';
 
-const SPECIALTIES = ['All', 'Anxiety', 'Depression', 'Relationships', 'Trauma', 'ADHD', 'Stress'];
+const DEFAULT_SPECIALTIES = ['All', 'Anxiety', 'Depression', 'Relationships', 'Trauma', 'ADHD', 'Stress'];
 
 interface SpecialtyTabsProps {
   selected: string;
   onSelect: (specialty: string) => void;
+  specialties?: string[];
 }
 
-const SpecialtyTabs = ({ selected, onSelect }: SpecialtyTabsProps) => {
+const SpecialtyTabs = ({ selected, onSelect, specialties = DEFAULT_SPECIALTIES }: SpecialtyTabsProps) => {
   return (
     <FlatList
-      data={SPECIALTIES}
+      data={specialties}
       horizontal
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={{ paddingHorizontal: 16 }}

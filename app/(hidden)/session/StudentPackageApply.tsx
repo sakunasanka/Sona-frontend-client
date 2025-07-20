@@ -15,9 +15,6 @@ const STUDENT_PACKAGE = {
   description: 'Free counseling sessions for verified university students',
   features: [
     '4 free sessions per month',
-    'Access to guided meditations',
-    'Chat support during business hours',
-    'University credential verification required'
   ]
 };
 
@@ -212,7 +209,7 @@ export default function StudentPackageApply() {
       keyboardDidShowListener.remove();
       keyboardDidHideListener.remove();
     };
-  }, []);
+  }, [additionalNotesInputFocused]);
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
@@ -221,12 +218,8 @@ export default function StudentPackageApply() {
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={{ flex: 1 }}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 20}
-        contentContainerStyle={{ flexGrow: 1 }}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0}
       >
-      
-      {/* Extra padding for notch */}
-      <View className="pt-6" />
       
       {/* Header */}
       <View className="flex-row items-center justify-between px-5 py-4 bg-white border-b border-gray-100">
@@ -242,8 +235,7 @@ export default function StudentPackageApply() {
         className="flex-1" 
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
-        onScrollBeginDrag={Keyboard.dismiss}
-        contentContainerStyle={{ paddingBottom: 200 }}
+        contentContainerStyle={{ paddingBottom: 30 }}
         onTouchStart={handleScreenPress}
       >
         {/* Introduction Card */}
@@ -274,7 +266,7 @@ export default function StudentPackageApply() {
         </View>
         
         {/* Application Form */}
-        <View className="mx-5 mt-5 bg-white rounded-2xl p-5 shadow-sm">
+        <View className="mx-5 mt-5 mb-5 bg-white rounded-2xl p-5 shadow-sm">
           <Text className="text-xl font-bold text-gray-900 mb-4">University Student Verification</Text>
           
           <View className="bg-yellow-50 p-3 rounded-lg mb-5">
@@ -417,7 +409,7 @@ export default function StudentPackageApply() {
                 placeholder="Any additional information you'd like to share"
                 multiline
                 numberOfLines={4}
-                className="text-gray-800 min-h-[100px]"
+                className="text-gray-800 min-h-[80px]"
                 placeholderTextColor="#9CA3AF"
                 textAlignVertical="top"
                 onFocus={() => {
@@ -425,14 +417,11 @@ export default function StudentPackageApply() {
                   // When the field is focused, scroll to ensure it's visible
                   setTimeout(() => {
                     if (scrollViewRef.current) {
-                      // Using a larger timeout and scrollToEnd to ensure visibility
                       scrollViewRef.current.scrollToEnd({ animated: true });
                     }
-                  }, 500);
+                  }, 300);
                 }}
                 onBlur={() => setAdditionalNotesInputFocused(false)}
-                blurOnSubmit={false}
-                returnKeyType="default"
               />
             </View>
           </View>
@@ -451,8 +440,6 @@ export default function StudentPackageApply() {
             </Text>
           </View>
         </View>
-        
-        {/* Bottom padding - no longer needed as we're using contentContainerStyle */}
       </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

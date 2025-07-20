@@ -7,7 +7,7 @@ import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Image, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 // Define types
-type SessionStatus = 'upcoming' | 'today' | 'past' | 'all' | 'student' | 'free';
+type SessionStatus = 'upcoming' | 'past' | 'all' | 'student' | 'free';
 type FilterOption = {
     label: string;
     value: string;
@@ -27,8 +27,8 @@ type Session = {
     status: SessionStatus;
     timeSlot?: string;
     sessionStatus?: string;
-    isStudentSession?: boolean; // Indicates if this is a free student session
-    isFreeForAll?: boolean; // Indicates if this session is free for everyone
+    isStudentSession?: boolean;
+    isFreeForAll?: boolean;
 };
 
 let API_BASE_URL = '';
@@ -39,7 +39,6 @@ if (Platform.OS === 'android') {
 }
 
 export default function SessionHistory() {
-    console.log('Session History component initialized - [Updated with API format fix]');
     const router = useRouter();
     const [sessions, setSessions] = useState<Session[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
@@ -69,7 +68,6 @@ export default function SessionHistory() {
         checkStudentStatus();
     }, []);
 
-    // Extract fetchSessions to reuse it
     const fetchSessions = async () => {
         setLoading(true);
         setError(null);
@@ -83,8 +81,6 @@ export default function SessionHistory() {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 10000);
             
-            console.log('Making API request to:', `${API_BASE_URL}/sessions/my-sessions`);
-            
             const response = await fetch(`${API_BASE_URL}/sessions/my-sessions`, {
                 method: 'GET',
                 headers: {
@@ -95,82 +91,37 @@ export default function SessionHistory() {
             });
             
             clearTimeout(timeoutId);
-            console.log('API response status:', response.status);
             
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({ message: `Server error: ${response.status}` }));
-                console.error('API error response:', errorData);
                 throw new Error(errorData.message || `Failed to fetch sessions: ${response.status}`);
             }
             
             const data = await response.json();
-            
-            // Debug: log the full response structure
-            console.log('API Response received:', JSON.stringify(data, null, 2));
-            
-            // Check if response is in the format shown in Postman
-            if (!data || (!Array.isArray(data.data) && !Array.isArray(data.sessions))) {
-                console.warn('Unexpected API response format:', data);
-                throw new Error('Invalid data format received from server');
-            }
-            
-            // Use data.data if available (new API format) or data.sessions as fallback
             let sessionsArray = Array.isArray(data.data) ? data.data : data.sessions || [];
-            console.log('Sessions received:', sessionsArray.length);
-            
-            if (sessionsArray.length === 0) {
-                console.warn('No sessions received from the API');
-                
-                // Check if we have received empty data or raw array in a different format
-                if (data && Array.isArray(data) && data.length > 0) {
-                    console.log('Detected array response format, trying to use it directly');
-                    sessionsArray = data;
-                }
-            }
             
             const processedSessions = sessionsArray.map((session: any) => {
-                try {
-                    // Format according to the new API structure
                     const counselor = session.counselor || {};
-                    
-                    // Check if this is a student session (price is 0 and user is a student)
                     const isStudentSession = (session.price === 0 || session.fee === 0) && isStudent && session.counselorType === 'paid_with_free_student';
-                    
-                    // Check if this is a free for all session (counselor type is 'free')
                     const isFreeForAll = session.counselorType === 'free';
                     
                     return {
                         id: session.id?.toString() || '',
-                        date: `${session.date}T${session.timeSlot || '00:00'}:00`, // Combine date and time
+                    date: `${session.date}T${session.timeSlot || '00:00'}:00`,
                         duration: session.duration || 0,
                         fee: session.price || session.fee || 0,
                         notes: session.notes,
                         counselorId: session.counselorId?.toString() || '',
                         counselorName: counselor.name || 'Unknown Counselor',
                         counselorImage: counselor.avatar || '',
-                        specialties: ['Counseling'], // Default specialties if not provided
-                        rating: 5, // Default rating if not provided
+                    specialties: ['Counseling'],
+                    rating: 5,
                         status: getSessionStatus(`${session.date}T${session.timeSlot || '00:00'}:00`),
                         timeSlot: session.timeSlot || '',
                         sessionStatus: session.status || 'scheduled',
-                        isStudentSession: isStudentSession,
-                        isFreeForAll: isFreeForAll
+                    isStudentSession,
+                    isFreeForAll
                     };
-                } catch (err) {
-                    console.error('Error processing session:', err, session);
-                    // Return a minimal valid session object to prevent crashes
-                    return {
-                        id: session.id?.toString() || Math.random().toString(),
-                        date: new Date().toISOString(),
-                        duration: 0,
-                        fee: 0,
-                        counselorId: '',
-                        counselorName: 'Unknown',
-                        specialties: [],
-                        rating: 0,
-                        status: 'past' as SessionStatus
-                    };
-                }
             });
             
             setSessions(processedSessions);
@@ -179,35 +130,21 @@ export default function SessionHistory() {
             setError(err.message || 'Failed to load sessions. Please try again.');
             
             if (err.name === 'AbortError') {
-                Alert.alert(
-                    'Request Timeout',
-                    'The server took too long to respond. Please try again.',
-                    [{ text: 'OK' }]
-                );
+                Alert.alert('Request Timeout', 'The server took too long to respond. Please try again.');
             } else if (err.message.includes('Network') || err.message.includes('Failed to fetch')) {
-                Alert.alert(
-                    'Network Error',
-                    'Please check your internet connection and try again.',
-                    [{ text: 'Try Again', onPress: () => fetchSessions() }]
-                );
+                Alert.alert('Network Error', 'Please check your internet connection and try again.');
             } else if (err.message.includes('auth') || err.message.includes('token')) {
-                Alert.alert(
-                    'Authentication Error',
-                    'Please log in again to view your sessions.',
-                    [{ text: 'OK', onPress: () => router.push('/(auth)/signin') }]
-                );
+                Alert.alert('Authentication Error', 'Please log in again to view your sessions.');
             }
         } finally {
             setLoading(false);
         }
     };
     
-    // Fetch sessions from API with proper error handling and auth
     useEffect(() => {
         fetchSessions();
     }, []);
 
-    // Get today's date at midnight for comparison
     const getTodayDate = (): Date => {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
@@ -216,7 +153,6 @@ export default function SessionHistory() {
     
     const today = getTodayDate();
     
-    // Extract unique counselors for filtering
     const counselors: FilterOption[] = React.useMemo(() => {
         const uniqueCounselors = new Set(sessions.map(session => session.counselorId));
         return [
@@ -231,7 +167,6 @@ export default function SessionHistory() {
         ];
     }, [sessions]);
     
-    // Helper to format date for search comparison
     const formatDateForSearch = (dateString: string): string => {
         try {
             const date = new Date(dateString);
@@ -248,20 +183,16 @@ export default function SessionHistory() {
     
     // Simplified filter options
     const filterOptions = [
-        { id: 'all', label: 'All Sessions' },
+        { id: 'all', label: 'All' },
         { id: 'upcoming', label: 'Upcoming' },
         { id: 'past', label: 'Past' }
     ];
     
     // Add free sessions filter if user is a student
     if (isStudent) {
-        filterOptions.push({ id: 'student', label: 'Student Free Sessions' });
+        filterOptions.push({ id: 'student', label: 'Free' });
     }
     
-    // Add general free sessions filter
-    filterOptions.push({ id: 'free', label: 'Free Sessions' });
-
-    // Update the filtered sessions to include free session filter
     const filteredSessions = React.useMemo(() => {
         return sessions.filter(session => {
             if (!session.date || !session.counselorId) return false;
@@ -293,17 +224,14 @@ export default function SessionHistory() {
         }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     }, [sessions, activeFilter, selectedCounselor, searchTerm, dateSearchTerm]);
     
-    // Format date for display with error handling
     const formatSessionDate = (dateString: string): string => {
         try {
             const date = new Date(dateString);
             
-            // Check if date is valid
             if (isNaN(date.getTime())) {
                 throw new Error('Invalid date');
             }
             
-            // Get current date for comparison
             const today = new Date();
             today.setHours(0, 0, 0, 0);
             
@@ -313,7 +241,6 @@ export default function SessionHistory() {
             const yesterday = new Date(today);
             yesterday.setDate(yesterday.getDate() - 1);
             
-            // Check if date is today, tomorrow, or yesterday
             const sessionDate = new Date(date);
             sessionDate.setHours(0, 0, 0, 0);
             
@@ -337,7 +264,6 @@ export default function SessionHistory() {
                 });
             }
             
-            // Default format
             return date.toLocaleDateString('en-US', { 
                 weekday: 'short',
                 month: 'short', 
@@ -350,21 +276,17 @@ export default function SessionHistory() {
         }
     };
     
-    // Format time for display with error handling
     const formatSessionTime = (dateString: string, timeSlot?: string): string => {
         try {
-            // If we have a separate timeSlot (like "09:00"), use that instead
             if (timeSlot) {
-                // Format the time (e.g., "09:00" to "9:00 AM")
                 const [hours, minutes] = timeSlot.split(':').map(Number);
                 if (!isNaN(hours) && !isNaN(minutes)) {
                     const period = hours >= 12 ? 'PM' : 'AM';
-                    const hour12 = hours % 12 || 12; // Convert 0 to 12 for 12 AM
+                    const hour12 = hours % 12 || 12;
                     return `${hour12}:${minutes.toString().padStart(2, '0')} ${period}`;
                 }
             }
             
-            // Fallback to date string if timeSlot is not available or valid
             const date = new Date(dateString);
             if (isNaN(date.getTime())) {
                 throw new Error('Invalid date');
@@ -380,15 +302,12 @@ export default function SessionHistory() {
         }
     };
     
-    // Get session status for UI
     const getSessionStatus = (dateString: string): SessionStatus => {
         try {
             const sessionDate = new Date(dateString);
             sessionDate.setHours(0, 0, 0, 0);
             
-            if (sessionDate.getTime() === today.getTime()) {
-                return 'today';
-            } else if (sessionDate < today) {
+            if (sessionDate < today) {
                 return 'past';
             } else {
                 return 'upcoming';
@@ -399,28 +318,16 @@ export default function SessionHistory() {
         }
     };
     
-    // Navigate to counselor profile
     const handleViewCounselorProfile = (counselorId: string): void => {
-        router.push({
-            pathname: '/(hidden)/profile/counsellor_profile',
-            params: { id: counselorId }
-        });
+        router.push(`/(hidden)/profile/counsellor_profile?id=${counselorId}`);
     };
     
-    // Navigate to chat with counselor
     const handleChatWithCounselor = (counselorId: string): void => {
-        router.push({
-            pathname: '/(hidden)/profile/counsellor-chat',
-            params: { counselorId: counselorId }
-        });
+        router.push(`/(hidden)/profile/counsellor-chat?counselorId=${counselorId}`);
     };
     
-    // Handle session booking
     const handleBookSession = (counselorId: string): void => {
-        router.push({
-            pathname: '/(hidden)/session/bookSessions',
-            params: { counselorId }
-        });
+        router.push(`/(hidden)/session/bookSessions?counselorId=${counselorId}`);
     };
 
     if (loading) {
@@ -448,44 +355,22 @@ export default function SessionHistory() {
 
     return (
         <View className="flex-1 bg-gray-50">
-            <View className="pt-6" />
+            {/* Header */}
             <View className="flex-row items-center justify-between px-5 py-4 bg-white border-b border-gray-100">
                 <TouchableOpacity onPress={() => router.back()}>
                     <ArrowLeft size={24} color="#374151" />
                 </TouchableOpacity>
                 <Text className="text-gray-900 text-lg font-semibold">Session History</Text>
-                <View className="w-6" />
+                <TouchableOpacity 
+                    className="p-2 rounded-full"
+                    onPress={() => setShowFilters(!showFilters)}
+                >
+                    <Filter size={20} color="#2563EB" />
+                </TouchableOpacity>
             </View>
             
-            <ScrollView className="flex-1 px-4 py-4">
-                <View className="flex-row justify-between items-center mb-4">
-                    <Text className="text-2xl font-bold text-gray-800">Sessions</Text>
-                    <TouchableOpacity 
-                        className="bg-primary/10 p-2 rounded-full"
-                        onPress={() => setShowFilters(prev => !prev)}
-                    >
-                        <Filter size={20} color="#2563EB" />
-                    </TouchableOpacity>
-                </View>
-                
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-4">
-                    {filterOptions.map((tab) => (
-                        <TouchableOpacity
-                            key={tab.id}
-                            onPress={() => setActiveFilter(tab.id as SessionStatus)}
-                            className={`mr-3 px-4 py-2 rounded-full ${
-                                activeFilter === tab.id ? 'bg-primary' : 'bg-gray-200'
-                            }`}
-                        >
-                            <Text className={`font-medium ${
-                                activeFilter === tab.id ? 'text-white' : 'text-gray-700'
-                            }`}>
-                                {tab.label}
-                            </Text>
-                        </TouchableOpacity>
-                    ))}
-                </ScrollView>
-                
+            <ScrollView className="flex-1 px-4 py-4" contentContainerStyle={{ paddingBottom: 20 }}>
+                {/* Search and Filters */}
                 <View className="mb-4">
                     <View className="flex-row items-center bg-white rounded-lg shadow-sm p-2 mb-3">
                         <Search size={20} color="#9CA3AF" className="mr-2" />
@@ -502,12 +387,39 @@ export default function SessionHistory() {
                         )}
                     </View>
                     
+                    {/* Filter Tabs */}
+                    <ScrollView 
+                        horizontal 
+                        showsHorizontalScrollIndicator={false} 
+                        className="mb-3"
+                        contentContainerStyle={{ paddingHorizontal: 2 }}
+                    >
+                        {filterOptions.map((tab) => (
+                            <TouchableOpacity
+                                key={tab.id}
+                                onPress={() => setActiveFilter(tab.id as SessionStatus)}
+                                className={`mr-2 px-4 py-2 rounded-full ${
+                                    activeFilter === tab.id ? 'bg-primary' : 'bg-gray-100'
+                                }`}
+                            >
+                                <Text className={`font-medium text-sm ${
+                                    activeFilter === tab.id ? 'text-white' : 'text-gray-700'
+                                }`}>
+                                    {tab.label}
+                                </Text>
+                            </TouchableOpacity>
+                        ))}
+                    </ScrollView>
+                    
+                    {/* Advanced Filters */}
                     {showFilters && (
-                        <View className="bg-white p-3 rounded-lg shadow-sm mb-3">
-                            <View>
-                                <Text className="text-gray-600 mb-1 text-sm">Filter by Counselor</Text>
+                        <View className="bg-white p-4 rounded-lg shadow-sm mb-3">
+                            <Text className="text-gray-800 font-medium mb-3">Filter Options</Text>
+                            
+                            <View className="mb-3">
+                                <Text className="text-gray-600 mb-1 text-sm">Counselor</Text>
                                 <TouchableOpacity
-                                    className="flex-row justify-between items-center bg-gray-100 p-2 rounded-md"
+                                    className="flex-row justify-between items-center bg-gray-100 p-3 rounded-md"
                                     onPress={() => setShowCounselorDropdown(!showCounselorDropdown)}
                                 >
                                     <Text className="text-gray-700">
@@ -517,7 +429,7 @@ export default function SessionHistory() {
                                 </TouchableOpacity>
                                 
                                 {showCounselorDropdown && (
-                                    <View className="bg-white mt-1 rounded-md shadow-md absolute top-10 left-0 right-0 z-10">
+                                    <View className="bg-white mt-1 rounded-md shadow-md absolute top-16 left-4 right-4 z-10 border border-gray-200">
                                         {counselors.map((counselor) => (
                                             <TouchableOpacity
                                                 key={counselor.value}
@@ -537,13 +449,13 @@ export default function SessionHistory() {
                                 )}
                             </View>
                             
-                            <View className="mt-3">
-                                <Text className="text-gray-600 mb-1 text-sm">Search by Date</Text>
-                                <View className="flex-row items-center bg-gray-100 rounded-md p-2">
+                            <View>
+                                <Text className="text-gray-600 mb-1 text-sm">Date</Text>
+                                <View className="flex-row items-center bg-gray-100 rounded-md p-3">
                                     <Calendar size={18} color="#4B5563" className="mr-2" />
                                     <TextInput
                                         placeholder="Search by date (e.g., Jul 15, 2025)"
-                                        className="flex-1 text-gray-700 py-1"
+                                        className="flex-1 text-gray-700"
                                         value={dateSearchTerm}
                                         onChangeText={setDateSearchTerm}
                                     />
@@ -558,63 +470,68 @@ export default function SessionHistory() {
                     )}
                 </View>
                 
+                {/* Sessions List */}
                 {filteredSessions.length === 0 ? (
                     <View className="items-center justify-center py-12">
-                        <Calendar size={48} color="#9CA3AF" />
+                        <Calendar size={48} color="#9CA3AF" className="opacity-70" />
                         <Text className="text-gray-500 text-lg font-medium mt-4">No sessions found</Text>
                         <Text className="text-gray-400 text-center mt-2 px-8">
                             {activeFilter === 'upcoming' 
-                                ? "You don't have any upcoming sessions. Book a session with a counselor to get started."
+                                ? "You don't have any upcoming sessions."
                                 : activeFilter === 'student'
-                                ? "You don't have any free student sessions. Book a session with a counselor that offers free student sessions."
-                                : activeFilter === 'free'
-                                ? "You don't have any free sessions. Book a session with a free counselor."
-                                : "No sessions match your current filters. Try adjusting your filters or search terms."}
+                                ? "No free student sessions found."
+                                : "No sessions match your current filters."}
                         </Text>
                         {activeFilter === 'upcoming' && (
-                            <TouchableOpacity 
+                        <TouchableOpacity
                                 className="mt-6 bg-primary px-6 py-3 rounded-lg"
                                 onPress={() => router.push('/(hidden)/profile/counsellors')}
-                            >
+                        >
                                 <Text className="text-white font-medium">Find a Counselor</Text>
-                            </TouchableOpacity>
+                        </TouchableOpacity>
                         )}
                     </View>
                 ) : (
-                    <View>
+                    <View className="space-y-3">
                         {filteredSessions.map((session) => (
                             <View 
                                 key={session.id} 
-                                className={`bg-white rounded-xl p-4 mb-4 shadow-sm ${
-                                    session.status === 'today' ? 'border-l-4 border-primary' : ''
-                                }`}
+                                className="bg-white rounded-xl p-4 shadow-sm border border-gray-100"
                             >
+                                {/* Session Header */}
                                 <View className="flex-row items-center justify-between mb-3">
-                                    <View className="flex-row items-center">
-                                        <View className="w-2 h-2 rounded-full mr-2 bg-primary" />
-                                        <Text className="text-primary font-medium">
-                                            {session.status === 'past' ? 'Completed' : 'Scheduled'}
+                                <View className="flex-row items-center">
+                                        <View className={`w-2 h-2 rounded-full mr-2 ${
+                                            session.status === 'past' ? 'bg-gray-400' : 'bg-primary'
+                                        }`} />
+                                        <Text className={`text-sm font-medium ${
+                                            session.status === 'past' ? 'text-gray-500' : 'text-primary'
+                                        }`}>
+                                            {session.status === 'past' ? 'Completed' : 'Upcoming'}
                                         </Text>
                                     </View>
                                     
-                                    {/* Show appropriate session badge */}
                                     {session.isFreeForAll ? (
                                         <View className="flex-row items-center bg-green-100 px-2 py-1 rounded-lg">
                                             <GraduationCap size={12} color="#059669" />
-                                            <Text className="text-xs text-green-700 font-medium ml-1">Free Session</Text>
+                                            <Text className="text-xs text-green-700 font-medium ml-1">Free</Text>
                                         </View>
                                     ) : session.isStudentSession ? (
                                         <View className="flex-row items-center bg-indigo-100 px-2 py-1 rounded-lg">
                                             <GraduationCap size={12} color="#4F46E5" />
-                                            <Text className="text-xs text-indigo-700 font-medium ml-1">Free Student Session</Text>
+                                            <Text className="text-xs text-indigo-700 font-medium ml-1">Student Free</Text>
                                         </View>
                                     ) : null}
-                                </View>
-                                
+                            </View>
+                            
+                                {/* Counselor Info */}
                                 <View className="flex-row mb-4">
-                                    <View className="w-12 h-12 rounded-full bg-gray-200 overflow-hidden mr-3">
+                                    <TouchableOpacity 
+                                        className="w-12 h-12 rounded-full bg-gray-200 overflow-hidden mr-3"
+                                        onPress={() => handleViewCounselorProfile(session.counselorId)}
+                                    >
                                         {session.counselorImage ? (
-                                            <Image 
+                                    <Image 
                                                 source={{ uri: session.counselorImage }}
                                                 className="w-full h-full"
                                                 resizeMode="cover"
@@ -624,14 +541,14 @@ export default function SessionHistory() {
                                                 <User size={24} color="#9CA3AF" />
                                             </View>
                                         )}
-                                    </View>
+                                    </TouchableOpacity>
                                     <View className="flex-1">
                                         <Text className="text-lg font-semibold text-gray-900">
                                             {session.counselorName}
                                         </Text>
-                                        <View className="flex-row items-center">
+                                        <View className="flex-row items-center mt-1">
                                             <Clock size={14} color="#6B7280" className="mr-1" />
-                                            <Text className="text-gray-500">
+                                            <Text className="text-gray-500 text-sm">
                                                 {formatSessionDate(session.date)} • {formatSessionTime(session.date, session.timeSlot)}
                                             </Text>
                                         </View>
@@ -640,38 +557,36 @@ export default function SessionHistory() {
                                         <Text className="text-gray-900 font-semibold">
                                             {session.isFreeForAll || session.isStudentSession ? 'FREE' : `Rs.${session.fee}`}
                                         </Text>
-                                        <Text className="text-gray-500 text-sm">{session.duration} min</Text>
+                                        <Text className="text-gray-500 text-xs mt-1">{session.duration} min</Text>
                                     </View>
                                 </View>
                                 
-                                <View className="flex-row justify-between mt-2">
-                                    <TouchableOpacity
+                                {/* Action Buttons */}
+                                <View className="flex-row justify-between">
+                                    <TouchableOpacity 
                                         className="flex-1 mr-2 py-2 bg-gray-100 rounded-lg items-center justify-center flex-row"
                                         onPress={() => handleChatWithCounselor(session.counselorId)}
                                     >
                                         <MessageCircle size={16} color="#4B5563" className="mr-1" />
-                                        <Text className="text-gray-700 font-medium">Message</Text>
+                                        <Text className="text-gray-700 font-medium text-sm">Message</Text>
                                     </TouchableOpacity>
                                     
                                     {session.status !== 'past' ? (
-                                        <TouchableOpacity
+                                    <TouchableOpacity 
                                             className="flex-1 ml-2 py-2 bg-primary rounded-lg items-center justify-center flex-row"
-                                            onPress={() => {
-                                                // Navigate to join session screen (would be implemented in a real app)
-                                                Alert.alert('Join Session', 'This would navigate to the video call screen in a real app.');
-                                            }}
+                                            onPress={() => Alert.alert('Join Session', 'This would navigate to the video call screen in a real app.')}
                                         >
                                             <ExternalLink size={16} color="#FFFFFF" className="mr-1" />
-                                            <Text className="text-white font-medium">Join Session</Text>
-                                        </TouchableOpacity>
+                                            <Text className="text-white font-medium text-sm">Join</Text>
+                                    </TouchableOpacity>
                                     ) : (
-                                        <TouchableOpacity
+                                    <TouchableOpacity 
                                             className="flex-1 ml-2 py-2 bg-primary rounded-lg items-center justify-center flex-row"
                                             onPress={() => handleBookSession(session.counselorId)}
-                                        >
+                                    >
                                             <Calendar size={16} color="#FFFFFF" className="mr-1" />
-                                            <Text className="text-white font-medium">Book Again</Text>
-                                        </TouchableOpacity>
+                                            <Text className="text-white font-medium text-sm">Book Again</Text>
+                                    </TouchableOpacity>
                                     )}
                                 </View>
                             </View>
@@ -679,27 +594,31 @@ export default function SessionHistory() {
                     </View>
                 )}
                 
+                {/* Student Benefits Banner */}
                 {isStudent && (
-                    <View className="mx-4 mt-4 mb-2 bg-indigo-50 p-3 rounded-xl">
+                    <View className="mt-4 p-4 bg-indigo-50 rounded-xl border border-indigo-100">
                         <Text className="text-indigo-900 font-semibold">Student Benefits</Text>
                         <Text className="text-indigo-700 text-sm mt-1">
                             You get 4 free counseling sessions each month
                         </Text>
                     </View>
                 )}
-                
-                <TouchableOpacity
-                    onPress={() => router.push('/session/StudentPackageApply')}
-                    className="mt-2 mb-6 bg-blue-50 p-4 rounded-lg border border-blue-200"
-                >
-                    <View className="flex-row justify-between items-center">
-                        <View>
-                            <Text className="text-blue-800 font-bold text-lg">Free Student Package</Text>
-                            <Text className="text-blue-600 mt-1">Apply with your university credentials</Text>
+
+                {/* Student Package CTA */}
+                {!isStudent && (
+                    <TouchableOpacity
+                        onPress={() => router.push('/session/StudentPackageApply')}
+                        className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200"
+                    >
+                        <View className="flex-row justify-between items-center">
+                            <View>
+                                <Text className="text-blue-800 font-bold">Free Student Package</Text>
+                                <Text className="text-blue-600 text-sm mt-1">Apply with your university credentials</Text>
+                            </View>
+                            <ExternalLink size={20} color="#2563EB" />
                         </View>
-                        <ExternalLink size={24} color="#2563EB" />
-                    </View>
-                </TouchableOpacity>
+                    </TouchableOpacity>
+                )}
             </ScrollView>     
         </View>
     );

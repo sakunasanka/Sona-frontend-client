@@ -153,7 +153,6 @@ const AddPostModal: React.FC<AddPostModalProps> = ({ visible, onClose, onSubmit 
             />
             <View>
               <Text className="font-semibold text-base">John Doe</Text>
-              <Text className="text-gray-500 text-sm">Public</Text>
             </View>
           </View>
 

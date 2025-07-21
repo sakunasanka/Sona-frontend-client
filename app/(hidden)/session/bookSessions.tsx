@@ -2,10 +2,11 @@
 import { checkIsStudent } from "@/api/api";
 import { Counselor } from "@/api/counselor";
 import { createPaymentLink } from "@/api/payment";
+import { getRemainingFreeSessions } from "@/api/sessions";
 import { API_URL, PORT } from "@/config/env";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router, useLocalSearchParams } from "expo-router";
-import { ArrowLeft, GraduationCap } from 'lucide-react-native';
+import { ArrowLeft, Calendar, GraduationCap } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -113,6 +114,8 @@ if (Platform.OS === 'android') {
 } else {
   API_BASE_URL = API_URL + ':' + PORT + '/api';
 }
+
+// Use the getRemainingFreeSessions function from the API
 const formatMonthKey = (year: number, month: number): string => {
   return `${year}-${String(month + 1).padStart(2, '0')}`;
 };
@@ -121,6 +124,40 @@ const formatMonthKey = (year: number, month: number): string => {
 const formatDateKey = (year: number, month: number, day: number): string => {
   // month is 0-indexed in JS Date but we want 1-indexed in our format
   return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+};
+
+const formatResetDate = (dateString: string): string => {
+  try {
+    const date = new Date(dateString);
+    
+    if (isNaN(date.getTime())) {
+      throw new Error('Invalid date');
+    }
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    const resetDate = new Date(date);
+    resetDate.setHours(0, 0, 0, 0);
+    
+    if (resetDate.getTime() === today.getTime()) {
+      return 'Today';
+    } else if (resetDate.getTime() === tomorrow.getTime()) {
+      return 'Tomorrow';
+    }
+    
+    return date.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric',
+      year: 'numeric'
+    });
+  } catch (e) {
+    console.warn('Invalid date string:', dateString);
+    return dateString;
+  }
 };
 
 // Fetch monthly availability from backend API
@@ -219,6 +256,9 @@ export default function BookSessionScreen() {
   const [isStudent, setIsStudent] = useState<boolean>(false);
   const [isCheckingStudentStatus, setIsCheckingStudentStatus] = useState<boolean>(true);
   const [freeSessionsRemaining, setFreeSessionsRemaining] = useState<number>(0);
+  const [nextResetDate, setNextResetDate] = useState<string>('');
+  const [totalSessionsThisPeriod, setTotalSessionsThisPeriod] = useState<number>(0);
+  const [loadingStudentData, setLoadingStudentData] = useState<boolean>(false);
 
   // WebView states for payment processing
   const [showWebView, setShowWebView] = useState(false);
@@ -265,9 +305,7 @@ export default function BookSessionScreen() {
           
           // If student, fetch remaining free sessions
           if (studentStatus) {
-            // In a real app, you would fetch this from an API
-            // For now, we'll mock 4 free sessions per month for students
-            setFreeSessionsRemaining(4);
+            await fetchStudentSessionsData(token);
           }
         }
       } catch (error) {
@@ -279,6 +317,24 @@ export default function BookSessionScreen() {
     
     checkStudentStatus();
   }, []);
+  
+  // Separate function to fetch student sessions data
+  const fetchStudentSessionsData = async (token: string) => {
+    setLoadingStudentData(true);
+    try {
+      const freeSessionsResponse = await getRemainingFreeSessions(token);
+      if (freeSessionsResponse && freeSessionsResponse.data) {
+        const sessionInfo = freeSessionsResponse.data;
+        setFreeSessionsRemaining(sessionInfo.remainingSessions);
+        setNextResetDate(sessionInfo.nextResetDate);
+        setTotalSessionsThisPeriod(sessionInfo.totalSessionsThisPeriod);
+      }
+    } catch (error) {
+      console.error('Error fetching remaining free sessions:', error);
+    } finally {
+      setLoadingStudentData(false);
+    }
+  };
 
   // Function to determine if the session is free
   const isSessionFree = () => {
@@ -289,10 +345,9 @@ export default function BookSessionScreen() {
       return true;
     }
     
-    // Free for students if user is a student and has free sessions remaining
-    if (isStudent && freeSessionsRemaining > 0) {
-      return true;
-    }
+    // Student benefits only apply for free counselors (volunteers)
+    // In the future, paid counselors might opt to provide student benefits
+    // but that's not implemented yet
     
     return false;
   };
@@ -676,16 +731,26 @@ export default function BookSessionScreen() {
     if (!counselor) return null;
     
     if (counselor.isVolunteer) {
+      // Free counselors are free for everyone, including students
       return <Text className="text-lg font-semibold text-green-600">FREE</Text>;
-    } else if (isStudent && freeSessionsRemaining > 0) {
-      return (
-        <View className="items-end">
-          <Text className="text-gray-500 line-through">Rs.{counselor.sessionFee}</Text>
-          <Text className="text-lg font-semibold text-green-600">FREE</Text>
-        </View>
-      );
     } else {
+      // Paid counselors are paid for everyone, including students
       return <Text className="text-lg font-semibold text-primary">Rs.{counselor.sessionFee}</Text>;
+      
+      /* 
+      // Future implementation for counselors who opt to provide student benefits
+      // Currently not implemented
+      if (isStudent && counselor.providesStudentBenefits && freeSessionsRemaining > 0) {
+        return (
+          <View className="items-end">
+            <Text className="text-gray-500 line-through">Rs.{counselor.sessionFee}</Text>
+            <Text className="text-lg font-semibold text-green-600">FREE</Text>
+          </View>
+        );
+      } else {
+        return <Text className="text-lg font-semibold text-primary">Rs.{counselor.sessionFee}</Text>;
+      }
+      */
     }
   };
 
@@ -791,27 +856,101 @@ export default function BookSessionScreen() {
               <GraduationCap size={20} color="#059669" />
               <Text className="text-lg font-semibold text-green-900 ml-2">Volunteer Counselor</Text>
             </View>
-            <Text className="text-green-800">
-              This counselor provides free sessions for everyone.
-            </Text>
+            
+            {isStudent && !loadingStudentData && (
+              <View className="mt-3 bg-indigo-100/60 p-3 rounded-lg">
+                <View className="flex-row items-center">
+                  <GraduationCap size={16} color="#4F46E5" className="mr-2" />
+                  <Text className="text-indigo-800 font-medium">Student Benefits Apply</Text>
+                </View>
+                <Text className="text-indigo-700 text-sm mt-1">
+                  Sessions with volunteer counselors count toward your {freeSessionsRemaining} remaining free student sessions.
+                </Text>
+                {nextResetDate && (
+                  <View className="flex-row items-center mt-2">
+                    <Calendar size={14} color="#4F46E5" className="mr-1" />
+                    <Text className="text-indigo-800 text-xs font-medium">
+                      Plan resets on {formatResetDate(nextResetDate)}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            )}
           </View>
         ) : isStudent ? (
           <View className="bg-indigo-50 mx-5 mt-4 p-5 rounded-2xl">
-            <View className="flex-row justify-between items-center mb-3">
-              <Text className="text-lg font-semibold text-indigo-900">Student Benefits</Text>
-              <View className="bg-indigo-100 rounded-full px-3 py-1">
-                <Text className="text-indigo-700 font-medium">{freeSessionsRemaining} Free Sessions Left</Text>
+            {loadingStudentData ? (
+              <View className="items-center py-2">
+                <ActivityIndicator size="small" color="#4F46E5" />
+                <Text className="text-indigo-700 text-sm mt-1">Loading your benefits...</Text>
               </View>
-            </View>
-            
-            {freeSessionsRemaining > 0 ? (
-              <Text className="text-indigo-800">
-                As a verified student, you can book free sessions with this counselor.
-              </Text>
             ) : (
-              <Text className="text-yellow-800">
-                You've used all your free student sessions this month. You can still book a paid session.
-              </Text>
+              <>
+                <View className="flex-row justify-between items-center mb-3">
+                  <Text className="text-lg font-semibold text-indigo-900">Student Benefits</Text>
+                  <View className="bg-indigo-100 rounded-full px-3 py-1">
+                    <Text className="text-indigo-700 font-medium">{freeSessionsRemaining} Free Sessions Left</Text>
+                  </View>
+                </View>
+                
+                <View>
+                  {counselor.isVolunteer ? (
+                    // This is a free counselor
+                    freeSessionsRemaining > 0 ? (
+                      <View>
+                        <Text className="text-indigo-800">
+                          As a verified student, you can book free sessions with volunteer counselors.
+                        </Text>
+                        {nextResetDate && (
+                          <View className="flex-row items-center mt-2">
+                            <Calendar size={14} color="#4F46E5" className="mr-1" />
+                            <Text className="text-indigo-800 text-sm font-medium">
+                              Plan resets on {formatResetDate(nextResetDate)}
+                            </Text>
+                          </View>
+                        )}
+                        <View className="bg-indigo-100/50 p-2 rounded-lg mt-2">
+                          <Text className="text-indigo-700 text-xs text-center">
+                            You've used {totalSessionsThisPeriod} of 4 free sessions this period
+                          </Text>
+                        </View>
+                      </View>
+                    ) : (
+                      <View>
+                        <Text className="text-yellow-800">
+                          You've used all your free student sessions this period. You can still book a paid session.
+                        </Text>
+                        {nextResetDate && (
+                          <View className="flex-row items-center mt-2">
+                            <Calendar size={14} color="#4F46E5" className="mr-1" />
+                            <Text className="text-indigo-800 text-sm font-medium">
+                              Free sessions reset on {formatResetDate(nextResetDate)}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+                    )
+                  ) : (
+                    // This is a paid counselor
+                    <View>
+                      <Text className="text-indigo-800">
+                        Student benefits apply only to free counselors. This is a paid counselor.
+                      </Text>
+                      <Text className="text-indigo-700 mt-1">
+                        You have {freeSessionsRemaining} free sessions remaining with volunteer counselors.
+                      </Text>
+                      {nextResetDate && (
+                        <View className="flex-row items-center mt-2">
+                          <Calendar size={14} color="#4F46E5" className="mr-1" />
+                          <Text className="text-indigo-800 text-sm font-medium">
+                            Free sessions plan resets on {formatResetDate(nextResetDate)}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                  )}
+                </View>
+              </>
             )}
           </View>
         ) : null}
@@ -931,10 +1070,8 @@ export default function BookSessionScreen() {
             title={
               isCreatingPayment 
                 ? "Processing..." 
-                : counselor.isVolunteer
+                : counselor.isVolunteer && isStudent && freeSessionsRemaining > 0
                   ? "Book Free Session"
-                  : isStudent && freeSessionsRemaining > 0
-                    ? "Book Free Student Session"
                     : `Book Session - Rs.${counselor.sessionFee}`
             }
             onPress={() => {

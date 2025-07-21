@@ -50,7 +50,7 @@ const CounselorCard = ({ counselor, isUserStudent, freeSessionsRemaining }: { co
     if (counselorDisplay.counselorType === 'free') {
       return (
         <View>
-          <Text className="text-green-600 font-semibold">Free for All</Text>
+          <Text className="text-green-600 font-semibold">Free session</Text>
           <Text className="text-xs text-gray-500">Volunteer Counselor</Text>
         </View>
       );
@@ -129,7 +129,7 @@ const CounselorCard = ({ counselor, isUserStudent, freeSessionsRemaining }: { co
         {counselorDisplay.counselorType === 'free' ? (
           <View className="flex-row items-center bg-green-100 px-3 py-1 rounded-xl">
             <GraduationCap size={12} color="#059669" className="mr-1" />
-            <Text className="text-xs text-green-700 font-medium ml-1">Free Counselor</Text>
+            <Text className="text-xs text-green-700 font-medium ml-1">Volunteer Counselor</Text>
           </View>
         ): null}
       </View>
@@ -235,17 +235,50 @@ export default function CounselorsScreen() {
           setAvailableSpecialties(allSpecialties);
         }
 
-        // Check if user is a student
+        // Check if user is a student and get free sessions data
         const token = await AsyncStorage.getItem('token');
         if (token) {
           const studentStatus = await checkIsStudent(token);
           setIsStudent(studentStatus);
           
-          // If student, fetch remaining free sessions
+          // If student, get free sessions data (either from AsyncStorage or API)
           if (studentStatus) {
-            // In a real app, you would fetch this from an API
-            // For now, we'll mock 4 free sessions per month for students
-            setFreeSessionsRemaining(4);
+            // First try to get from AsyncStorage (prefetched in counsellor.tsx)
+            const storedFreeSessionsRemaining = await AsyncStorage.getItem('freeSessionsRemaining');
+            const lastFetchTime = await AsyncStorage.getItem('lastFreeSessionsFetch');
+            
+            // Check if we have recently fetched data (within the last hour)
+            const useStoredData = storedFreeSessionsRemaining && lastFetchTime && 
+              (new Date().getTime() - new Date(lastFetchTime).getTime() < 60 * 60 * 1000);
+            
+            if (useStoredData) {
+              // Use the stored data
+              setFreeSessionsRemaining(parseInt(storedFreeSessionsRemaining || '0'));
+            } else {
+              try {
+                // Fetch from API if data is not available or outdated
+                const freeSessionsResponse = await import('@/api/sessions').then(
+                  module => module.getRemainingFreeSessions(token)
+                );
+                
+                if (freeSessionsResponse && freeSessionsResponse.data) {
+                  const sessionInfo = freeSessionsResponse.data;
+                  setFreeSessionsRemaining(sessionInfo.remainingSessions);
+                  
+                  // Update the stored data
+                  await AsyncStorage.setItem('freeSessionsRemaining', sessionInfo.remainingSessions.toString());
+                  await AsyncStorage.setItem('nextResetDate', sessionInfo.nextResetDate);
+                  await AsyncStorage.setItem('totalSessionsThisPeriod', sessionInfo.totalSessionsThisPeriod.toString());
+                  await AsyncStorage.setItem('lastFreeSessionsFetch', new Date().toISOString());
+                }
+              } catch (error) {
+                console.error('Error fetching free sessions data:', error);
+                // Fallback to stored data if available
+                if (storedFreeSessionsRemaining) {
+                  setFreeSessionsRemaining(parseInt(storedFreeSessionsRemaining));
+                }
+              }
+            }
           }
         }
       } catch (error) {

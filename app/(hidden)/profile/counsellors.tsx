@@ -74,7 +74,15 @@ const CounselorCard = ({ counselor, isUserStudent, freeSessionsRemaining }: { co
   return (
     <View className="bg-white rounded-2xl p-5 mb-4 shadow">
       <View className="flex-row mb-4">
-        <View className="relative">
+        <TouchableOpacity 
+          className="relative"
+          onPress={() => {
+            router.push({
+              pathname: '/(hidden)/profile/counsellor_profile',
+              params: { id: counselor.id }
+            });
+          }}
+        >
           {!imageError ? (
             <Image
               source={{ uri: counselor.avatar }}
@@ -94,8 +102,16 @@ const CounselorCard = ({ counselor, isUserStudent, freeSessionsRemaining }: { co
           {counselorDisplay.isOnline && (
             <View className="absolute bottom-0 right-0 w-4 h-4 bg-green-500 border-2 border-white rounded-full" />
           )}
-        </View>
-        <View className="flex-1 ml-4 mr-3">
+        </TouchableOpacity>
+        <TouchableOpacity 
+          className="flex-1 ml-4 mr-3"
+          onPress={() => {
+            router.push({
+              pathname: '/(hidden)/profile/counsellor_profile',
+              params: { id: counselor.id }
+            });
+          }}
+        >
           <Text className="text-lg font-semibold text-gray-900" numberOfLines={1}>
             {counselor.name}
           </Text>
@@ -109,7 +125,7 @@ const CounselorCard = ({ counselor, isUserStudent, freeSessionsRemaining }: { co
             <Star size={16} color="#F59E0B" fill="#F59E0B" />
             <Text className="ml-1 text-sm font-semibold text-gray-800">{counselorDisplay.rating}</Text>
           </View>
-        </View>
+        </TouchableOpacity>
         <View className="items-end justify-start">
           {getPriceDisplay()}
         </View>
@@ -148,14 +164,14 @@ const CounselorCard = ({ counselor, isUserStudent, freeSessionsRemaining }: { co
       )}
 
       {/* Show free session badge for students with remaining sessions */}
-      {isUserStudent && counselorDisplay.providesStudentSessions && freeSessionsRemaining > 0 ? (
-        <View className="mb-3 bg-green-50 p-2 rounded-lg">
-          <Text className="text-green-700 text-xs font-medium">
-            {counselorDisplay.counselorType === 'free' 
-              ? "✓ Free sessions available for everyone" 
-              : `✓ ${freeSessionsRemaining} free student sessions remaining this month`}
+      {isUserStudent && freeSessionsRemaining > 0 ? (
+        <View>
+        {counselorDisplay.counselorType === 'free' && (
+          <Text className="text-green-700 text-xs font-medium mb-3 bg-green-50 p-2 rounded-lg">
+            ✓ {freeSessionsRemaining} free student sessions remaining this month
           </Text>
-        </View>
+        )}
+      </View>
       ) : isUserStudent && counselorDisplay.providesStudentSessions && freeSessionsRemaining === 0 ? (
         <View className="mb-3 bg-yellow-50 p-2 rounded-lg">
           <Text className="text-yellow-700 text-xs font-medium">

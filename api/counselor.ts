@@ -33,6 +33,14 @@ export interface CounselorResponse {
   };
 }
 
+export interface SingleCounselorResponse {
+  success: boolean;
+  message: string;
+  data: {
+    counselor: Counselor;
+  };
+}
+
 // Get available counselors
 export const getAvailableCounselors = async (): Promise<CounselorResponse> => {
   try {
@@ -50,13 +58,25 @@ export const getAvailableCounselors = async (): Promise<CounselorResponse> => {
 // Get counselor by ID
 export const getCounselorById = async (counselorId: number): Promise<Counselor> => {
   try {
+    console.log(`API call: Fetching counselor with ID ${counselorId}`);
     const response = await apiRequest({
       method: 'get',
       path: `/counselors/${counselorId}`
     });
+    
+    console.log('API response:', response);
+    
+    if (!response.success) {
+      throw new Error(response.message || 'Failed to fetch counselor data');
+    }
+    
+    if (!response.data || !response.data.counselor) {
+      throw new Error('Invalid response format: missing counselor data');
+    }
+    
     return response.data.counselor;
   } catch (error) {
-    // console.error(`Error fetching counselor with ID ${counselorId}:`, error);
+    console.error(`Error fetching counselor with ID ${counselorId}:`, error);
     throw error;
   }
 };

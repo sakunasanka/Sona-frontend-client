@@ -1,80 +1,122 @@
 import { checkIsStudent } from '@/api/api';
+import { getCounselorById } from '@/api/counselor';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router, useLocalSearchParams } from 'expo-router';
 import { ArrowLeft, Award, Calendar, Clock, Globe, GraduationCap, MapPin, MessageSquare, Star } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Image,
-    SafeAreaView,
-    ScrollView,
-    Text,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  Alert,
+  Image,
+  SafeAreaView,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { PrimaryButton, SecondaryButton } from '../../components/Buttons';
 
+interface CounselorData {
+  id: number;
+  name: string;
+  title: string;
+  avatar: string;
+  specialities?: string[]; // Note: API uses 'specialities' not 'specialties'
+  rating?: number;
+  reviews?: number;
+  experience?: string;
+  languages?: string[];
+  description: string;
+  availability?: string;
+  address: string;
+  education?: string;
+  sessionFee: number;
+  isVolunteer: boolean;
+  isAvailable: boolean;
+  contact_no?: string;
+  license_no?: string;
+  status?: string;
+  email?: string;
+}
+
 export default function CounsellorProfile() {
   const params = useLocalSearchParams();
-  const counselorId = params.id as string;
+  // Get counselor ID from params - could be either 'id' or 'counselorId'
+  const rawId = params.id || params.counselorId;
+  const counselorId = rawId ? String(rawId) : null;
+  
   const [isStudent, setIsStudent] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [counselorData, setCounselorData] = useState<CounselorData | null>(null);
+  const [loadingCounselor, setLoadingCounselor] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
   
-  // Check if user is a student when component mounts
+  // Log params for debugging
   useEffect(() => {
-    const checkStudentStatus = async () => {
+    console.log('Params received:', JSON.stringify(params));
+    console.log('Raw ID:', rawId);
+    console.log('Counselor ID:', counselorId);
+  }, [params, counselorId, rawId]);
+  
+  // Fetch counselor data and check student status when component mounts
+  useEffect(() => {
+    const fetchData = async () => {
       try {
+        setLoadingCounselor(true);
+        
+        // Fetch counselor data
+        if (counselorId) {
+          console.log('Fetching counselor with ID:', counselorId);
+          try {
+            const counselor = await getCounselorById(Number(counselorId));
+            console.log('Counselor data received:', JSON.stringify(counselor));
+            setCounselorData(counselor);
+          } catch (apiError: any) {
+            console.error('API error details:', apiError);
+            Alert.alert('API Error', `Failed to fetch counselor: ${apiError.message || apiError}`);
+            setError(`API error: ${apiError.message || apiError}`);
+          }
+        } else {
+          console.error('No counselor ID provided');
+          setError('No counselor ID provided');
+        }
+        
+        // Check if user is a student
         const token = await AsyncStorage.getItem('token');
         if (token) {
           const studentStatus = await checkIsStudent(token);
           setIsStudent(studentStatus);
         }
-      } catch (error) {
-        console.error('Error checking student status:', error);
+      } catch (error: any) {
+        console.error('Error fetching data:', error);
+        setError(`Failed to load counselor data: ${error.message || error}`);
       } finally {
+        setLoadingCounselor(false);
         setIsLoading(false);
       }
     };
     
-    checkStudentStatus();
-  }, []);
-
-  const counsellorData = {
-    id: counselorId || '1',
-    name: 'Dr. Sarah Johnson',
-    title: 'Licensed Clinical Psychologist',
-    specialization: 'Anxiety & Depression',
-    rating: 4.9,
-    reviews: 128,
-    experience: '8 years',
-    languages: ['English', 'Spanish'],
-    bio: 'Specialized in cognitive behavioral therapy with a focus on anxiety disorders. Passionate about helping clients develop coping strategies.',
-    availability: 'Mon-Fri, 9am-5pm',
-    location: 'Virtual or 123 Therapy St, Boston',
-    education: 'PhD in Clinical Psychology, Harvard University',
-    price: 'Rs.4000 per session',
-    image: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=880&q=80',
-    providesStudentSessions: true // Indicates if this counselor provides free sessions for students
-  };
+    fetchData();
+  }, [counselorId]);
 
   const handleBookAppointment = () => {
     router.push({
       pathname: '/(hidden)/session/bookSessions',
-      params: { counselorId: counsellorData.id }
+      params: { counselorId: counselorData?.id }
     });
   };
 
   const handleBookSession = () => {
     router.push({
       pathname: '/(hidden)/session/bookSessions',
-      params: { counselorId: counsellorData.id }
+      params: { counselorId: counselorData?.id }
     });
   };
 
   const handleMessage = () => {
     router.push({
       pathname: '/(hidden)/profile/counsellor-chat',
-      params: { counselorId: counsellorData.id }
+      params: { counselorId: counselorData?.id }
     });
   };
 
@@ -101,6 +143,75 @@ export default function CounsellorProfile() {
     </View>
   );
 
+  // Show loading state if data is being fetched
+  if (isLoading || loadingCounselor) {
+    return (
+      <SafeAreaView className="flex-1 bg-white">
+        <View className="flex-1 items-center justify-center">
+          <ActivityIndicator size="large" color="#6366F1" />
+          <Text className="text-gray-600 mt-4">Loading counselor profile...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // Show error state if there was an error
+  if (error || !counselorData) {
+    return (
+      <SafeAreaView className="flex-1 bg-white">
+        <View className="flex-row items-center justify-between px-6 py-4 bg-white border-b border-gray-100">
+          <TouchableOpacity 
+            className="w-10 h-10 items-center justify-center rounded-full bg-gray-50"
+            onPress={() => router.back()}
+          >
+            <ArrowLeft size={20} color="#374151" />
+          </TouchableOpacity>
+          <Text className="text-lg font-bold text-gray-900">Counselor Profile</Text>
+          <View className="w-10" />
+        </View>
+        <View className="flex-1 items-center justify-center px-6">
+          <Text className="text-red-500 text-lg font-medium mb-4">{error || 'Could not load counselor data'}</Text>
+          <TouchableOpacity 
+            className="bg-primary px-4 py-2 rounded-lg"
+            onPress={() => router.back()}
+          >
+            <Text className="text-white font-medium">Go Back</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // Calculate years of experience from description if available
+  const getExperienceFromDescription = () => {
+    if (!counselorData.description) return '1+ years';
+    
+    // Try to extract years from description
+    const yearsMatch = counselorData.description.match(/(\d+)\s*(?:years|year)/i);
+    if (yearsMatch && yearsMatch[1]) {
+      return `${yearsMatch[1]} years`;
+    }
+    
+    return '1+ years';
+  };
+
+  // Process counselor data for display
+  const counsellorDisplay = {
+    ...counselorData,
+    // Handle specialities field from API - join all specialities with commas
+    specialization: counselorData.specialities && counselorData.specialities.length > 0 
+      ? counselorData.specialities.join(', ') 
+      : 'General Counseling',
+    experience: counselorData.experience || getExperienceFromDescription(),
+    reviews: counselorData.reviews || Math.floor(Math.random() * 50) + 10,
+    availability: counselorData.availability || 'Mon-Fri, 9am-5pm',
+    education: counselorData.education || 'Professional Counselor',
+    price: `Rs.${counselorData.sessionFee}`,
+    providesStudentSessions: !counselorData.isVolunteer,
+    // Ensure languages is an array
+    languages: Array.isArray(counselorData.languages) ? counselorData.languages : ['English']
+  };
+
   return (
     <SafeAreaView className="flex-1 bg-white">
       <ScrollView
@@ -124,34 +235,60 @@ export default function CounsellorProfile() {
         <View className="bg-gradient-to-b from-blue-50 to-white px-6 py-8">
           <View className="items-center">
             <View className="relative mb-6">
-              <Image
-                source={{ uri: counsellorData.image }}
-                className="w-28 h-28 rounded-2xl"
-              />
-              <View className="absolute -bottom-2 -right-2 w-8 h-8 bg-green-500 rounded-full border-3 border-white items-center justify-center">
-                <View className="w-3 h-3 bg-white rounded-full" />
-              </View>
+              {counsellorDisplay.avatar ? (
+                <Image
+                  source={{ uri: counsellorDisplay.avatar }}
+                  className="w-28 h-28 rounded-2xl"
+                  defaultSource={require('@/assets/images/mascot/mascot-happy.png')}
+                  onError={(e) => console.log('Image load error:', e.nativeEvent.error)}
+                />
+              ) : (
+                <View className="w-28 h-28 rounded-2xl bg-gray-300 items-center justify-center">
+                  <Text className="text-gray-600 font-semibold text-2xl">
+                    {counsellorDisplay.name
+                      .split(' ')
+                      .map((n) => n[0])
+                      .join('')}
+                  </Text>
+                </View>
+              )}
+              {counsellorDisplay.isAvailable && (
+                <View className="absolute -bottom-2 -right-2 w-8 h-8 bg-green-500 rounded-full border-3 border-white items-center justify-center">
+                  <View className="w-3 h-3 bg-white rounded-full" />
+                </View>
+              )}
             </View>
             
             <Text className="text-2xl font-bold text-gray-900 mb-1 text-center">
-              {counsellorData.name}
+              {counsellorDisplay.name}
             </Text>
             <Text className="text-base font-medium text-primary mb-3">
-              {counsellorData.title}
+              {counsellorDisplay.title}
             </Text>
+            
+            {/* Specialties tags */}
+            {counselorData.specialities && counselorData.specialities.length > 0 && (
+              <View className="flex-row flex-wrap justify-center gap-2 mb-4">
+                {counselorData.specialities.map((specialty, index) => (
+                  <View key={index} className="bg-blue-100 px-3 py-1 rounded-xl">
+                    <Text className="text-xs text-primary font-medium">{specialty}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
             
             <View className="flex-row items-center bg-white px-4 py-2 rounded-full shadow-sm mb-4">
               <Star size={16} color="#F59E0B" fill="#F59E0B" />
               <Text className="text-amber-600 font-semibold ml-1 mr-2">
-                {counsellorData.rating}
+                {counsellorDisplay.rating || 4.5}
               </Text>
               <Text className="text-gray-500 text-sm">
-                ({counsellorData.reviews} reviews)
+                ({counsellorDisplay.reviews} reviews)
               </Text>
             </View>
             
             {/* Student Session Badge */}
-            {counsellorData.providesStudentSessions && (
+            {counsellorDisplay.providesStudentSessions && (
               <View className="flex-row items-center bg-indigo-100 px-4 py-2 rounded-full mb-3">
                 <GraduationCap size={16} color="#4F46E5" />
                 <Text className="text-indigo-700 font-medium ml-2">
@@ -165,39 +302,9 @@ export default function CounsellorProfile() {
         {/* Bio Section */}
         <View className="px-6 pb-6 bg-white">
           <Text className="text-gray-700 text-base leading-6 text-center">
-            {counsellorData.bio}
+            {counsellorDisplay.description || 'Professional counselor providing mental health support and guidance.'}
           </Text>
         </View>
-
-        {/* Student Benefits Section */}
-        {isLoading ? (
-          <View className="px-6 pb-6 items-center">
-            <ActivityIndicator size="small" color="#4F46E5" />
-            <Text className="text-gray-500 mt-2">Checking student status...</Text>
-          </View>
-        ) : isStudent && counsellorData.providesStudentSessions ? (
-          <View className="px-6 pb-6">
-            <View className="bg-indigo-50 p-5 rounded-xl border border-indigo-100">
-              <View className="flex-row items-center mb-3">
-                <GraduationCap size={20} color="#4F46E5" />
-                <Text className="text-lg font-bold text-indigo-900 ml-2">
-                  Student Benefits
-                </Text>
-              </View>
-              <Text className="text-indigo-800 mb-3">
-                As a verified student, you are eligible for free counseling sessions with this counselor.
-              </Text>
-              <View className="bg-white p-3 rounded-lg">
-                <Text className="text-indigo-700 font-medium">Benefits include:</Text>
-                <View className="ml-2 mt-1">
-                  <Text className="text-gray-700 mb-1">• Free sessions (limited per month)</Text>
-                  <Text className="text-gray-700 mb-1">• Priority booking</Text>
-                  <Text className="text-gray-700">• Same quality care as paid sessions</Text>
-                </View>
-              </View>
-            </View>
-          </View>
-        ) : null}
 
         {/* Quick Actions */}
         <View className="px-6 pb-6">
@@ -223,35 +330,37 @@ export default function CounsellorProfile() {
           <DetailItem
             icon={Award}
             label="Specialization"
-            value={counsellorData.specialization}
+            value={counsellorDisplay.specialization}
             iconColor="#6366F1"
           />
           
           <DetailItem
             icon={Calendar}
             label="Experience"
-            value={counsellorData.experience}
+            value={counsellorDisplay.experience}
             iconColor="#059669"
           />
           
           <DetailItem
             icon={MapPin}
             label="Location"
-            value={counsellorData.location}
+            value={counsellorDisplay.address || 'Virtual Sessions'}
             iconColor="#DC2626"
           />
           
-          <DetailItem
-            icon={Award}
-            label="Education"
-            value={counsellorData.education}
-            iconColor="#7C3AED"
-          />
+          {counsellorDisplay.education && (
+            <DetailItem
+              icon={Award}
+              label="Education"
+              value={counsellorDisplay.education}
+              iconColor="#7C3AED"
+            />
+          )}
           
           <DetailItem
             icon={Globe}
             label="Languages"
-            value={counsellorData.languages.join(', ')}
+            value={counsellorDisplay.languages.join(', ')}
             iconColor="#0891B2"
           />
         </View>
@@ -263,7 +372,7 @@ export default function CounsellorProfile() {
           <DetailItem
             icon={Clock}
             label="Schedule"
-            value={counsellorData.availability}
+            value={counsellorDisplay.availability}
             iconColor="#EA580C"
           />
           
@@ -271,8 +380,8 @@ export default function CounsellorProfile() {
             <View className="flex-row items-center justify-between">
               <View>
                 <Text className="text-sm font-medium text-gray-600 mb-1">Session Price</Text>
-                <Text className="text-3xl font-bold text-gray-900">{counsellorData.price}</Text>
-                {isStudent && counsellorData.providesStudentSessions && (
+                <Text className="text-3xl font-bold text-gray-900">{counsellorDisplay.price}</Text>
+                {isStudent && counsellorDisplay.providesStudentSessions && (
                   <Text className="text-sm font-medium text-green-600 mt-1">
                     Free sessions available with student package
                   </Text>
@@ -285,7 +394,7 @@ export default function CounsellorProfile() {
         {/* Book Appointment Button */}
         <View className="px-6">
           <PrimaryButton
-            title={isStudent && counsellorData.providesStudentSessions ? "Book Session (Student Options Available)" : "Book Appointment"}
+            title={isStudent && counsellorDisplay.providesStudentSessions ? "Book Session (Student Options Available)" : "Book Appointment"}
             onPress={handleBookAppointment}
             icon={Calendar}
             iconSize={20}

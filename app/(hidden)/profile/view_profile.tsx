@@ -13,7 +13,7 @@ export default function Profile() {
     nickname: 'John',
     dob: '23/05/2003',
     email: 'hiruna.pramuthitha1@gmail.com',
-    joinDate: 'July 2025',
+    joinDate: 'June 2025',
     checkins: 24,
     goals: 18,
     streak: 36
@@ -88,7 +88,7 @@ export default function Profile() {
         <View className="items-center py-6 border-b border-gray-200">
           <View className="relative mb-4">
             <Image 
-              source={{ uri: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg' }} 
+              source={{ uri: 'https://i.pinimg.com/736x/7a/a9/98/7aa998bc43b70132bc4ba177dcd2d40e.jpg' }} 
               className="w-32 h-32 rounded-full border-4 border-gray-200"
             />
             <TouchableOpacity 

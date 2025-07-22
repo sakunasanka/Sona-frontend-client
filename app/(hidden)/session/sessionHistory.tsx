@@ -408,7 +408,7 @@ export default function SessionHistory() {
     return (
         <View className="flex-1 bg-gray-50">
             {/* Header */}
-            <View className="px-5 pt-6 pb-4 bg-white border-b border-gray-100 shadow-sm">
+            <View className="px-5 pt-6 pb-4 mt-10 bg-white border-b border-gray-100 shadow-sm">
                 <View className="flex-row items-center justify-between mb-2">
                     <TouchableOpacity 
                         onPress={() => router.back()}

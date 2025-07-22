@@ -8,7 +8,7 @@ import FocusAnimation from '@/components/Focused';
 import { icons } from '@/constants/icons';
 import { getDisplayName } from '@/util/asyncName';
 import { router } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FlatList, Text, View } from 'react-native';
 import TopBar from '../TopBar';
 
@@ -37,7 +37,7 @@ const HomescreenCard = [
     textColor: 'text-orange-500',
     icon: icons.meditation1,
     focusIcon: icons.clock,
-    focusText: "6.00 AM",
+    focusText: "12.00 PM",
     onPress: () => router.push('/(hidden)/meditation/meditationAnimation')
   }
 ]

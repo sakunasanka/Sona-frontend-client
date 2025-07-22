@@ -8,9 +8,6 @@ import { ActivityIndicator, Image, SafeAreaView, ScrollView, Text, TouchableOpac
 import { LogoutButton } from '../../components/Buttons';
 
 export default function Profile() {
-  const [isStudent, setIsStudent] = useState<boolean>(false);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  
   const userData = {
     name: 'hiruna',
     nickname: 'John',
@@ -21,6 +18,35 @@ export default function Profile() {
     goals: 18,
     streak: 36
   };
+
+  const [isStudent, setIsStudent] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [displayName, setDisplayName] = useState<string>(userData.name);
+
+  useEffect(() => {
+    const initializeProfile = async () => {
+      try {
+        // Get display name
+        const name = await getDisplayName();
+        if (name) {
+          setDisplayName(name);
+        }
+        
+        // Check student status
+        const token = await AsyncStorage.getItem('token');
+        if (token) {
+          const studentStatus = await checkIsStudent(token);
+          setIsStudent(studentStatus);
+        }
+      } catch (error) {
+        console.error('Error initializing profile:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    initializeProfile();
+  }, []);
 
   useEffect(() => {
     const checkStudentStatus = async () => {
@@ -40,7 +66,6 @@ export default function Profile() {
     checkStudentStatus();
   }, []);
 
-  const name = getDisplayName() || userData.name;
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
@@ -74,7 +99,7 @@ export default function Profile() {
             </TouchableOpacity>
           </View>
 
-          <Text className="text-2xl font-bold text-gray-900 mb-1">{name}</Text>
+          <Text className="text-2xl font-bold text-gray-900 mb-1">{displayName}</Text>
           <Text className="text-base text-gray-500 mb-4">@{userData.nickname}</Text>
           
           {/* Student Badge */}

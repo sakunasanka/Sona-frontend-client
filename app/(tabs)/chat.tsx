@@ -23,10 +23,13 @@ const Chat = () => {
   const chatId = 2; // Example chat ID
   const currentUserId = 19; // Example current user ID
   const currentUserName = 'Current User'; // Example current user name
-  const [token, setToken] = useState<string>('');
+  const [token, setToken] = useState<string | null>(null);
   const [isTokenLoaded, setIsTokenLoaded] = useState(false);
 
+  // Load token before rendering
   useEffect(() => {
+    let isMounted = true;
+    
     const loadToken = async () => {
       try {
         const storedToken = await AsyncStorage.getItem('token');
@@ -36,20 +39,29 @@ const Chat = () => {
           preview: storedToken?.substring(0, 20) + '...'
         });
 
-        if (!storedToken) {
-          console.log('No token found, user not authenticated');
-        }else{
-           setToken(storedToken);
+        if (isMounted) {
+          if (!storedToken) {
+            console.log('No token found, user not authenticated');
+            setToken(null);
+          } else {
+            setToken(storedToken);
+          }
+          setIsTokenLoaded(true);
         }
-       
-        setIsTokenLoaded(true);
       } catch (error) {
-        // console.error('Error loading token:', error);
-        setIsTokenLoaded(true); // Mark as loaded even if failed
+        console.error('Error loading token:', error);
+        if (isMounted) {
+          setToken(null);
+          setIsTokenLoaded(true); // Mark as loaded even if failed
+        }
       }
     };
 
     loadToken();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const {
@@ -69,7 +81,7 @@ const Chat = () => {
     chatId, 
     currentUserId, 
     currentUserName, 
-    isTokenLoaded ? token : ''
+    isTokenLoaded && token ? token : ''
   );
 
   
@@ -141,7 +153,7 @@ const Chat = () => {
           scrollViewRef.current?.scrollToEnd({ animated: true });
         }, 100);
       } catch (error) {
-        // console.error('Error sending message:', error);
+        console.error('Error sending message:', error);
         // You can add error handling here (show toast, etc.)
       }
     }
@@ -183,6 +195,7 @@ const Chat = () => {
   }
 };
 
+  // Show loading state until token is loaded
   if (!isTokenLoaded) {
     return (
       <>
@@ -194,7 +207,7 @@ const Chat = () => {
     );
   }
 
-  // ✅ Show error if no token after loading
+  // Show error if no token after loading
   if (!token) {
     return (
       <>

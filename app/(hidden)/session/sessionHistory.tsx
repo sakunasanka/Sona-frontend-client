@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import { ArrowLeft, Calendar, Check, ChevronDown, Clock, ExternalLink, Filter, GraduationCap, MessageCircle, Search, Star, User } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Image, RefreshControl, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 
 // Define types
 type SessionStatus = 'upcoming' | 'past' | 'all' | 'student' | 'free';
@@ -407,7 +408,7 @@ export default function SessionHistory() {
     return (
         <View className="flex-1 bg-gray-50">
             {/* Header */}
-            <View className="px-5 pt-6 pb-4 bg-white border-b border-gray-100 shadow-sm">
+            <View className="px-5 pt-6 pb-4 mt-10 bg-white border-b border-gray-100 shadow-sm">
                 <View className="flex-row items-center justify-between mb-2">
                     <TouchableOpacity 
                         onPress={() => router.back()}
@@ -595,7 +596,7 @@ export default function SessionHistory() {
                         {filteredSessions.map((session) => (
                             <View 
                                 key={session.id} 
-                                className="bg-white rounded-xl p-5 shadow-md border border-gray-100"
+                                className="bg-white rounded-xl p-5 border border-gray-300 mb-5"
                                 style={{ elevation: 2 }}
                             >
                                 {/* Session Header */}
@@ -748,7 +749,7 @@ export default function SessionHistory() {
                                 {totalSessionsThisPeriod > 0 && (
                                     <View className="mt-2 bg-indigo-100/50 p-2 rounded-lg">
                                         <Text className="text-indigo-700 text-xs text-center">
-                                            You've used {totalSessionsThisPeriod} of 4 free sessions this period
+                                            You&apos;ve used {totalSessionsThisPeriod} of 4 free sessions this period
                                         </Text>
                                     </View>
                                 )}
@@ -760,25 +761,33 @@ export default function SessionHistory() {
                 {/* Student Package CTA */}
                 {!isStudent && (
                     <TouchableOpacity
-                        onPress={() => router.push('/session/StudentPackageApply')}
-                        className="mt-6 p-5 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl shadow-lg"
-                    >
-                        <View className="flex-row justify-between items-center">
-                            <View className="flex-1">
-                                <Text className="text-white font-bold text-lg">Free Student Package</Text>
-                                <Text className="text-blue-100 text-sm mt-1 pr-4">
-                                    Get 4 free counseling sessions every month with your university credentials
-                                </Text>
-                                <View className="flex-row items-center mt-3">
-                                    <Text className="text-white font-medium text-sm">Apply now</Text>
-                                    <ExternalLink size={14} color="#FFFFFF" className="ml-1" />
-                                </View>
-                            </View>
-                            <View className="bg-white/20 p-3 rounded-full">
-                                <GraduationCap size={28} color="#FFFFFF" />
-                            </View>
-                        </View>
-                    </TouchableOpacity>
+    onPress={() => router.push('/session/StudentPackageApply')}
+    className="mt-6 rounded-xl shadow-lg overflow-hidden" // Added overflow-hidden for rounded corners
+    activeOpacity={0.8}
+>
+    <LinearGradient
+        colors={['#4F46E5', '#6366F1']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+        style={{ padding: 20 }} // Replace className="p-5" with style
+    >
+        <View className="flex-row justify-between items-center">
+            <View className="flex-1">
+                <Text className="text-white font-bold text-lg">Free Student Package</Text>
+                <Text className="text-blue-100 text-sm mt-1 pr-4">
+                    Get 4 free counseling sessions every month with your university credentials
+                </Text>
+                <View className="flex-row items-center mt-3">
+                    <Text className="text-white font-medium text-sm">Apply now</Text>
+                    <ExternalLink size={14} color="#FFFFFF" className="ml-1" />
+                </View>
+            </View>
+            <View className="bg-white/20 p-3 rounded-full">
+                <GraduationCap size={28} color="#FFFFFF" />
+            </View>
+        </View>
+    </LinearGradient>
+</TouchableOpacity>
                 )}
             </ScrollView>     
         </View>

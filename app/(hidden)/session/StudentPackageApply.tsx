@@ -436,7 +436,7 @@ export default function StudentPackageApply() {
           <View className="flex-row items-start mt-4">
             <Info size={16} color="#6B7280" />
             <Text className="text-gray-500 text-xs ml-2 flex-1">
-              We'll verify your university credentials within 24 hours. This verification process is necessary to ensure only eligible students receive the free package. Once verified, you'll receive an email with instructions on how to access your free student counseling sessions.
+              We&apos;ll verify your university credentials within 24 hours. This verification process is necessary to ensure only eligible students receive the free package. Once verified, you&apos;ll receive an email with instructions on how to access your free student counseling sessions.
             </Text>
           </View>
         </View>

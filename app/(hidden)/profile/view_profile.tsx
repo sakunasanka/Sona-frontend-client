@@ -8,19 +8,45 @@ import { ActivityIndicator, Image, SafeAreaView, ScrollView, Text, TouchableOpac
 import { LogoutButton } from '../../components/Buttons';
 
 export default function Profile() {
-  const [isStudent, setIsStudent] = useState<boolean>(false);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  
   const userData = {
     name: 'hiruna',
     nickname: 'John',
     dob: '23/05/2003',
     email: 'hiruna.pramuthitha1@gmail.com',
-    joinDate: 'July 2025',
+    joinDate: 'June 2025',
     checkins: 24,
     goals: 18,
     streak: 36
   };
+
+  const [isStudent, setIsStudent] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [displayName, setDisplayName] = useState<string>(userData.name);
+
+  useEffect(() => {
+    const initializeProfile = async () => {
+      try {
+        // Get display name
+        const name = await getDisplayName();
+        if (name) {
+          setDisplayName(name);
+        }
+        
+        // Check student status
+        const token = await AsyncStorage.getItem('token');
+        if (token) {
+          const studentStatus = await checkIsStudent(token);
+          setIsStudent(studentStatus);
+        }
+      } catch (error) {
+        console.error('Error initializing profile:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    initializeProfile();
+  }, []);
 
   useEffect(() => {
     const checkStudentStatus = async () => {
@@ -40,7 +66,6 @@ export default function Profile() {
     checkStudentStatus();
   }, []);
 
-  const name = getDisplayName() || userData.name;
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
@@ -63,7 +88,7 @@ export default function Profile() {
         <View className="items-center py-6 border-b border-gray-200">
           <View className="relative mb-4">
             <Image 
-              source={{ uri: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg' }} 
+              source={{ uri: 'https://i.pinimg.com/736x/7a/a9/98/7aa998bc43b70132bc4ba177dcd2d40e.jpg' }} 
               className="w-32 h-32 rounded-full border-4 border-gray-200"
             />
             <TouchableOpacity 
@@ -74,7 +99,7 @@ export default function Profile() {
             </TouchableOpacity>
           </View>
 
-          <Text className="text-2xl font-bold text-gray-900 mb-1">{name}</Text>
+          <Text className="text-2xl font-bold text-gray-900 mb-1">{displayName}</Text>
           <Text className="text-base text-gray-500 mb-4">@{userData.nickname}</Text>
           
           {/* Student Badge */}

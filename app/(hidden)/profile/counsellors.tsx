@@ -383,33 +383,35 @@ export default function CounselorsScreen() {
             </View>
           )}
           
-          {/* Counselor type filters in a ScrollView with fixed height to prevent overlap */}
-          <View className="h-10 mb-4">
-            <ScrollView 
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ paddingHorizontal: 16 }}
-            >
-              {tabFilters.map((filter) => {
-                const isActive = selectedTab === filter.id;
-                return (
-                  <TouchableOpacity
-                    key={filter.id}
-                    onPress={() => setSelectedTab(filter.id)}
-                    style={{ 
-                      height: 26,
-                      paddingHorizontal: 12,
-                      paddingVertical: 4,
-                      marginRight: 8,
-                      borderRadius: 9999,
-                      borderWidth: 1,
-                      borderColor: isActive ? '#2563EB' : '#D1D5DB',
-                      backgroundColor: isActive ? '#2563EB' : '#FFFFFF'
-                    }}
-                  >
-                    <Text 
+          {/* Counselor type filters in a ScrollView with fixed height to prevent overlap - only shown to students */}
+          {isStudent && (
+            <View className="h-10 mb-4">
+              <ScrollView 
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ paddingHorizontal: 16 }}
+              >
+                
+                {tabFilters.map((filter) => {
+                  const isActive = selectedTab === filter.id;
+                  return (
+                    <TouchableOpacity
+                      key={filter.id}
+                      onPress={() => setSelectedTab(filter.id)}
                       style={{ 
-                        fontSize: 12,
+                        height: 26,
+                        paddingHorizontal: 12,
+                        paddingVertical: 4,
+                        marginRight: 8,
+                        borderRadius: 9999,
+                        borderWidth: 1,
+                        borderColor: isActive ? '#2563EB' : '#D1D5DB',
+                        backgroundColor: isActive ? '#2563EB' : '#FFFFFF'
+                      }}
+                    >
+                      <Text 
+                        style={{ 
+                          fontSize: 12,
                         fontWeight: '500',
                         color: isActive ? '#FFFFFF' : '#4B5563'
                       }}
@@ -421,6 +423,7 @@ export default function CounselorsScreen() {
               })}
             </ScrollView>
           </View>
+          )}
         </View>
       
         {/* Counselor list with proper width and padding */}

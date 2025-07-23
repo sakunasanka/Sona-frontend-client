@@ -16,7 +16,7 @@ const TopBar: React.FC<{ title?: string }> = ({title}) => {
         <View className="flex-row items-center">
             <TouchableOpacity onPress={() => router.push('/(hidden)/profile/view_profile')} >
                 <Image 
-                  source={{ uri: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=100&h=100' }} 
+                  source={{ uri: 'https://i.pinimg.com/736x/7a/a9/98/7aa998bc43b70132bc4ba177dcd2d40e.jpg' }} 
                   style={{ width: 32, height: 32, borderRadius: 16 }}
                 />
             </TouchableOpacity>

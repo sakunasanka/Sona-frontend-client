@@ -8,7 +8,7 @@ import FocusAnimation from '@/components/Focused';
 import { icons } from '@/constants/icons';
 import { getDisplayName } from '@/util/asyncName';
 import { router } from 'expo-router';
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { FlatList, Text, View } from 'react-native';
 import TopBar from '../TopBar';
 
@@ -28,7 +28,7 @@ const HomescreenCard = [
     icon: icons.meetup,
     focusIcon: icons.play,
     focusText: "Start Session",
-    // onPress: () => router.push('/(hidden)/meditation/')
+    onPress: () => router.push('../(hidden)/session/VideoCallPage'),
   },
   {
     title: "Meditation",

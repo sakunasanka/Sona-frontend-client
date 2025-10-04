@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { Home, MessageCircle, Newspaper, PersonStanding } from 'lucide-react-native';
+import { Home, MessageCircle, Newspaper, PersonStanding, Stethoscope } from 'lucide-react-native';
 
 
 export default function TabsLayout() {
@@ -30,7 +30,13 @@ export default function TabsLayout() {
         options={{
           title: 'Counsellor',
           tabBarIcon: ({ color }) => <PersonStanding color={color} />,
-          tabBarStyle: { display: 'none' }, // Hide this tab's screen
+        }}
+      />
+      <Tabs.Screen
+        name="psychiatrist"
+        options={{
+          title: 'Psychiatrist',
+          tabBarIcon: ({ color }) => <Stethoscope color={color} />,
         }}
       />
       <Tabs.Screen

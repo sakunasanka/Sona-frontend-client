@@ -1,21 +1,20 @@
 // app/components/AddPostModal.tsx
-import React, { useState, useCallback } from 'react';
-import {
-  View,
-  Text,
-  Modal,
-  TouchableOpacity,
-  TextInput,
-  Image,
-  ActivityIndicator,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  Dimensions
-} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import React, { useCallback, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Image,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
+} from 'react-native';
 import { createPost, Post } from '../../api/Posts';
 
 interface AddPostModalProps {
@@ -27,12 +26,14 @@ interface AddPostModalProps {
 const AddPostModal: React.FC<AddPostModalProps> = ({ visible, onClose, onSubmit }) => {
   const [postText, setPostText] = useState('');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [hashtags, setHashtags] = useState<string>('');
   const [loading, setLoading] = useState(false);
 
   const handleClose = useCallback(() => {
     if (!loading) {
       setPostText('');
       setSelectedImage(null);
+      setHashtags('');
       onClose();
     }
   }, [loading, onClose]);
@@ -75,9 +76,16 @@ const AddPostModal: React.FC<AddPostModalProps> = ({ visible, onClose, onSubmit 
       setLoading(true);
       
       // Create post data
+      const tags = hashtags
+        .split(/\s|,/) // split by spaces or commas
+        .map(t => t.trim())
+        .filter(Boolean)
+        .map(t => (t.startsWith('#') ? t.slice(1) : t));
+
       const postData = {
         content: postText.trim(),
         image: selectedImage,
+  hashtags: tags,
       };
 
       // Call API to create post
@@ -88,7 +96,8 @@ const AddPostModal: React.FC<AddPostModalProps> = ({ visible, onClose, onSubmit 
       
       // Reset form
       setPostText('');
-      setSelectedImage(null);
+  setSelectedImage(null);
+  setHashtags('');
       
     } catch (error) {
       Alert.alert('Error', 'Failed to create post. Please try again.');
@@ -176,6 +185,18 @@ const AddPostModal: React.FC<AddPostModalProps> = ({ visible, onClose, onSubmit 
             >
               <Ionicons name="image" size={24} color="#22C55E" />
             </TouchableOpacity>
+          </View>
+
+          {/* Hashtags input (optional) */}
+          <View className="px-4 mt-2">
+            <TextInput
+              className="text-base text-gray-800"
+              placeholder="Add hashtags (e.g., #wellness #mindfulness)"
+              placeholderTextColor="#999"
+              value={hashtags}
+              onChangeText={setHashtags}
+              editable={!loading}
+            />
           </View>
 
           {/* Selected Image */}

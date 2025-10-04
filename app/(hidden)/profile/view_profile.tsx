@@ -2,7 +2,7 @@ import { checkIsStudent } from '@/api/api';
 import { getDisplayName } from '@/util/asyncName';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
-import { ArrowLeft, BadgeCheck, Bookmark, Edit, GraduationCap, HelpCircle, History, LogOut, Shield } from 'lucide-react-native';
+import { AlertTriangle, ArrowLeft, BadgeCheck, BarChart3, Bookmark, Edit, GraduationCap, HelpCircle, History, LogOut, Shield } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Image, SafeAreaView, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { LogoutButton } from '../../components/Buttons';
@@ -167,12 +167,32 @@ export default function Profile() {
             <Text className="text-base text-gray-900">Counselling sessions</Text>
           </TouchableOpacity>
           
-          <TouchableOpacity className="flex-row items-center py-4 border-b border-gray-100">
+          <TouchableOpacity 
+            className="flex-row items-center py-4 border-b border-gray-100"
+            onPress={() => router.push('/(hidden)/analysis')}
+          >
+            <View className="w-9 h-9 rounded-full bg-blue-50 justify-center items-center mr-4">
+              <BarChart3 size={20} color="#2563EB" />
+            </View>
+            <Text className="text-base text-gray-900">My Progress</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            className="flex-row items-center py-4 border-b border-gray-100"
+            onPress={() => router.push('/(hidden)/profile/complaint')}
+          >
+            <View className="w-9 h-9 rounded-full bg-blue-50 justify-center items-center mr-4">
+              <AlertTriangle size={20} color="#2563EB" />
+            </View>
+            <Text className="text-base text-gray-900">File a Complaint</Text>
+          </TouchableOpacity>
+          
+          {/* <TouchableOpacity className="flex-row items-center py-4 border-b border-gray-100">
             <View className="w-9 h-9 rounded-full bg-blue-50 justify-center items-center mr-4">
               <Bookmark size={20} color="#2563EB" />
             </View>
             <Text className="text-base text-gray-900">Saved Resources</Text>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
           
           <TouchableOpacity className="flex-row items-center py-4 border-b border-gray-100">
             <View className="w-9 h-9 rounded-full bg-blue-50 justify-center items-center mr-4">

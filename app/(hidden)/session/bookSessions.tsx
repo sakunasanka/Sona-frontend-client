@@ -30,7 +30,7 @@ interface TimeSlot {
   time: string;
   available: boolean;
   isBooked?: boolean;
-  isAvailable?: boolean; 
+  isAvailable?: boolean;
 }
 
 interface PaymentMethod {
@@ -41,70 +41,7 @@ interface PaymentMethod {
   isDefault: boolean;
 }
 
-const fetchTimeSlots = async (counsellorId: string, date: Date): Promise<TimeSlot[]> => {
-  const year = date.getFullYear();
-  const month = date.getMonth() + 1; // getMonth() is 0-indexed
-  const day = date.getDate();
-  const formattedDate = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-  
-  try {
-    const isCalendarCheck = !!(new Error()).stack?.includes('fetchMonthlyAvailability');
-    const timeoutMs = isCalendarCheck ? 3000 : 10000; // 3s for calendar checks, 10s for direct user selection
-    
-    const apiUrl = `${API_BASE_URL}/sessions/timeslots/${counsellorId}/${formattedDate}`;
-    // console.log(`[API] Fetching timeslots for ${formattedDate}${isCalendarCheck ? ' (calendar check)' : ''}`);
-    
-    const timeoutPromise = new Promise<Response>((_, reject) => {
-      setTimeout(() => reject(new Error(`Timeout after ${timeoutMs}ms`)), timeoutMs);
-    });
-    
-    const response = await Promise.race([
-      fetch(apiUrl),
-    ]) as Response;
-    
-    if (!response.ok) {
-      throw new Error(`API error: ${response.status}`);
-    }
-    
-    const data = await response.json();
-    
-    let slotsArray = data;
-    
-    if (data && typeof data === 'object' && !Array.isArray(data)) {
-      slotsArray = data.slots || data.timeSlots || data.data || data.timeslots || [];
-    }
-    
-    if (!Array.isArray(slotsArray)) {
-      // console.warn(`API response for ${formattedDate} is not an array:`, slotsArray);
-      return [];
-    }
-    
-    const formattedSlots = slotsArray.map((slot: any) => ({
-      id: slot.id || `time-${slot.time}`,
-      time: slot.time,
-      available: slot.isAvailable || slot.available || false,
-      isBooked: slot.isBooked || false
-    }));
-    
-    // if (isCalendarCheck) {
-    //   console.log(`[API] Found ${formattedSlots.length} slots for ${formattedDate}, ${formattedSlots.filter(s => s.available).length} available`);
-    // } else {
-    //   console.log(`[API] Timeslots for ${formattedDate}:`, formattedSlots);
-    // }
-    
-    return formattedSlots;
-  } catch (error) {
-    const isCalendarCheck = !!(new Error()).stack?.includes('fetchMonthlyAvailability');
-    
-    if (isCalendarCheck) {
-      // console.warn(`[API] Error fetching time slots for ${formattedDate} (availability check):`, error);
-      return []; 
-    } else {
-      // console.error(`[API] Error fetching time slots for ${formattedDate}:`, error);
-      throw error;
-    }
-  }
-};
+// Note: per-day timeslot fetching has been removed; we now rely on the monthly availability API
 
 import { Platform } from 'react-native';
 
@@ -160,76 +97,62 @@ const formatResetDate = (dateString: string): string => {
   }
 };
 
-// Fetch monthly availability from backend API
-// This function now checks each day of the month by fetching timeslots
-// and only marks a day as unavailable if it has no available timeslots
-const fetchMonthlyAvailability = async (counsellorId: string, year: number, month: number): Promise<{ [dateKey: string]: { isAvailable: boolean, hasImmediateSlot?: boolean } }> => {
-  // Month is 0-indexed in JS Date, but we want 1-indexed for API
-  const monthForApi = month + 1;
-  const monthString = String(monthForApi).padStart(2, '0');
-  
-  // console.log(`[API] Fetching counselor availability for ${year}-${monthString}`);
-  
+// Fetch monthly availability + slots from the backend API in one call
+const fetchMonthlyAvailability = async (
+  counsellorId: string,
+  year: number,
+  month: number // 0-indexed (JS)
+): Promise<{
+  availabilityMap: { [dateKey: string]: { isAvailable: boolean; hasImmediateSlot?: boolean } };
+  slotsMap: { [dateKey: string]: TimeSlot[] };
+}> => {
   try {
-    // Get the number of days in the month
-    const daysInMonth = new Date(year, monthForApi, 0).getDate();
-    const formattedData: { [dateKey: string]: { isAvailable: boolean, hasImmediateSlot?: boolean } } = {};
-    
-    // console.log(`[API] Checking availability for ${daysInMonth} days in ${year}-${monthString}`);
-    
-    // Create an array of promises for fetching timeslots for each day
-    const dayPromises = Array.from({ length: daysInMonth }, (_, i) => {
-      const day = i + 1;
-      const date = new Date(year, month, day);
-      
-      // Format the date key (YYYY-MM-DD)
-      const dateKey = formatDateKey(year, month, day);
-      
-      // Return a promise for fetching timeslots for this day
-      return fetchTimeSlots(counsellorId, date)
-        .then(slots => {
-          // Check if any timeslot is available for this day
-          const hasAvailableSlot = slots.some(slot => slot.available === true);
-          
-          // If there are any available slots, mark the day as available
-          formattedData[dateKey] = {
-            isAvailable: hasAvailableSlot,
-            // Check if there's an immediate slot (within next few hours)
-            hasImmediateSlot: slots.some(slot => {
-              if (!slot.available) return false;
-              // Extract hours from time string (assuming format like "09:00" or "9:00 AM")
-              const timeStr = slot.time;
-              const hour = parseInt(timeStr.split(':')[0], 10);
-              const now = new Date();
-              // Consider slots in the next 4 hours as immediate if today
-              return date.setHours(0,0,0,0) === now.setHours(0,0,0,0) && 
-                     hour >= now.getHours() && 
-                     hour <= now.getHours() + 4;
-            })
-          };
-          
-          // console.log(`[API] Day ${dateKey}: ${hasAvailableSlot ? 'Available' : 'Not Available'} (${slots.length} slots, ${slots.filter(s => s.available).length} available)`);
-          
-          return formattedData[dateKey];
-        })
-        .catch(error => {
-          // console.warn(`[API] Failed to fetch timeslots for ${dateKey}:`, error);
-          // If we fail to fetch for a specific day, mark it as unavailable
-          formattedData[dateKey] = { isAvailable: false };
-          return formattedData[dateKey];
+    const monthForApi = month + 1; // convert to 1-indexed
+    const url = `${API_BASE_URL}/sessions/counselors/${counsellorId}/availability/${year}/${monthForApi}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`API error: ${res.status}`);
+    const json = await res.json();
+
+    const availabilityArr: Array<{ date: string; slots: any[] }> = json?.data?.availability || [];
+
+    const availabilityMap: { [dateKey: string]: { isAvailable: boolean; hasImmediateSlot?: boolean } } = {};
+    const slotsMap: { [dateKey: string]: TimeSlot[] } = {};
+
+    const today = new Date();
+    const todayKey = formatDateKey(today.getFullYear(), today.getMonth(), today.getDate());
+
+    for (const item of availabilityArr) {
+      const dateKey = item.date; // already in YYYY-MM-DD
+      const slots: TimeSlot[] = (item.slots || []).map((slot: any) => ({
+        id: String(slot.id ?? `time-${slot.time}`),
+        time: slot.time,
+        available: !!(slot.isAvailable ?? slot.available),
+        isBooked: !!slot.isBooked,
+        isAvailable: !!(slot.isAvailable ?? slot.available),
+      }));
+
+      const hasAvailable = slots.some((s) => s.available && !s.isBooked);
+
+      // Optional: simple immediate slot check for today only
+      let hasImmediateSlot = false;
+      if (dateKey === todayKey) {
+        const now = new Date();
+        hasImmediateSlot = slots.some((s) => {
+          if (!s.available || s.isBooked) return false;
+          const [h, m] = s.time.split(":").map((v: string) => parseInt(v, 10));
+          const minutes = h * 60 + (isNaN(m) ? 0 : m);
+          const nowMinutes = now.getHours() * 60 + now.getMinutes();
+          return minutes >= nowMinutes && minutes <= nowMinutes + 240; // next 4 hours
         });
-    });
-    
-    // Wait for all day checks to complete
-    await Promise.all(dayPromises);
-    
-    console.log(`[API] Successfully processed availability for ${Object.keys(formattedData).length} days in ${year}-${monthString}`);
-    console.log(`[API] Available days: ${Object.keys(formattedData).filter(key => formattedData[key].isAvailable).join(', ') || 'None'}`);
-    
-    return formattedData;
-  } catch (error) {
-    // console.error('Error fetching monthly availability:', error);
-    throw error;
+      }
+
+      availabilityMap[dateKey] = { isAvailable: hasAvailable, hasImmediateSlot };
+      slotsMap[dateKey] = slots;
+    }
+
+    return { availabilityMap, slotsMap };
+  } catch (err) {
+    throw err;
   }
 };
 
@@ -247,6 +170,7 @@ export default function BookSessionScreen() {
   const [monthlyAvailability, setMonthlyAvailability] = useState<{[dateKey: string]: {isAvailable: boolean, hasImmediateSlot?: boolean}}>({});
   const [isLoadingAvailability, setIsLoadingAvailability] = useState<boolean>(false);
   const [monthCache, setMonthCache] = useState<{[key: string]: {[dateKey: string]: {isAvailable: boolean, hasImmediateSlot?: boolean}}}>({});
+  const [monthSlotsCache, setMonthSlotsCache] = useState<{[key: string]: {[dateKey: string]: TimeSlot[]}}>({});
   
   // Counselor data state
   const [counselor, setCounselor] = useState<Counselor | null>(null);
@@ -499,28 +423,29 @@ export default function BookSessionScreen() {
     }
     
     try {
-      const availability = await fetchMonthlyAvailability(counselor.id.toString(), year, month);
-      console.log(`[Calendar] Loaded availability for ${Object.keys(availability).length} days in ${year}-${month+1}`);
+      const { availabilityMap, slotsMap } = await fetchMonthlyAvailability(counselor.id.toString(), year, month);
+      console.log(`[Calendar] Loaded availability for ${Object.keys(availabilityMap).length} days in ${year}-${month+1}`);
       
-      const availableDays = Object.values(availability).filter(day => day.isAvailable).length;
+      const availableDays = Object.values(availabilityMap).filter(day => day.isAvailable).length;
       console.log(`[Calendar] Found ${availableDays} available days in ${year}-${month+1}`);
       
       if (availableDays === 0) {
         console.log(`[Calendar] No availability found for ${year}-${month+1}`);
       }
       
-      console.log(`[Calendar] Caching data for ${cacheKey} with ${Object.keys(availability).length} days and ${Object.values(availability).filter(day => day.isAvailable).length} available days`);
+      console.log(`[Calendar] Caching data for ${cacheKey} with ${Object.keys(availabilityMap).length} days and ${Object.values(availabilityMap).filter(day => day.isAvailable).length} available days`);
       
       setMonthCache(prevCache => {
         const newCache = {
           ...prevCache,
-          [cacheKey]: availability
+          [cacheKey]: availabilityMap
         };
         console.log(`[Calendar] Updated cache now has keys:`, Object.keys(newCache));
         return newCache;
       });
+      setMonthSlotsCache(prev => ({ ...prev, [cacheKey]: slotsMap }));
       
-      setMonthlyAvailability(availability);
+      setMonthlyAvailability(availabilityMap);
     } catch (error) {
       // console.error('Failed to load monthly availability:', error);
       // Alert.alert(
@@ -548,6 +473,14 @@ export default function BookSessionScreen() {
     setSelectedDate(date);
     
     const isAvailable = monthlyAvailability[dateKey]?.isAvailable === true;
+    // Load time slots from cache immediately when available
+    const cacheKey = formatMonthKey(year, date.getMonth());
+    const monthSlots = monthSlotsCache[cacheKey];
+    if (monthSlots && monthSlots[dateKey]) {
+      setTimeSlots(monthSlots[dateKey]);
+    } else {
+      setTimeSlots([]);
+    }
   };
 
   useEffect(() => {
@@ -562,41 +495,29 @@ export default function BookSessionScreen() {
   }, [counselor]);
   
   useEffect(() => {
-    const loadTimeSlots = async () => {
-      if (!counselor) return;
-      
-      console.log(`[Calendar] Loading time slots for date: ${selectedDate.toLocaleDateString()}`);
-      console.log(`[Calendar] Current availability data has ${Object.keys(monthlyAvailability).length} days with ${Object.values(monthlyAvailability).filter(day => day.isAvailable).length} available`);
-      
-      const year = selectedDate.getFullYear();
-      const month = selectedDate.getMonth();
-      const day = selectedDate.getDate();
-      const dateKey = formatDateKey(year, month, day);
-      
-      console.log(`[Calendar] Selected date key: ${dateKey}, isAvailable according to data: ${monthlyAvailability[dateKey]?.isAvailable}`);
-      
-      setIsLoadingSlots(true);
-      setSelectedTime('');
-      
-      try {
-        const slots = await fetchTimeSlots(counselor.id.toString(), selectedDate);
-        console.log(`[Calendar] Loaded ${slots.length} time slots for ${selectedDate.toDateString()}, ${slots.filter(s => s.available).length} available`);
-        setTimeSlots(slots);
-      } catch (error) {
-        // console.error('Failed to load time slots:', error);
-        // Alert.alert(
-        //   'Error Loading Time Slots', 
-        //   'Could not load available times for this date. Please try again.',
-        //   [{ text: 'OK' }]
-        // );
-        setTimeSlots([]);
-      } finally {
-        setIsLoadingSlots(false);
-      }
-    };
+    if (!counselor) return;
+    const year = selectedDate.getFullYear();
+    const month = selectedDate.getMonth();
+    const day = selectedDate.getDate();
+    const dateKey = formatDateKey(year, month, day);
+    const cacheKey = formatMonthKey(year, month);
 
-    loadTimeSlots();
-  }, [selectedDate, counselor]);
+    console.log(`[Calendar] Selected date key: ${dateKey}`);
+    setIsLoadingSlots(true);
+    setSelectedTime('');
+
+    const monthSlots = monthSlotsCache[cacheKey];
+    if (monthSlots && monthSlots[dateKey]) {
+      const slots = monthSlots[dateKey];
+      console.log(`[Calendar] Loaded ${slots.length} time slots from monthly cache for ${selectedDate.toDateString()}`);
+      setTimeSlots(slots);
+      setIsLoadingSlots(false);
+    } else {
+      // If the month isn't cached yet (e.g., direct navigation), fetch monthly and then update
+      handleMonthChange(year, month)
+        .finally(() => setIsLoadingSlots(false));
+    }
+  }, [selectedDate, counselor, monthSlotsCache]);
 
   const TimeSlot = ({ slot }: { slot: TimeSlot }) => {
     const isSelected = selectedTime === slot.time;

@@ -151,4 +151,111 @@ export interface StudentSessionInfo {
   nextResetDate: string;
   totalSessionsThisPeriod: number;
   isStudent: boolean;
-} 
+}
+
+/**
+ * Fetch available psychiatrists
+ */
+export const fetchPsychiatrists = async (token?: string) => {
+  try {
+    const response = await apiRequest({
+      method: 'get',
+      path: 'psychiatrists',
+      token
+    });
+    return response;
+  } catch (error) {
+    console.error('Error fetching psychiatrists:', error);
+    throw error;
+  }
+};
+
+/**
+ * Fetch psychiatrist by ID
+ */
+export const fetchPsychiatristById = async (psychiatristId: string, token?: string) => {
+  try {
+    const response = await apiRequest({
+      method: 'get',
+      path: `psychiatrists/${psychiatristId}`,
+      token
+    });
+    return response;
+  } catch (error) {
+    console.error('Error fetching psychiatrist:', error);
+    throw error;
+  }
+};
+
+/**
+ * Fetch available time slots for a psychiatrist on a specific date
+ */
+export const fetchPsychiatristTimeSlots = async (psychiatristId: string, date: string, token?: string) => {
+  try {
+    const response = await apiRequest({
+      method: 'get',
+      path: `psychiatrist-timeslots/${psychiatristId}/${date}`,
+      token
+    });
+    return response;
+  } catch (error) {
+    console.error('Error fetching psychiatrist time slots:', error);
+    throw error;
+  }
+};
+
+/**
+ * Book a session with a psychiatrist
+ */
+export const bookPsychiatristSession = async (sessionData: {
+  psychiatristId: string;
+  date: string;
+  timeSlot: string;
+  duration: number;
+  price: number;
+  concerns?: string;
+}, token: string) => {
+  try {
+    const response = await apiRequest({
+      method: 'post',
+      path: 'sessions/book',
+      data: {
+        ...sessionData,
+        counselorId: sessionData.psychiatristId, // Map to counselorId for backend compatibility
+        type: 'psychiatrist'
+      },
+      token
+    });
+    return response;
+  } catch (error) {
+    console.error('Error booking psychiatrist session:', error);
+    throw error;
+  }
+};
+
+/**
+ * Book a free psychiatrist session for students
+ */
+export const bookFreePsychiatristSession = async (sessionData: {
+  psychiatristId: string;
+  date: string;
+  timeSlot: string;
+  duration: number;
+}, token: string) => {
+  try {
+    const response = await apiRequest({
+      method: 'post',
+      path: 'sessions/book-free',
+      data: {
+        ...sessionData,
+        counselorId: sessionData.psychiatristId, // Map to counselorId for backend compatibility
+        type: 'psychiatrist'
+      },
+      token
+    });
+    return response;
+  } catch (error) {
+    console.error('Error booking free psychiatrist session:', error);
+    throw error;
+  }
+}; 

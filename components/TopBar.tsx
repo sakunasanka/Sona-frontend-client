@@ -35,7 +35,7 @@ const TopBar: React.FC<{ title?: string }> = ({title}) => {
 
   return (
     <View className='mt-10'>
-    <StatusBar style="dark" backgroundColor="#f8f9fa" />
+    <StatusBar style="dark" />
     <View className="flex-row justify-between items-center px-5 py-4 border-b border-gray-200">
         <Text className="font-bold text-gray-900 font-alegreyaBold text-3xl">{title}</Text>
         <View className="flex-row items-center">

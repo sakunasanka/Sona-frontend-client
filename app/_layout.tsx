@@ -1,7 +1,9 @@
-import { Stack, SplashScreen } from "expo-router";
 import { useFonts } from "expo-font";
+import { SplashScreen, Stack } from "expo-router";
 import { useEffect } from "react";
 import 'react-native-reanimated';
+import MoodManager from "../components/MoodManager";
+import QuestionnaireManager from "../components/QuestionnaireManager";
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
@@ -21,5 +23,11 @@ export default function RootLayout() {
     return null;
   }
 
-  return <Stack screenOptions={{ headerShown: false }} />;
+  return (
+    <>
+      <Stack screenOptions={{ headerShown: false }} />
+      <MoodManager />
+      <QuestionnaireManager />
+    </>
+  );
 }

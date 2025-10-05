@@ -2,17 +2,17 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
-    Dimensions,
-    Text,
-    TouchableOpacity,
-    View,
+  Dimensions,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { GestureHandlerRootView, PanGestureHandler, PanGestureHandlerGestureEvent } from 'react-native-gesture-handler';
 import Animated, {
-    runOnJS,
-    useAnimatedGestureHandler,
-    useAnimatedStyle,
-    useSharedValue,
+  runOnJS,
+  useAnimatedGestureHandler,
+  useAnimatedStyle,
+  useSharedValue,
 } from 'react-native-reanimated';
 import { saveDailyMood } from '../../../api/mood';
 import TopBar from '../../../components/TopBar';
@@ -134,7 +134,8 @@ export default function MoodTracker() {
         intensity: Number(intensity.toFixed(2)),
       });
       
-      router.back();
+      // Navigate back to home and trigger a refresh
+      router.replace('/');
     } catch (error) {
       console.error('Failed to save mood:', error);
     } finally {
@@ -152,17 +153,9 @@ export default function MoodTracker() {
         </Text>
         
         {showInstructions ? (
-          <View className="bg-blue-50 rounded-xl p-4 mb-6">
-            <Text className="text-blue-800 font-medium text-center mb-2">
-              💡 How to track your mood
-            </Text>
-            <Text className="text-blue-700 text-sm text-center mb-2">
-              • Tap a mood button below for quick selection
-            </Text>
-            <Text className="text-blue-700 text-sm text-center">
-              • Or use the sliders to precisely adjust how you feel
-            </Text>
-          </View>
+          <Text className="text-lg text-gray-600 text-center mb-4">
+            Use the sliders to fine-tune your mood
+          </Text>
         ) : (
           <Text className="text-lg text-gray-600 text-center mb-4">
             Use the sliders to fine-tune your mood

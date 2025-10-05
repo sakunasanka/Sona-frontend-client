@@ -1,5 +1,4 @@
 import Homecard from '@/components/HomescreenCard';
-import IconButton from '@/components/Iconbutton';
 import FallingLeaves from '@/components/LeafFalling';
 import PinkOverlay from '@/components/Pinkoverlay'; // Import your overlay components
 //import FallingLeaves from '@/components/PurpleLeaves';
@@ -9,9 +8,10 @@ import FocusAnimation from '@/components/Focused';
 import { icons } from '@/constants/icons';
 import { getDisplayName } from '@/util/asyncName';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { FlatList, Text, View } from 'react-native';
+import { FlatList, Text, TouchableOpacity, View } from 'react-native';
 import TopBar from '../TopBar';
 
 const moodData = [
@@ -164,23 +164,33 @@ export default function RegularHome() {
               <Text className='text-gray-500 text-lg mt-1'>How are you feeling today?</Text>
             </View>
             <View className='px-4 pt-4'>
-              <FlatList
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{ paddingHorizontal: 8 }}
-                data={moodData}
-                keyExtractor={(item, index) => `${item.text}-${index}`}
-                renderItem={({ item }) => (
-                  <View className="mr-4">
-                    <IconButton
-                      icon={item.icon}
-                      text={item.text}
-                      color={item.color}
-                      onPress={() => handleMoodPress(item.mood)}
-                    />
+              <TouchableOpacity
+                className="rounded-2xl shadow-lg overflow-hidden"
+                onPress={() => router.push('/(hidden)/mood/' as any)}
+              >
+                <LinearGradient
+                  colors={['#60A5FA', '#A78BFA']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={{ padding: 24 }}
+                >
+                  <View className="flex-row items-center justify-between">
+                    <View className="flex-1">
+                      <Text className="text-white text-xl font-bold mb-2">
+                        Track Your Mood
+                      </Text>
+                      <Text className="text-blue-100 text-sm">
+                        How are you feeling today? Express your emotions with our advanced mood tracker.
+                      </Text>
+                    </View>
+                    <View className="ml-4">
+                      <View className="w-16 h-16 bg-white/20 rounded-full items-center justify-center">
+                        <Text className="text-2xl">😊</Text>
+                      </View>
+                    </View>
                   </View>
-                )}
-              />
+                </LinearGradient>
+              </TouchableOpacity>
             </View>
             <Text className='text-gray-700 text-2xl font-alegreya px-4 pt-4 mt-5'>
               Today&apos;s Recommendations

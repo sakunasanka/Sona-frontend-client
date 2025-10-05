@@ -38,6 +38,7 @@ export interface Post {
   liked: boolean;
   image?: string; // Added for image support
   status?: 'pending' | 'approved' | 'rejected';
+  isAnonymous?: boolean; // Added for anonymous posts
 }
 
 export interface CreatePostData {
@@ -47,6 +48,7 @@ export interface CreatePostData {
   tags?: string[];
   backgroundColor?: string;
   hashtags?: string[]; // alias for tags
+  isAnonymous?: boolean; // Added for anonymous posts
 }
 
 const authHeaders = async () => {
@@ -80,7 +82,8 @@ export const fetchPosts = async (): Promise<Post[]> => {
       },
       liked: post.liked || false,
       image: post.image || undefined,
-      status: post.status || undefined
+      status: post.status || undefined,
+      isAnonymous: post.isAnonymous || false
     }));
   } catch (error) {
     console.error('Error fetching posts:', error);
@@ -159,7 +162,8 @@ export const createPost = async (postData: CreatePostData): Promise<Post> => {
       hashtags: normalizedHashtags,
       backgroundColor: postData.backgroundColor ?? '#FFFFFF',
       image: imageToSend,
-      location: postData.location || undefined
+      location: postData.location || undefined,
+      isAnonymous: postData.isAnonymous || false
     };
 
     // Make the actual API call
@@ -187,7 +191,8 @@ export const createPost = async (postData: CreatePostData): Promise<Post> => {
         comments: createdPost?.stats?.comments || 0
       },
       liked: createdPost?.liked || false,
-      image: createdPost?.image || undefined
+      image: createdPost?.image || undefined,
+      isAnonymous: createdPost?.isAnonymous || false
     };
   } catch (error) {
     console.error('Error creating post:', error);
@@ -211,7 +216,8 @@ export const updatePost = async (postId: string, updates: Partial<CreatePostData
       hashtags: updates.hashtags || updates.tags,
       backgroundColor: updates.backgroundColor,
       image: updates.image,
-      location: updates.location
+      location: updates.location,
+      isAnonymous: updates.isAnonymous
     };
     const response = await axios.put(`${API_BASE_URL}/posts/${postId}`, payload, { headers: await authHeaders() });
     const updatedPost = response.data?.data?.post ?? response.data?.post ?? response.data;
@@ -235,7 +241,8 @@ export const updatePost = async (postId: string, updates: Partial<CreatePostData
         comments: updatedPost?.stats?.comments || 0
       },
       liked: updatedPost?.liked || false,
-      image: updatedPost?.image || undefined
+      image: updatedPost?.image || undefined,
+      isAnonymous: updatedPost?.isAnonymous || false
     };
   } catch (error) {
     console.error('Error updating post:', error);

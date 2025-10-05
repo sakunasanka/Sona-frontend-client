@@ -1,4 +1,5 @@
 // app/(tabs)/feed.tsx
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -25,6 +26,7 @@ export default function Feed() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [showAddPostModal, setShowAddPostModal] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
   // Track which posts have already been counted for views during this session
   const viewedPostsRef = useRef<Set<string>>(new Set());
   const viewTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
@@ -57,6 +59,23 @@ export default function Feed() {
       setLoading(false);
       setRefreshing(false);
     }
+  }, []);
+
+  // Get current user ID for view exclusion
+  useEffect(() => {
+    const getCurrentUserId = async () => {
+      try {
+        // Try to get user ID from storage or make API call to get current user
+        // For now, we'll extract it from the token or make a simple /me API call
+        const userIdStr = await AsyncStorage.getItem('userId');
+        if (userIdStr) {
+          setCurrentUserId(Number(userIdStr));
+        }
+      } catch (error) {
+        console.error('Error getting current user ID:', error);
+      }
+    };
+    getCurrentUserId();
   }, []);
 
   // Initial load
@@ -154,8 +173,15 @@ export default function Feed() {
   const onViewableItemsChanged = useRef(({ viewableItems }: { viewableItems: any[] }) => {
     viewableItems.forEach((vi) => {
       const postId: string | undefined = vi?.item?.id;
+      const post: Post | undefined = vi?.item;
       const isViewable: boolean = !!vi?.isViewable;
-      if (!postId) return;
+      if (!postId || !post) return;
+      
+      // Don't count views for the post author's own posts
+      if (currentUserId && post.author.id === currentUserId) {
+        return;
+      }
+      
       if (isViewable && !viewedPostsRef.current.has(postId)) {
         // Start a 2s timer to count as a view
         if (viewTimersRef.current[postId]) {

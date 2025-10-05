@@ -28,32 +28,43 @@ const FeedCard: React.FC<FeedCardProps> = ({ post, onLikePress }) => {
       {/* Post Header */}
       <View className="flex-row justify-between items-center mb-4">
         <View className="flex-row items-center flex-1">
-          <Image 
-            source={{ uri: post.author.avatar }} 
-            className="w-10 h-10 rounded-full mr-3"
-            resizeMode="cover"
-          />
+          {!post.isAnonymous && (
+            <Image 
+              source={{ uri: post.author.avatar }} 
+              className="w-10 h-10 rounded-full mr-3"
+              resizeMode="cover"
+            />
+          )}
+          {post.isAnonymous && (
+            <View className="w-10 h-10 rounded-full mr-3 bg-gray-300 flex items-center justify-center">
+              <Text className="text-gray-600 font-bold text-lg">?</Text>
+            </View>
+          )}
           <View className="flex-1">
-            <Text className="text-base font-semibold text-gray-800">{post.author.name}</Text>
+            <Text className="text-base font-semibold text-gray-800">
+              {post.isAnonymous ? 'Anonymous' : post.author.name}
+            </Text>
             <Text className="text-sm text-gray-500 mt-0.5">{post.timeAgo}</Text>
           </View>
         </View>
-        <View
-          className={`px-3 py-1.5 rounded-xl ${
-            post.author.role === 'Counselor'
-              ? 'bg-blue-400'
-              : post.author.role === 'Psychiatrist'
-              ? 'bg-purple-500'
-              : post.author.role === 'Admin'
-              ? 'bg-amber-500'
-              : 'bg-gray-400'
-          }`}
-        >
-          <Text className="text-xs font-semibold text-white">{post.author.role}</Text>
-        </View>
-        <TouchableOpacity className="ml-2">
+        {!post.isAnonymous && (
+          <View
+            className={`px-3 py-1.5 rounded-xl ${
+              post.author.role === 'Counselor'
+                ? 'bg-blue-400'
+                : post.author.role === 'Psychiatrist'
+                ? 'bg-purple-500'
+                : post.author.role === 'Admin'
+                ? 'bg-amber-500'
+                : 'bg-gray-400'
+            }`}
+          >
+            <Text className="text-xs font-semibold text-white">{post.author.role}</Text>
+          </View>
+        )}
+        {/* <TouchableOpacity className="ml-2">
           <MoreHorizontal size={20} color="#6B7280" />
-        </TouchableOpacity>
+        </TouchableOpacity> */}
       </View>
 
       {/* Post Content */}

@@ -1,70 +1,59 @@
 import { checkIsStudent } from '@/api/api';
+import { getLoginStats, getProfile, LoginStatsData, ProfileData } from '@/api/auth';
 import { getDisplayName } from '@/util/asyncName';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { router } from 'expo-router';
-import { AlertTriangle, ArrowLeft, BadgeCheck, BarChart3, Bookmark, Edit, GraduationCap, HelpCircle, History, LogOut, Shield } from 'lucide-react-native';
-import React, { useEffect, useState } from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import { AlertTriangle, ArrowLeft, BadgeCheck, BarChart3, Edit, GraduationCap, HelpCircle, History, LogOut, Shield } from 'lucide-react-native';
+import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Image, SafeAreaView, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { LogoutButton } from '../../components/Buttons';
 
 export default function Profile() {
-  const userData = {
-    name: 'hiruna',
-    nickname: 'John',
-    dob: '23/05/2003',
-    email: 'hiruna.pramuthitha1@gmail.com',
-    joinDate: 'June 2025',
-    checkins: 24,
-    goals: 18,
-    streak: 36
-  };
-
+  const [profileData, setProfileData] = useState<ProfileData | null>(null);
+  const [loginStats, setLoginStats] = useState<LoginStatsData | null>(null);
   const [isStudent, setIsStudent] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [displayName, setDisplayName] = useState<string>(userData.name);
+  const [displayName, setDisplayName] = useState<string>('');
+
+  const initializeProfile = useCallback(async () => {
+    try {
+      // Get profile data
+      const profile = await getProfile();
+      setProfileData(profile);
+      
+      // Get login stats
+      const stats = await getLoginStats();
+      setLoginStats(stats);
+      
+      // Get display name
+      const name = await getDisplayName();
+      if (name) {
+        setDisplayName(name);
+      }
+      
+      // Check student status
+      const token = await AsyncStorage.getItem('token');
+      if (token) {
+        const studentStatus = await checkIsStudent(token);
+        setIsStudent(studentStatus);
+      }
+    } catch (error) {
+      console.error('Error initializing profile:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    const initializeProfile = async () => {
-      try {
-        // Get display name
-        const name = await getDisplayName();
-        if (name) {
-          setDisplayName(name);
-        }
-        
-        // Check student status
-        const token = await AsyncStorage.getItem('token');
-        if (token) {
-          const studentStatus = await checkIsStudent(token);
-          setIsStudent(studentStatus);
-        }
-      } catch (error) {
-        console.error('Error initializing profile:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
     initializeProfile();
-  }, []);
+  }, [initializeProfile]);
 
-  useEffect(() => {
-    const checkStudentStatus = async () => {
-      try {
-        const token = await AsyncStorage.getItem('token');
-        if (token) {
-          const studentStatus = await checkIsStudent(token);
-          setIsStudent(studentStatus);
-        }
-      } catch (error) {
-        console.error('Error checking student status:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    checkStudentStatus();
-  }, []);
+  // Refresh profile data when screen comes back into focus (e.g., after editing)
+  useFocusEffect(
+    useCallback(() => {
+      initializeProfile();
+    }, [initializeProfile])
+  );
 
 
   return (
@@ -87,10 +76,16 @@ export default function Profile() {
         {/* Profile Section */}
         <View className="items-center py-6 border-b border-gray-200">
           <View className="relative mb-4">
-            <Image 
-              source={{ uri: 'https://i.pinimg.com/736x/7a/a9/98/7aa998bc43b70132bc4ba177dcd2d40e.jpg' }} 
-              className="w-32 h-32 rounded-full border-4 border-gray-200"
-            />
+            {isLoading ? (
+              <View className="w-32 h-32 rounded-full border-4 border-gray-200 bg-gray-100 justify-center items-center">
+                <ActivityIndicator size="large" color="#2563EB" />
+              </View>
+            ) : (
+              <Image 
+                source={{ uri: profileData?.avatar }} 
+                className="w-32 h-32 rounded-full border-4 border-gray-200"
+              />
+            )}
             <TouchableOpacity 
               className="absolute bottom-0 right-0 bg-primary rounded-full w-8 h-8 justify-center items-center"
               onPress={() => router.push('/profile/edit_profile')}
@@ -99,8 +94,8 @@ export default function Profile() {
             </TouchableOpacity>
           </View>
 
-          <Text className="text-2xl font-bold text-gray-900 mb-1">{displayName}</Text>
-          <Text className="text-base text-gray-500 mb-4">@{userData.nickname}</Text>
+          <Text className="text-2xl font-bold text-gray-900 mb-1">{displayName || profileData?.name}</Text>
+          <Text className="text-base text-gray-500 mb-4">@{profileData?.nickName}</Text>
           
           {/* Student Badge */}
           {isLoading ? (
@@ -114,11 +109,11 @@ export default function Profile() {
           
           <View className="flex-row justify-around w-full px-10 mt-4">
             <View className="items-center">
-              <Text className="text-xl font-bold text-primary">{userData.checkins}</Text>
+              <Text className="text-xl font-bold text-primary">{loginStats?.totalLogins || 0}</Text>
               <Text className="text-sm text-gray-500 mt-1">Check-ins</Text>
             </View>
             <View className="items-center">
-              <Text className="text-xl font-bold text-primary">{userData.streak}</Text>
+              <Text className="text-xl font-bold text-primary">{loginStats?.currentStreak || 0}</Text>
               <Text className="text-sm text-gray-500 mt-1">Day Streak</Text>
             </View>
           </View>
@@ -130,27 +125,17 @@ export default function Profile() {
           
           <View className="flex-row justify-between mb-4">
             <Text className="text-sm text-gray-500">Full Name</Text>
-            <Text className="text-sm font-medium text-gray-900">{userData.name}</Text>
+            <Text className="text-sm font-medium text-gray-900">{profileData?.name}</Text>
           </View>
           
           <View className="flex-row justify-between mb-4">
             <Text className="text-sm text-gray-500">Nickname</Text>
-            <Text className="text-sm font-medium text-gray-900">{userData.nickname}</Text>
-          </View>
-          
-          <View className="flex-row justify-between mb-4">
-            <Text className="text-sm text-gray-500">Date of Birth</Text>
-            <Text className="text-sm font-medium text-gray-900">{userData.dob}</Text>
+            <Text className="text-sm font-medium text-gray-900">{profileData?.nickName}</Text>
           </View>
           
           <View className="flex-row justify-between mb-4">
             <Text className="text-sm text-gray-500">Email</Text>
-            <Text className="text-sm font-medium text-gray-900">{userData.email}</Text>
-          </View>
-          
-          <View className="flex-row justify-between mb-4">
-            <Text className="text-sm text-gray-500">Member Since</Text>
-            <Text className="text-sm font-medium text-gray-900">{userData.joinDate}</Text>
+            <Text className="text-sm font-medium text-gray-900">{profileData?.email}</Text>
           </View>
         </View>
 

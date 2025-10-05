@@ -25,6 +25,13 @@ import { WebView } from 'react-native-webview';
 import BookingCalendar from '../../../components/BookingCalendar';
 import { PrimaryButton } from '../../components/Buttons';
 
+export const title = 'Book Session';
+
+export const options = {
+  title: 'Book Session',
+  headerShown: false,
+};
+
 interface TimeSlot {
   id: string;
   time: string;

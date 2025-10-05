@@ -1,10 +1,12 @@
 import { Tabs } from 'expo-router';
 import { Home, MessageCircle, Newspaper, PersonStanding, Stethoscope } from 'lucide-react-native';
-
+import { useSessionTimeout } from '../../hooks/useSessionTimeout';
 
 export default function TabsLayout() {
+  // Initialize session timeout tracking
+  useSessionTimeout();
+
   return (
-    <>
     <Tabs
       screenOptions={{
         headerShown: false,
@@ -47,6 +49,5 @@ export default function TabsLayout() {
         }}
       />
     </Tabs>
-    </>
   );
 }

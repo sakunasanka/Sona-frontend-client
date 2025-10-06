@@ -466,7 +466,7 @@ export default function CounselorChat() {
         <View className="flex-row items-center flex-1">
           <View className="relative">
             <Image
-              source={{ uri: 'https://images.pexels.com/photos/5327585/pexels-photo-5327585.jpeg' }}
+              source={{ uri: 'https://images.icon-icons.com/1378/PNG/512/avatardefault_92824.png' }}
               className="w-12 h-12 rounded-full"
             />
             <View className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-emerald-500 border-2 border-white" />
@@ -515,7 +515,7 @@ export default function CounselorChat() {
                 <View className={`flex-row items-end ${isUser ? 'justify-end' : 'justify-start'} mb-1`}>
                   {!isUser && (
                     <Image
-                      source={{ uri: 'https://images.pexels.com/photos/5327585/pexels-photo-5327585.jpeg' }}
+                      source={{ uri: 'https://images.icon-icons.com/1378/PNG/512/avatardefault_92824.png' }}
                       className="w-8 h-8 rounded-full mr-3 mb-1"
                     />
                   )}
@@ -560,7 +560,7 @@ export default function CounselorChat() {
           {isTyping && (
             <View className="flex-row items-end justify-start mb-4">
               <Image
-                source={{ uri: 'https://images.pexels.com/photos/5327585/pexels-photo-5327585.jpeg' }}
+                source={{ uri: 'https://images.icon-icons.com/1378/PNG/512/avatardefault_92824.png' }}
                 className="w-8 h-8 rounded-full mr-3"
               />
               <View className="bg-white rounded-3xl rounded-bl-lg px-5 py-4 shadow-sm border border-gray-100">

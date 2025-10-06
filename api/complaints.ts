@@ -19,6 +19,54 @@ interface SubmitComplaintRequest {
   reason: string;
 }
 
+interface Complaint {
+  complaintId: number;
+  additional_details: string;
+  status: string;
+  proof?: string;
+  reason: string;
+  user_id: number;
+  session_id: number;
+  action_by: number | null;
+  reasonID: number | null;
+  createdAt: string;
+  updatedAt: string;
+  user: {
+    id: number;
+    name: string;
+    email: string;
+    role: string;
+  };
+  session: {
+    id: number;
+    date: string;
+    timeSlot: string;
+    duration: number;
+    status: string;
+  };
+}
+
+export const fetchComplaints = async (): Promise<{ success: boolean; message: string; data: Complaint[] }> => {
+  try {
+    const token = await AsyncStorage.getItem('token');
+
+    if (!token) {
+      throw new Error('No authentication token found. Please log in again.');
+    }
+
+    const response = await api.get('/complaints', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching complaints:', error);
+    throw error;
+  }
+};
+
 export const submitComplaint = async (complaintData: SubmitComplaintRequest): Promise<any> => {
   try {
     const token = await AsyncStorage.getItem('token');

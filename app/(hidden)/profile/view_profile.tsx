@@ -82,7 +82,7 @@ export default function Profile() {
               </View>
             ) : (
               <Image 
-                source={{ uri: profileData?.avatar }} 
+                source={{ uri: profileData?.avatar || 'https://images.icon-icons.com/1378/PNG/512/avatardefault_92824.png' }} 
                 className="w-32 h-32 rounded-full border-4 border-gray-200"
               />
             )}

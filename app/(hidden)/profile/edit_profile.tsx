@@ -2,7 +2,7 @@ import { getProfile, ProfileData, updateProfile } from '@/api/auth';
 import { uploadImageToCloudinary } from '@/utils/cloudinary';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
-import { ArrowLeft, Camera, Check } from 'lucide-react-native';
+import { ArrowLeft, Camera, Check, Trash2 } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
   Alert,
@@ -87,6 +87,24 @@ export default function EditProfile() {
     }
   };
 
+  const handleRemoveImage = () => {
+    Alert.alert(
+      'Remove Profile Picture',
+      'Are you sure you want to remove your profile picture?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Remove', 
+          style: 'destructive',
+          onPress: () => {
+            setSelectedImage(null);
+            setCloudinaryImageUrl(null);
+          }
+        }
+      ]
+    );
+  };
+
   const handleSave = async () => {
     if (!profileData) return;
 
@@ -98,10 +116,13 @@ export default function EditProfile() {
     setSaving(true);
     
     try {
+      // Determine avatar value: empty string if removed, cloudinary URL if uploaded, or existing avatar
+      const avatarValue = cloudinaryImageUrl === null ? "" : (cloudinaryImageUrl || profileData.avatar || "");
+      
       await updateProfile({
         name: profileData.name,
         nickName: profileData.nickName,
-        avatar: cloudinaryImageUrl || profileData.avatar,
+        avatar: avatarValue,
       });
       
       Alert.alert('Success', 'Profile updated successfully', [
@@ -155,22 +176,36 @@ export default function EditProfile() {
         <View className="items-center py-6 border-b border-gray-200">
           <View className="relative mb-4">
             <Image 
-              source={{ uri: selectedImage || cloudinaryImageUrl || 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg' }} 
+              source={{ uri: selectedImage || cloudinaryImageUrl || 'https://images.icon-icons.com/1378/PNG/512/avatardefault_92824.png' }} 
               className="w-32 h-32 rounded-full border-4 border-gray-200"
             />
-            <TouchableOpacity 
-              className="absolute bottom-0 right-0 bg-primary rounded-full w-8 h-8 justify-center items-center"
-              onPress={handleImagePicker}
-              disabled={imageUploading}
-            >
-              <Camera size={16} color="white" />
-            </TouchableOpacity>
+            <View className="absolute bottom-0 right-0 flex-row gap-2">
+              <TouchableOpacity 
+                className="bg-primary rounded-full w-8 h-8 justify-center items-center"
+                onPress={handleImagePicker}
+                disabled={imageUploading}
+              >
+                <Camera size={16} color="white" />
+              </TouchableOpacity>
+              {(selectedImage || cloudinaryImageUrl) && (
+                <TouchableOpacity 
+                  className="bg-red-500 rounded-full w-8 h-8 justify-center items-center"
+                  onPress={handleRemoveImage}
+                  disabled={imageUploading}
+                >
+                  <Trash2 size={16} color="white" />
+                </TouchableOpacity>
+              )}
+            </View>
             {imageUploading && (
               <View className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center">
                 <Text className="text-white text-xs">Uploading...</Text>
               </View>
             )}
           </View>
+          <Text className="text-sm text-gray-500 text-center">
+            Tap the camera to change your photo{cloudinaryImageUrl ? '\nTap the trash to remove your photo' : ''}
+          </Text>
         </View>
 
         {/* Edit Form */}

@@ -18,7 +18,7 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
-import { submitComplaint } from '../../../api/complaints';
+import { fetchComplaints, submitComplaint } from '../../../api/complaints';
 import { Session, fetchUserSessions } from '../../../api/sessions';
 import { uploadComplaintProofToCloudinary } from '../../../utils/cloudinary';
 import { PrimaryButton } from '../../components/Buttons';
@@ -272,6 +272,56 @@ export default function ComplaintScreen() {
     setUploadedFile(null);
   };
 
+  const checkComplaintRateLimit = async (sessionId: string): Promise<{ allowed: boolean; message: string }> => {
+    try {
+      const complaintsResponse = await fetchComplaints();
+      const userComplaints = complaintsResponse.data || [];
+      const currentTime = new Date();
+      const twentyFourHoursAgo = new Date(currentTime.getTime() - 24 * 60 * 60 * 1000);
+      const fortyEightHoursAgo = new Date(currentTime.getTime() - 48 * 60 * 60 * 1000);
+
+      // Check if user has submitted any complaint in the last 24 hours
+      const recentComplaints = userComplaints.filter(complaint => {
+        const complaintTime = new Date(complaint.createdAt);
+        return complaintTime > twentyFourHoursAgo;
+      });
+
+      if (recentComplaints.length > 0) {
+        const lastComplaintTime = new Date(Math.max(...recentComplaints.map(c => new Date(c.createdAt).getTime())));
+        const hoursUntilNextAllowed = Math.ceil((lastComplaintTime.getTime() + 24 * 60 * 60 * 1000 - currentTime.getTime()) / (60 * 60 * 1000));
+        return {
+          allowed: false,
+          message: `You can only submit one complaint every 24 hours. Please try again in ${hoursUntilNextAllowed} hours.`
+        };
+      }
+
+      // Check if user has already submitted a complaint for this specific session in the last 48 hours
+      const sessionComplaints = userComplaints.filter(complaint => 
+        complaint.session_id.toString() === sessionId
+      );
+
+      const recentSessionComplaints = sessionComplaints.filter(complaint => {
+        const complaintTime = new Date(complaint.createdAt);
+        return complaintTime > fortyEightHoursAgo;
+      });
+
+      if (recentSessionComplaints.length > 0) {
+        const lastSessionComplaintTime = new Date(Math.max(...recentSessionComplaints.map(c => new Date(c.createdAt).getTime())));
+        const hoursUntilNextAllowed = Math.ceil((lastSessionComplaintTime.getTime() + 48 * 60 * 60 * 1000 - currentTime.getTime()) / (60 * 60 * 1000));
+        return {
+          allowed: false,
+          message: `You can only submit one complaint per session every 48 hours. Please try again in ${hoursUntilNextAllowed} hours.`
+        };
+      }
+
+      return { allowed: true, message: '' };
+    } catch (error) {
+      console.error('Error checking complaint rate limit:', error);
+      // If we can't check, allow the complaint to proceed (fail open)
+      return { allowed: true, message: '' };
+    }
+  };
+
   const handleSubmitComplaint = async () => {
     // Validation
     if (!selectedSessionId) {
@@ -294,6 +344,13 @@ export default function ComplaintScreen() {
 
     if (!selectedSession || !selectedReasonDetails) {
       Alert.alert('Error', 'Invalid selection. Please try again.');
+      return;
+    }
+
+    // Check rate limiting rules
+    const rateLimitCheck = await checkComplaintRateLimit(selectedSessionId);
+    if (!rateLimitCheck.allowed) {
+      Alert.alert('Rate Limit Exceeded', rateLimitCheck.message);
       return;
     }
 
@@ -327,7 +384,7 @@ export default function ComplaintScreen() {
 
       Alert.alert(
         'Complaint Submitted Successfully',
-        `Your complaint about the ${selectedSession.counselorType} session with ${selectedSession.counselor?.name} has been submitted. Our team will review it and contact you within 48 hours.`,
+        `Your complaint about the session with ${selectedSession.counselor?.name} has been submitted. Our team will review it and contact you within 48 hours.`,
         [
           {
             text: 'OK',
@@ -360,7 +417,10 @@ export default function ComplaintScreen() {
 
   const getSessionDisplayName = (session: Session) => {
     const professionalName = session.counselor?.name || 'Unknown Professional';
-    const sessionType = session.counselorType === 'counselor' ? 'Counseling' : 'Psychiatrist Consultation';
+    // Since counselorType doesn't exist in the database, determine type from counselor name
+    const isPsychiatrist = professionalName.toLowerCase().includes('dr.') ||
+                          professionalName.toLowerCase().includes('psychiatrist');
+    const sessionType = isPsychiatrist ? 'Psychiatrist Consultation' : 'Counseling';
     return `${sessionType} with ${professionalName}`;
   };
 

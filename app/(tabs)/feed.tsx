@@ -260,7 +260,7 @@ export default function Feed() {
             <View className="p-4 border-b border-gray-100">
               <View className="flex-row items-center space-x-3 mb-3">
                 <Image 
-                  source={{ uri: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg' }} 
+                  source={{ uri: 'https://images.icon-icons.com/1378/PNG/512/avatardefault_92824.png' }} 
                   className="w-10 h-10 rounded-full"
                 />
                 <TouchableOpacity 

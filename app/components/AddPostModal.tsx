@@ -172,7 +172,7 @@ const AddPostModal: React.FC<AddPostModalProps> = ({ visible, onClose, onSubmit 
           {/* User Info */}
           <View className="flex-row items-center p-4">
             <Image 
-              source={{ uri: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg' }} 
+              source={{ uri: 'https://images.icon-icons.com/1378/PNG/512/avatardefault_92824.png' }} 
               className="w-12 h-12 rounded-full mr-3"
             />
             <View>

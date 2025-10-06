@@ -17,7 +17,7 @@ export interface ProfileData {
   id: number;
   name: string;
   email: string;
-  avatar: string;
+  avatar: string | null;
   nickName: string;
   isStudent: boolean;
 }

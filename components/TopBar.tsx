@@ -46,7 +46,7 @@ const TopBar: React.FC<{ title?: string }> = ({title}) => {
                   </View>
                 ) : (
                   <Image 
-                    source={{ uri: profileData?.avatar }} 
+                    source={{ uri: profileData?.avatar || 'https://images.icon-icons.com/1378/PNG/512/avatardefault_92824.png' }} 
                     style={{ width: 32, height: 32, borderRadius: 16 }}
                   />
                 )}

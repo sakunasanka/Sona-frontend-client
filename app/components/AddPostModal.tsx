@@ -189,21 +189,28 @@ const AddPostModal: React.FC<AddPostModalProps> = ({ visible, onClose, onSubmit 
               multiline
               value={postText}
               onChangeText={setPostText}
-              style={{ textAlignVertical: 'top', paddingRight: 40 }} // Added padding for the icon
+              style={{ textAlignVertical: 'top' }}
               editable={!loading}
             />
-            {/* Add image icon near cursor */}
-            <TouchableOpacity 
-              onPress={handleImagePicker}
-              disabled={loading || imageUploading}
-              className="absolute right-4 top-2 p-2"
-            >
-              <Ionicons 
-                name="image" 
-                size={24} 
-                color={loading || imageUploading ? "#9CA3AF" : "#22C55E"} 
-              />
-            </TouchableOpacity>
+          </View>
+
+          {/* Media Options */}
+          <View className="px-4 mt-4">
+            <View className="flex-row items-center space-x-4">
+              <TouchableOpacity 
+                onPress={handleImagePicker}
+                disabled={loading || imageUploading}
+                className={`p-3 rounded-lg ${
+                  loading || imageUploading ? 'bg-gray-100' : 'bg-gray-50'
+                }`}
+              >
+                <Ionicons 
+                  name="image" 
+                  size={24} 
+                  color={loading || imageUploading ? "#9CA3AF" : "#22C55E"} 
+                />
+              </TouchableOpacity>
+            </View>
           </View>
 
           {/* Hashtags input (optional) */}

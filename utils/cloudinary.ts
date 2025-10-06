@@ -77,6 +77,75 @@ export const uploadImageToCloudinary = async (
 };
 
 /**
+ * Upload file (image or PDF) to Cloudinary for complaint proofs
+ * @param fileUri - Local file URI from DocumentPicker or ImagePicker
+ * @param fileName - Original filename
+ * @param mimeType - File MIME type
+ * @returns Promise<CloudinaryUploadResult>
+ */
+export const uploadComplaintProofToCloudinary = async (
+  fileUri: string,
+  fileName: string,
+  mimeType: string
+): Promise<CloudinaryUploadResult> => {
+  try {
+    // Create FormData
+    const formData = new FormData();
+    
+    // Append file
+    formData.append('file', {
+      uri: fileUri,
+      type: mimeType,
+      name: fileName,
+    } as any);
+    
+    // Use complaint_proofs upload preset
+    formData.append('upload_preset', 'complaint_proofs');
+    formData.append('api_key', VITE_CLOUDINARY_API_KEY);
+    
+    // Determine upload endpoint based on file type
+    const isImage = mimeType.startsWith('image/');
+    const endpoint = isImage ? 'image' : 'raw'; // Use 'raw' for PDFs and other files
+    
+    // Upload to Cloudinary
+    const response = await fetch(
+      `https://api.cloudinary.com/v1_1/${VITE_CLOUDINARY_CLOUD_NAME}/${endpoint}/upload`,
+      {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      }
+    );
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Cloudinary upload error:', errorText);
+      throw new Error(`Upload failed: ${response.status} ${response.statusText}`);
+    }
+    
+    const result = await response.json();
+    
+    if (!result.secure_url) {
+      throw new Error('Upload succeeded but no URL returned');
+    }
+    
+    return {
+      public_id: result.public_id,
+      secure_url: result.secure_url,
+      width: result.width || 0,
+      height: result.height || 0,
+      format: result.format,
+    };
+    
+  } catch (error) {
+    console.error('Error uploading complaint proof to Cloudinary:', error);
+    throw new Error('Failed to upload file. Please try again.');
+  }
+};
+
+/**
  * Generate Cloudinary transformation URL
  * @param publicId - Cloudinary public_id
  * @param transformations - Transformation string (e.g., 'w_300,h_300,c_fill')

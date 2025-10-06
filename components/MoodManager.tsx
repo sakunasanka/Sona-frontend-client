@@ -1,14 +1,22 @@
 import { router } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
+import { AppState } from 'react-native';
 import { hasSubmittedTodaysMood } from '../api/mood';
 import MoodPopup from '../components/MoodPopup';
 
 export default function MoodManager() {
   const [showMoodPopup, setShowMoodPopup] = useState(false);
+  const lastCheckedDate = useRef<string>('');
 
-  useEffect(() => {
-    const checkMoodStatus = async () => {
-      try {
+  const checkMoodStatus = async () => {
+    try {
+      const currentDate = new Date().toDateString(); // Get current date string
+
+      // Only check if we haven't checked today yet
+      if (lastCheckedDate.current !== currentDate) {
+        console.log('Checking mood status for new day:', currentDate);
+        lastCheckedDate.current = currentDate;
+
         // Check if user has already submitted today's mood
         const hasSubmitted = await hasSubmittedTodaysMood();
 
@@ -17,15 +25,36 @@ export default function MoodManager() {
           setTimeout(() => {
             setShowMoodPopup(true);
           }, 2000); // 2 second delay
+        } else {
+          console.log('Mood already submitted today');
         }
-      } catch (error) {
-        console.error('Error checking mood status:', error);
-        // On error, don't show popup to avoid annoying users
       }
-    };
+    } catch (error) {
+      console.error('Error checking mood status:', error);
+      // On error, don't show popup to avoid annoying users
+    }
+  };
 
-    // Check mood status every time the app opens
+  useEffect(() => {
+    // Check mood status immediately when component mounts
     checkMoodStatus();
+
+    // Set up an interval to check every 5 minutes
+    const interval = setInterval(() => {
+      checkMoodStatus();
+    }, 5 * 60 * 1000); // 5 minutes
+
+    // Listen for app state changes (when app comes to foreground)
+    const subscription = AppState.addEventListener('change', (nextAppState) => {
+      if (nextAppState === 'active') {
+        checkMoodStatus();
+      }
+    });
+
+    return () => {
+      clearInterval(interval);
+      subscription?.remove?.();
+    };
   }, []);
 
   const handleMoodSubmitted = () => {

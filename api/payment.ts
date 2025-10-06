@@ -54,6 +54,13 @@ interface SessionBookingPaymentData {
   };
 }
 
+interface PaymentConfirmationData {
+  orderId: string;
+  userhash: string;
+  amount: number;
+  description?: string;
+}
+
 export const createPaymentLink = async (data: paymentRequestData, token?: string): Promise<PaymentResponse> => {
   try {
     const response = await apiRequest({
@@ -113,17 +120,17 @@ export const processPlatformFeePayment = async (data: PlatformFeePaymentData, to
   }
 };
 
-export const processSessionBookingPayment = async (data: SessionBookingPaymentData, token: string): Promise<PaymentResponse> => {
+export const confirmPlatformFeePayment = async (data: PaymentConfirmationData, token: string): Promise<PaymentResponse> => {
   try {
     const response = await apiRequest({
       method: 'post',
-      path: 'payments/initiate-payment',
+      path: 'payments/confirm-platform-fee',
       data,
       token
     });
     return response;
   } catch (error) {
-    console.error('Error processing session booking payment:', error);
+    console.error('Error confirming platform fee payment:', error);
     throw error;
   }
 };

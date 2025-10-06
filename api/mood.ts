@@ -4,6 +4,15 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import { getProfile } from './auth';
 
+// Helper function to get current local date in YYYY-MM-DD format
+const getCurrentLocalDate = (): string => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 // Always use configured host; avoid localhost fallbacks that break on web/device
 const API_BASE_URL = `${API_URL}:${PORT}/api`;
 
@@ -60,7 +69,7 @@ export const saveDailyMood = async (moodData: {
   try {
     const userId = await getCurrentUserId();
     const payload = {
-      local_date: new Date().toISOString().split('T')[0],
+      local_date: getCurrentLocalDate(), // Use local date instead of UTC
       mood: moodData.mood,
       valence: moodData.valence,
       arousal: moodData.arousal,
@@ -115,7 +124,7 @@ export const saveDailyMood = async (moodData: {
 export const hasSubmittedTodaysMood = async (): Promise<boolean> => {
   try {
     const userId = await getCurrentUserId();
-    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+    const today = getCurrentLocalDate(); // Use local date instead of UTC
 
     // Get all moods for the user
     const response = await axios.get(
@@ -146,7 +155,7 @@ export const hasSubmittedTodaysMood = async (): Promise<boolean> => {
 export const getTodaysMood = async (): Promise<DailyMood | null> => {
   try {
     const userId = await getCurrentUserId();
-    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+    const today = getCurrentLocalDate(); // Use local date instead of UTC
 
     // Get all moods for the user and find today's
     const response = await axios.get(

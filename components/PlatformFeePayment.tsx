@@ -1,4 +1,4 @@
-import { createPlatformFeePaymentLink, processPlatformFeePayment } from '@/api/payment';
+import { confirmPlatformFeePayment, createPlatformFeePaymentLink } from '@/api/payment';
 import { API_URL, PORT } from '@/config/env';
 import { usePlatformFee } from '@/contexts/PlatformFeeContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -116,7 +116,7 @@ const PlatformFeePayment: React.FC<PlatformFeePaymentProps> = ({
       try {
         // Process the platform fee payment on the backend
         const authToken = await AsyncStorage.getItem('token') || '';
-        await processPlatformFeePayment({
+        await confirmPlatformFeePayment({
           orderId,
           userhash: currentUserHash, // Use the stored userhash from payment generation
           amount: PLATFORM_FEE_AMOUNT,

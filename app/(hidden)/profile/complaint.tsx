@@ -277,22 +277,30 @@ export default function ComplaintScreen() {
       const complaintsResponse = await fetchComplaints();
       const userComplaints = complaintsResponse.data || [];
       const currentTime = new Date();
-      const twentyFourHoursAgo = new Date(currentTime.getTime() - 24 * 60 * 60 * 1000);
-      const fortyEightHoursAgo = new Date(currentTime.getTime() - 48 * 60 * 60 * 1000);
 
       // Check if user has submitted any complaint in the last 24 hours
-      const recentComplaints = userComplaints.filter(complaint => {
-        const complaintTime = new Date(complaint.createdAt);
-        return complaintTime > twentyFourHoursAgo;
-      });
+      // Find the most recent complaint
+      const sortedComplaints = userComplaints.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+      const lastComplaint = sortedComplaints[0];
 
-      if (recentComplaints.length > 0) {
-        const lastComplaintTime = new Date(Math.max(...recentComplaints.map(c => new Date(c.createdAt).getTime())));
-        const hoursUntilNextAllowed = Math.ceil((lastComplaintTime.getTime() + 24 * 60 * 60 * 1000 - currentTime.getTime()) / (60 * 60 * 1000));
-        return {
-          allowed: false,
-          message: `You can only submit one complaint every 24 hours. Please try again in ${hoursUntilNextAllowed} hours.`
-        };
+      if (lastComplaint) {
+        const lastComplaintTime = new Date(lastComplaint.updatedAt);
+        
+        // Ensure both times are in UTC for comparison
+        const currentTimeUTC = new Date(currentTime.toISOString());
+        const lastComplaintTimeUTC = new Date(lastComplaintTime.toISOString());
+        
+        const timeSinceLastComplaint = Math.max(0, currentTimeUTC.getTime() - lastComplaintTimeUTC.getTime());
+        const twentyFourHoursInMs = 24 * 60 * 60 * 1000;
+
+        if (timeSinceLastComplaint < twentyFourHoursInMs) {
+          const timeUntilNextAllowed = twentyFourHoursInMs - timeSinceLastComplaint;
+          const hoursUntilNextAllowed = Math.ceil(timeUntilNextAllowed / (60 * 60 * 1000));
+          return {
+            allowed: false,
+            message: `You can only submit one complaint every 24 hours. Please try again in ${hoursUntilNextAllowed} hours.`
+          };
+        }
       }
 
       // Check if user has already submitted a complaint for this specific session in the last 48 hours
@@ -300,18 +308,28 @@ export default function ComplaintScreen() {
         complaint.session_id.toString() === sessionId
       );
 
-      const recentSessionComplaints = sessionComplaints.filter(complaint => {
-        const complaintTime = new Date(complaint.createdAt);
-        return complaintTime > fortyEightHoursAgo;
-      });
+      // Find the most recent complaint for this session
+      const sortedSessionComplaints = sessionComplaints.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+      const lastSessionComplaint = sortedSessionComplaints[0];
 
-      if (recentSessionComplaints.length > 0) {
-        const lastSessionComplaintTime = new Date(Math.max(...recentSessionComplaints.map(c => new Date(c.createdAt).getTime())));
-        const hoursUntilNextAllowed = Math.ceil((lastSessionComplaintTime.getTime() + 48 * 60 * 60 * 1000 - currentTime.getTime()) / (60 * 60 * 1000));
-        return {
-          allowed: false,
-          message: `You can only submit one complaint per session every 48 hours. Please try again in ${hoursUntilNextAllowed} hours.`
-        };
+      if (lastSessionComplaint) {
+        const lastSessionComplaintTime = new Date(lastSessionComplaint.updatedAt);
+        
+        // Ensure both times are in UTC for comparison
+        const currentTimeUTC_session = new Date(currentTime.toISOString());
+        const lastSessionComplaintTimeUTC = new Date(lastSessionComplaintTime.toISOString());
+        
+        const timeSinceLastSessionComplaint = Math.max(0, currentTimeUTC_session.getTime() - lastSessionComplaintTimeUTC.getTime());
+        const fortyEightHoursInMs = 48 * 60 * 60 * 1000;
+
+        if (timeSinceLastSessionComplaint < fortyEightHoursInMs) {
+          const timeUntilNextAllowed = fortyEightHoursInMs - timeSinceLastSessionComplaint;
+          const hoursUntilNextAllowed = Math.ceil(timeUntilNextAllowed / (60 * 60 * 1000));
+          return {
+            allowed: false,
+            message: `You can only submit one complaint per session every 48 hours. Please try again in ${hoursUntilNextAllowed} hours.`
+          };
+        }
       }
 
       return { allowed: true, message: '' };

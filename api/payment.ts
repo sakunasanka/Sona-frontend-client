@@ -42,6 +42,18 @@ interface PlatformFeePaymentData {
   };
 }
 
+interface SessionBookingPaymentData {
+  orderId: string;
+  userhash: string;
+  sessionDetails: {
+    counselorId: string;
+    date: string;
+    time: string;
+    duration: number;
+    amount: number;
+  };
+}
+
 export const createPaymentLink = async (data: paymentRequestData, token?: string): Promise<PaymentResponse> => {
   try {
     const response = await apiRequest({
@@ -86,34 +98,32 @@ export const createPlatformFeePaymentLink = async (data: PlatformFeePaymentData,
   }
 };
 
-export const processPlatformFeePayment = async (data: {
-  orderId: string;
-  userhash: string;
-  amount: number;
-  description: string;
-}, token: string): Promise<any> => {
+export const processPlatformFeePayment = async (data: PlatformFeePaymentData, token: string): Promise<PaymentResponse> => {
   try {
-    console.log('Calling processPlatformFeePayment with data:', data);
-    console.log('Making POST request to payments/initiate-platform-fee');
-    console.log('🚀 Backend endpoint: POST /api/payments/initiate-platform-fee');
-
     const response = await apiRequest({
       method: 'post',
       path: 'payments/initiate-platform-fee',
       data,
       token
     });
-    console.log('Platform fee payment processed successfully:', response);
     return response;
   } catch (error) {
-    console.error('❌ Error processing platform fee payment:', error);
-    console.error('💡 Make sure your backend has: POST /api/payments/initiate-platform-fee');
-    console.error('📋 Expected payload:', {
-      orderId: data.orderId,
-      userhash: data.userhash,
-      amount: data.amount,
-      description: data.description
+    console.error('Error processing platform fee payment:', error);
+    throw error;
+  }
+};
+
+export const processSessionBookingPayment = async (data: SessionBookingPaymentData, token: string): Promise<PaymentResponse> => {
+  try {
+    const response = await apiRequest({
+      method: 'post',
+      path: 'payments/initiate-payment',
+      data,
+      token
     });
+    return response;
+  } catch (error) {
+    console.error('Error processing session booking payment:', error);
     throw error;
   }
 };

@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import 'react-native-reanimated';
 import MoodManager from "../components/MoodManager";
 import QuestionnaireManager from "../components/QuestionnaireManager";
+import { PlatformFeeProvider } from "../contexts/PlatformFeeContext";
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
@@ -24,10 +25,10 @@ export default function RootLayout() {
   }
 
   return (
-    <>
+    <PlatformFeeProvider>
       <Stack screenOptions={{ headerShown: false }} />
       <MoodManager />
       <QuestionnaireManager />
-    </>
+    </PlatformFeeProvider>
   );
 }

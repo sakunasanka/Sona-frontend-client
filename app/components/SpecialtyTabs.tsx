@@ -1,3 +1,4 @@
+import { usePlatformFeeGuard } from '@/hooks/usePlatformFeeGuard';
 import React from 'react';
 import { FlatList, Text, TouchableOpacity } from 'react-native';
 
@@ -10,6 +11,23 @@ interface SpecialtyTabsProps {
 }
 
 const SpecialtyTabs = ({ selected, onSelect, specialties = DEFAULT_SPECIALTIES }: SpecialtyTabsProps) => {
+  const { checkPlatformFeeAccess } = usePlatformFeeGuard();
+
+  const handleSelect = async (specialty: string) => {
+    // Allow "All" selection without platform fee check
+    if (specialty === 'All') {
+      onSelect(specialty);
+      return;
+    }
+
+    // Check platform fee for specific specialty filtering
+    const hasAccess = await checkPlatformFeeAccess();
+    if (hasAccess) {
+      onSelect(specialty);
+    }
+    // If no access, the alert is already shown by checkPlatformFeeAccess
+  };
+
   return (
     <FlatList
       data={specialties}
@@ -21,7 +39,7 @@ const SpecialtyTabs = ({ selected, onSelect, specialties = DEFAULT_SPECIALTIES }
         const isActive = selected === item;
         return (
           <TouchableOpacity
-            onPress={() => onSelect(item)}
+            onPress={() => handleSelect(item)}
             style={{ 
               height: 26, // Explicit height to match counselor filters
               paddingHorizontal: 12,

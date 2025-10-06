@@ -1,11 +1,13 @@
 import { checkIsStudent } from '@/api/api';
 import { getLoginStats, getProfile, LoginStatsData, ProfileData } from '@/api/auth';
+import { usePlatformFee } from '@/contexts/PlatformFeeContext';
 import { getDisplayName } from '@/util/asyncName';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router, useFocusEffect } from 'expo-router';
-import { AlertTriangle, ArrowLeft, BadgeCheck, BarChart3, Edit, GraduationCap, HelpCircle, History, LogOut, Shield } from 'lucide-react-native';
+import { AlertCircle, AlertTriangle, ArrowLeft, BadgeCheck, BarChart3, Edit, GraduationCap, HelpCircle, History, LogOut, Shield } from 'lucide-react-native';
 import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Image, SafeAreaView, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import PlatformFeePayment from '../../../components/PlatformFeePayment';
 import { LogoutButton } from '../../components/Buttons';
 
 export default function Profile() {
@@ -14,6 +16,8 @@ export default function Profile() {
   const [isStudent, setIsStudent] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [displayName, setDisplayName] = useState<string>('');
+  const [showPlatformFeePayment, setShowPlatformFeePayment] = useState<boolean>(false);
+  const { feeStatus, isLoading: feeLoading, refreshFeeStatus } = usePlatformFee();
 
   const initializeProfile = useCallback(async () => {
     try {
@@ -139,6 +143,62 @@ export default function Profile() {
           </View>
         </View>
 
+        {/* Platform Fee Status Section */}
+        <View className="p-5 border-b border-gray-200">
+          <Text className="text-lg font-semibold text-gray-900 mb-4">Platform Access</Text>
+
+          {feeLoading ? (
+            <View className="items-center py-4">
+              <ActivityIndicator size="small" color="#2563EB" />
+              <Text className="text-gray-500 mt-2">Checking platform fee status...</Text>
+            </View>
+          ) : feeStatus ? (
+            <View className="bg-white rounded-lg border border-gray-200 p-4">
+              {feeStatus.hasPaid ? (
+                <View className="flex-row items-center justify-between">
+                  <View className="flex-row items-center">
+                    <View className="w-10 h-10 rounded-full bg-green-50 justify-center items-center mr-3">
+                      <Shield size={20} color="#059669" />
+                    </View>
+                    <View>
+                      <Text className="text-green-800 font-medium">Platform Fee Paid</Text>
+                      <Text className="text-green-600 text-sm">
+                        Expires: {feeStatus.expiryDate ? new Date(feeStatus.expiryDate).toLocaleDateString() : 'N/A'}
+                        {feeStatus.daysRemaining !== undefined && ` (${feeStatus.daysRemaining} days left)`}
+                      </Text>
+                    </View>
+                  </View>
+                  <View className="bg-green-100 px-3 py-1 rounded-full">
+                    <Text className="text-green-700 font-medium text-sm">Active</Text>
+                  </View>
+                </View>
+              ) : (
+                <View className="flex-row items-center justify-between">
+                  <View className="flex-row items-center flex-1">
+                    <View className="w-10 h-10 rounded-full bg-red-50 justify-center items-center mr-3">
+                      <AlertCircle size={20} color="#DC2626" />
+                    </View>
+                    <View className="flex-1">
+                      <Text className="text-red-800 font-medium">Platform Fee Required</Text>
+                      <Text className="text-red-600 text-sm">Pay monthly fee to access all features</Text>
+                    </View>
+                  </View>
+                  <TouchableOpacity
+                    className="bg-primary px-4 py-2 rounded-lg"
+                    onPress={() => setShowPlatformFeePayment(true)}
+                  >
+                    <Text className="text-white font-medium">Pay Now</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+          ) : (
+            <View className="items-center py-4">
+              <Text className="text-gray-500">Unable to check platform fee status</Text>
+            </View>
+          )}
+        </View>
+
         {/* Actions Section */}
         <View className="p-5">
           <Text className="text-lg font-semibold text-gray-900 mb-4">Account</Text>
@@ -214,6 +274,16 @@ export default function Profile() {
             icon={LogOut}
           />
       </ScrollView>
+
+      {/* Platform Fee Payment Modal */}
+      <PlatformFeePayment
+        visible={showPlatformFeePayment}
+        onClose={() => setShowPlatformFeePayment(false)}
+        onPaymentSuccess={() => {
+          // Refresh fee status after successful payment
+          refreshFeeStatus();
+        }}
+      />
     </SafeAreaView>
   );
 }

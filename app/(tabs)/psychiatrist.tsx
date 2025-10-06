@@ -41,12 +41,14 @@ const Psychiatrist = () => {
             }
           }
         }
-      } catch (error) {
-        console.error('Error during prefetch:', error);
-      } finally {
-        setIsLoading(false);
+
         // Redirect to the psychiatrists page
         router.replace("/(hidden)/profile/psychiatrists");
+      } catch (error) {
+        console.error('Error during prefetch:', error);
+        setIsRedirecting(false);
+      } finally {
+        setIsLoading(false);
       }
     };
 

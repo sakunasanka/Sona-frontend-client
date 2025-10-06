@@ -1,5 +1,6 @@
 import { checkIsStudent } from '@/api/api';
 import { Counselor, getAvailableCounselors } from '@/api/counselor';
+import { usePlatformFee } from '@/contexts/PlatformFeeContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import { ArrowLeft, Clock, GraduationCap, Star, Video } from 'lucide-react-native';
@@ -206,6 +207,7 @@ export default function CounselorsScreen() {
   const [counselors, setCounselors] = useState<ExtendedCounselor[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [availableSpecialties, setAvailableSpecialties] = useState<string[]>(['All']);
+  const { feeStatus, isLoading: feeLoading } = usePlatformFee();
 
   // Fetch counselors and check student status when component mounts
   useEffect(() => {
@@ -308,6 +310,13 @@ export default function CounselorsScreen() {
     fetchData();
   }, []);
 
+  // Reset specialty filter if platform fee is not paid
+  useEffect(() => {
+    if (!feeStatus?.hasPaid && selectedSpecialty !== 'All') {
+      setSelectedSpecialty('All');
+    }
+  }, [feeStatus?.hasPaid, selectedSpecialty]);
+
   // Simple filter tabs for Free and Paid counselors
   const tabFilters = [
     { id: 'all', label: 'All Counselors' },
@@ -318,8 +327,8 @@ export default function CounselorsScreen() {
   const filteredCounselors = useMemo(() => {
     let filtered = counselors;
     
-    // Filter by specialty
-    if (selectedSpecialty !== 'All') {
+    // Filter by specialty - only if platform fee is paid
+    if (selectedSpecialty !== 'All' && feeStatus?.hasPaid) {
       filtered = filtered.filter((counselor) => 
         counselor.specialties?.includes(selectedSpecialty)
       );
@@ -345,7 +354,7 @@ export default function CounselorsScreen() {
       // Then by rating
       return (b.rating || 0) - (a.rating || 0);
     });
-  }, [selectedSpecialty, selectedTab, isStudent, freeSessionsRemaining, counselors]);
+  }, [selectedSpecialty, selectedTab, isStudent, freeSessionsRemaining, counselors, feeStatus?.hasPaid]);
 
   return (
     <SafeAreaView className="flex-1 bg-primary">
@@ -360,10 +369,18 @@ export default function CounselorsScreen() {
         <View className="w-6" />
       </View>
 
-      {/* Specialty tabs remain in the blue header */}
-      <View className="py-2 bg-primary">
-        <SpecialtyTabs selected={selectedSpecialty} onSelect={setSelectedSpecialty} specialties={availableSpecialties} />
-      </View>
+      {/* Specialty tabs remain in the blue header - only show if platform fee is paid */}
+      {feeStatus?.hasPaid ? (
+        <View className="py-2 bg-primary">
+          <SpecialtyTabs selected={selectedSpecialty} onSelect={setSelectedSpecialty} specialties={availableSpecialties} />
+        </View>
+      ) : (
+        <View className="py-3 bg-primary px-5">
+          <Text className="text-white/80 text-sm text-center">
+            💡 Upgrade with platform fee to filter by specialties like anxiety, depression, stress, and more
+          </Text>
+        </View>
+      )}
     
       <View className="flex-1 bg-gray-50 rounded-t-3xl">
         {/* Added proper padding at the top */}

@@ -1,11 +1,13 @@
 import { checkIsStudent } from '@/api/api';
 import { fetchUserSessions, getRemainingFreeSessions } from '@/api/sessions';
+import { usePlatformFee } from '@/contexts/PlatformFeeContext';
+import { usePlatformFeeGuard } from '@/hooks/usePlatformFeeGuard';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, Calendar, Check, ChevronDown, Clock, ExternalLink, Filter, GraduationCap, MessageCircle, Search, Star, User } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Image, RefreshControl, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 
 // Define types
 type SessionStatus = 'upcoming' | 'past' | 'all' | 'student' | 'free';
@@ -35,6 +37,9 @@ type UISession = {
 
 export default function SessionHistory() {
     const router = useRouter();
+    const { checkPlatformFeeAccess } = usePlatformFeeGuard();
+    const { feeStatus } = usePlatformFee();
+    const [hasPlatformFeeAccess, setHasPlatformFeeAccess] = useState<boolean | null>(null);
     const [sessions, setSessions] = useState<UISession[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
@@ -50,6 +55,18 @@ export default function SessionHistory() {
     const [nextResetDate, setNextResetDate] = useState<string>('');
     const [totalSessionsThisPeriod, setTotalSessionsThisPeriod] = useState<number>(0);
     const [loadingStudentData, setLoadingStudentData] = useState<boolean>(false);
+
+    // Check platform fee access on mount and when fee status changes
+    useEffect(() => {
+        const checkAccess = async () => {
+            const hasAccess = await checkPlatformFeeAccess();
+            setHasPlatformFeeAccess(hasAccess);
+            if (!hasAccess) {
+                setLoading(false);
+            }
+        };
+        checkAccess();
+    }, [checkPlatformFeeAccess, feeStatus]);
 
     // Check if user is a student and fetch free sessions data
     useEffect(() => {
@@ -382,11 +399,24 @@ export default function SessionHistory() {
         }
     };
 
-    if (loading) {
+    if (hasPlatformFeeAccess === false) {
         return (
-            <View className="flex-1 justify-center items-center bg-white">
-                <ActivityIndicator size="large" color="#6366F1" />
-                <Text className="text-gray-600 mt-4">Loading your sessions...</Text>
+            <View className="flex-1 bg-gray-50 justify-center items-center px-6">
+                <View className="bg-white rounded-2xl p-8 shadow-lg items-center max-w-sm">
+                    <View className="w-16 h-16 rounded-full bg-red-50 justify-center items-center mb-4">
+                        <Calendar size={32} color="#DC2626" />
+                    </View>
+                    <Text className="text-xl font-semibold text-gray-900 mb-2 text-center">Platform Fee Required</Text>
+                    <Text className="text-gray-600 text-center mb-6 leading-5">
+                        You need to pay the monthly platform fee to view your session history.
+                    </Text>
+                    <TouchableOpacity
+                        className="w-full bg-primary py-3 rounded-xl items-center"
+                        onPress={() => router.push('/(hidden)/profile/view_profile')}
+                    >
+                        <Text className="text-white font-semibold">Pay Platform Fee</Text>
+                    </TouchableOpacity>
+                </View>
             </View>
         );
     }

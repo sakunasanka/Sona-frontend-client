@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { Eye, EyeOff, Lock, Mail } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { ActivityIndicator, Image, Keyboard, Modal, ScrollView, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
+import { sessionManager } from '../../utils/sessionManager';
 import { PrimaryButton } from '../components/Buttons';
 
 const saveDisplayName = async (name: string) => {
@@ -50,6 +51,10 @@ export default function SignIn() {
       
       
     }
+    
+    // Initialize session tracking after successful login
+    await sessionManager.initializeSession();
+    
     console.log('Token from the local storage', await AsyncStorage.getItem('token'));
 
     console.log('Login success:', result);

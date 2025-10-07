@@ -2,17 +2,19 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppState, AppStateStatus } from 'react-native';
 
-const SESSION_TIMEOUT = 4 * 60 * 60 * 1000; // 4 hours in milliseconds
+const SESSION_TIMEOUT = 2 * 60 * 60 * 1000; // 2 hours in milliseconds
 const LAST_ACTIVITY_KEY = 'lastActivityTimestamp';
 const TOKEN_KEY = 'token';
 
 class SessionManager {
   private timeoutId: ReturnType<typeof setTimeout> | null = null;
   private appStateSubscription: any = null;
+  private touchSubscription: any = null;
   private onSessionExpired: (() => void) | null = null;
 
   constructor() {
     this.setupAppStateListener();
+    this.setupTouchListener();
     this.startSessionTimer();
   }
 
@@ -73,9 +75,18 @@ class SessionManager {
   /**
    * Setup app state listener to handle background/foreground transitions
    */
-  private setupAppStateListener = () => {
+  private setupAppStateListener() {
     this.appStateSubscription = AppState.addEventListener('change', this.handleAppStateChange);
-  };
+  }
+
+  /**
+   * Setup touch listener to track user activity
+   */
+  private setupTouchListener() {
+    // Note: React Native doesn't have a direct touch listener, but we can use PanResponder or other methods
+    // For now, we'll rely on the updateActivity being called from components
+    // This can be enhanced later with PanResponder or other touch tracking mechanisms
+  }
 
   /**
    * Handle app state changes
@@ -152,6 +163,9 @@ class SessionManager {
     this.clearTimer();
     if (this.appStateSubscription) {
       this.appStateSubscription.remove();
+    }
+    if (this.touchSubscription) {
+      this.touchSubscription.remove();
     }
   };
 }

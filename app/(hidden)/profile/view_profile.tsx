@@ -8,6 +8,7 @@ import { AlertCircle, AlertTriangle, ArrowLeft, BadgeCheck, BarChart3, Edit, Gra
 import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Image, SafeAreaView, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import PlatformFeePayment from '../../../components/PlatformFeePayment';
+import { sessionManager } from '../../../utils/sessionManager';
 import { LogoutButton } from '../../components/Buttons';
 
 export default function Profile() {
@@ -270,7 +271,10 @@ export default function Profile() {
         {/* Logout Button */}
         <LogoutButton 
             title="Log Out" 
-            onPress={() => router.replace('/(auth)/signin')} 
+            onPress={async () => {
+              await sessionManager.clearSession();
+              router.replace('/(auth)/signin');
+            }} 
             icon={LogOut}
           />
       </ScrollView>

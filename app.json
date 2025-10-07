@@ -11,14 +11,26 @@
     "jsEngine": "hermes",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.SonaClientFrontend"
+      "bundleIdentifier": "com.anonymous.SonaClientFrontend",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Camera is required for video calls.",
+        "NSMicrophoneUsageDescription": "Microphone is required for audio in video calls.",
+        "NSPhotoLibraryUsageDescription": "Photo library access is required to choose profile images (optional).",
+        "LSApplicationQueriesSchemes": ["jitsi-meet", "intent"]
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "permissions": [
+        "CAMERA",
+        "RECORD_AUDIO",
+        "MODIFY_AUDIO_SETTINGS",
+        "INTERNET"
+      ]
     },
     "web": {
       "bundler": "metro",

@@ -30,7 +30,7 @@ const baseHomescreenCards = [
     icon: icons.meetup,
     focusIcon: icons.play,
     focusText: "Start Session",
-    // onPress: () => router.push('/(hidden)/meditation/')
+    onPress: () => router.push('../(hidden)/session/VideoCallPage'),
   },
   {
     title: "Meditation",

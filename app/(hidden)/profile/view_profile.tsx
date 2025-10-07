@@ -213,7 +213,7 @@ export default function Profile() {
             <Text className="text-base text-gray-900">Counselling sessions</Text>
           </TouchableOpacity>
           
-          <TouchableOpacity 
+          {/* <TouchableOpacity 
             className="flex-row items-center py-4 border-b border-gray-100"
             onPress={() => router.push('/(hidden)/analysis')}
           >
@@ -221,7 +221,7 @@ export default function Profile() {
               <BarChart3 size={20} color="#2563EB" />
             </View>
             <Text className="text-base text-gray-900">My Progress</Text>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
           
           <TouchableOpacity 
             className="flex-row items-center py-4 border-b border-gray-100"

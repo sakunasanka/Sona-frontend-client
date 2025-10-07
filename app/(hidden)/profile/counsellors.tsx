@@ -43,7 +43,9 @@ const CounselorCard = ({ counselor, isUserStudent, freeSessionsRemaining }: { co
     price: counselor.sessionFee ? `Rs.${counselor.sessionFee}` : 'Free',
     isOnline: counselor.isAvailable || false,
     languages: counselor.languages || ['English', 'Sinhala'],
-    counselorType: counselor.isVolunteer ? 'free' : 'paid_only'
+    counselorType: counselor.isVolunteer && counselor.sessionFee === 0 ? 'free' : 
+                  counselor.isVolunteer && counselor.sessionFee > 0 ? 'paid_with_free_student' : 
+                  'paid_only'
   };
 
   // Determine the pricing display based on counselor type and student status
@@ -143,7 +145,7 @@ const CounselorCard = ({ counselor, isUserStudent, freeSessionsRemaining }: { co
         ))}
         
         {/* Show appropriate counselor type badge */}
-        {counselorDisplay.counselorType === 'free' ? (
+        {(counselorDisplay.counselorType === 'free') || (counselorDisplay.counselorType === 'paid_with_free_student' && isUserStudent) ? (
           <View className="flex-row items-center bg-green-100 px-3 py-1 rounded-xl">
             <GraduationCap size={12} color="#059669" className="mr-1" />
             <Text className="text-xs text-green-700 font-medium ml-1">Volunteer Counselor</Text>
@@ -167,13 +169,13 @@ const CounselorCard = ({ counselor, isUserStudent, freeSessionsRemaining }: { co
       {/* Show free session badge for students with remaining sessions */}
       {isUserStudent && freeSessionsRemaining > 0 ? (
         <View>
-        {counselorDisplay.counselorType === 'free' && (
+        {(counselorDisplay.counselorType === 'free' || counselorDisplay.counselorType === 'paid_with_free_student') && (
           <Text className="text-green-700 text-xs font-medium mb-3 bg-green-50 p-2 rounded-lg">
             ✓ {freeSessionsRemaining} free student sessions remaining this month
           </Text>
         )}
       </View>
-      ) : isUserStudent && counselorDisplay.providesStudentSessions && freeSessionsRemaining === 0 ? (
+      ) : isUserStudent && counselorDisplay.counselorType === 'paid_with_free_student' && freeSessionsRemaining === 0 ? (
         <View className="mb-3 bg-yellow-50 p-2 rounded-lg">
           <Text className="text-yellow-700 text-xs font-medium">
             ⓘ No free student sessions left this month
@@ -226,10 +228,12 @@ export default function CounselorsScreen() {
             
             return {
               ...counselor,
-              // Determine counselor type based on isVolunteer flag
-              counselorType: counselor.isVolunteer ? 'free' : 'paid_only',
-              // For now, assume all paid counselors can provide student sessions
-              providesStudentSessions: !counselor.isVolunteer,
+              // Determine counselor type based on isVolunteer flag and sessionFee
+              counselorType: counselor.isVolunteer && counselor.sessionFee === 0 ? 'free' : 
+                            counselor.isVolunteer && counselor.sessionFee > 0 ? 'paid_with_free_student' : 
+                            'paid_only',
+              // Set providesStudentSessions based on counselor type
+              providesStudentSessions: counselor.isVolunteer && counselor.sessionFee > 0,
               // Add any additional UI properties not provided by API
               experience: '5 years',
               // Map API's specialities to our interface's specialties
@@ -467,10 +471,12 @@ export default function CounselorsScreen() {
                         
                         return {
                           ...counselor,
-                          // Determine counselor type based on isVolunteer flag
-                          counselorType: counselor.isVolunteer ? 'free' : 'paid_only',
-                          // For now, assume all paid counselors can provide student sessions
-                          providesStudentSessions: !counselor.isVolunteer,
+                          // Determine counselor type based on isVolunteer flag and sessionFee
+                          counselorType: counselor.isVolunteer && counselor.sessionFee === 0 ? 'free' : 
+                                        counselor.isVolunteer && counselor.sessionFee > 0 ? 'paid_with_free_student' : 
+                                        'paid_only',
+                          // Set providesStudentSessions based on counselor type
+                          providesStudentSessions: counselor.isVolunteer && counselor.sessionFee > 0,
                           // Add any additional UI properties not provided by API
                           experience: counselor.description ? 
                             `${counselor.description.split(' ').slice(-2)[0]} years` : 

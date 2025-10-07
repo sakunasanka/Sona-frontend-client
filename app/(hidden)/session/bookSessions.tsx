@@ -271,15 +271,17 @@ export default function BookSessionScreen() {
   const isSessionFree = () => {
     if (!counselor) return false;
     
-    // Free for everyone if counselor is a volunteer
-    if (counselor.isVolunteer) {
+    // Free for everyone if counselor is volunteer with sessionFee = 0
+    if (counselor.isVolunteer && counselor.sessionFee === 0) {
       return true;
     }
     
-    // Student benefits only apply for free counselors (volunteers)
-    // In the future, paid counselors might opt to provide student benefits
-    // but that's not implemented yet
+    // Free for students if counselor is volunteer with sessionFee > 0
+    if (counselor.isVolunteer && counselor.sessionFee > 0 && isStudent) {
+      return true;
+    }
     
+    // Paid for everyone else
     return false;
   };
 
@@ -302,10 +304,18 @@ export default function BookSessionScreen() {
       try {
         const authToken = await AsyncStorage.getItem('token') || '';
         
+        // Determine the type of free session
+        let sessionType = '';
+        if (counselor.isVolunteer && counselor.sessionFee === 0) {
+          sessionType = 'free for everyone';
+        } else if (counselor.isVolunteer && counselor.sessionFee > 0 && isStudent) {
+          sessionType = 'free student';
+        }
+        
         // Book free session directly without payment
         Alert.alert(
-          counselor.isVolunteer ? 'Free Session' : 'Free Student Session',
-          `You are about to book a free ${counselor.isVolunteer ? '' : 'student '}session with ${counselor.name} on ${selectedDate.toLocaleDateString()} at ${selectedTime}.`,
+          'Free Session',
+          `You are about to book a ${sessionType} session with ${counselor.name} on ${selectedDate.toLocaleDateString()} at ${selectedTime}.`,
           [
             {
               text: 'Cancel',
@@ -322,15 +332,15 @@ export default function BookSessionScreen() {
                   setIsCreatingPayment(true);
                   await new Promise(resolve => setTimeout(resolve, 1500));
                   
-                  // Update remaining free sessions if it's a student session
-                  if (isStudent && !counselor.isVolunteer) {
+                  // Update remaining free sessions if it's a student session with volunteer counselor
+                  if (isStudent && counselor.isVolunteer && counselor.sessionFee > 0) {
                     setFreeSessionsRemaining(prev => Math.max(0, prev - 1));
                   }
                   
                   // Show success message
                   Alert.alert(
                     'Free Session Booked Successfully! 🎉',
-                    `Your free${!counselor.isVolunteer ? ' student' : ''} session with ${counselor.name} has been booked for ${selectedDate.toLocaleDateString()} at ${selectedTime}.`,
+                    `Your ${sessionType} session with ${counselor.name} has been booked for ${selectedDate.toLocaleDateString()} at ${selectedTime}.`,
                     [
                       {
                         text: 'View My Sessions',
@@ -658,28 +668,18 @@ export default function BookSessionScreen() {
   const getSessionFeeDisplay = () => {
     if (!counselor) return null;
     
-    if (counselor.isVolunteer) {
-      // Free counselors are free for everyone, including students
+    // Free for everyone if counselor is volunteer with sessionFee = 0
+    if (counselor.isVolunteer && counselor.sessionFee === 0) {
       return <Text className="text-lg font-semibold text-green-600">FREE</Text>;
-    } else {
-      // Paid counselors are paid for everyone, including students
-      return <Text className="text-lg font-semibold text-primary">Rs.{counselor.sessionFee}</Text>;
-      
-      /* 
-      // Future implementation for counselors who opt to provide student benefits
-      // Currently not implemented
-      if (isStudent && counselor.providesStudentBenefits && freeSessionsRemaining > 0) {
-        return (
-          <View className="items-end">
-            <Text className="text-gray-500 line-through">Rs.{counselor.sessionFee}</Text>
-            <Text className="text-lg font-semibold text-green-600">FREE</Text>
-          </View>
-        );
-      } else {
-        return <Text className="text-lg font-semibold text-primary">Rs.{counselor.sessionFee}</Text>;
-      }
-      */
     }
+    
+    // Free for students if counselor is volunteer with sessionFee > 0
+    if (counselor.isVolunteer && counselor.sessionFee > 0 && isStudent) {
+      return <Text className="text-lg font-semibold text-green-600">FREE</Text>;
+    }
+    
+    // Paid for everyone else
+    return <Text className="text-lg font-semibold text-primary">Rs.{counselor.sessionFee}</Text>;
   };
 
   // Define missing WebView handling functions
@@ -772,38 +772,50 @@ export default function BookSessionScreen() {
           </View>
         </View>
 
-        {/* Student Session Info - Only show if user is a student and counselor is not a volunteer */}
+        {/* Counselor Info Section */}
         {isCheckingStudentStatus ? (
           <View className="bg-white mx-5 mt-4 p-5 rounded-2xl items-center">
             <ActivityIndicator size="small" color="#2563EB" />
             <Text className="text-gray-500 mt-2">Checking student status...</Text>
           </View>
-        ) : counselor.isVolunteer ? (
+        ) : (counselor.isVolunteer && counselor.sessionFee === 0) ? (
           <View className="bg-green-50 mx-5 mt-4 p-5 rounded-2xl">
             <View className="flex-row items-center mb-3">
               <GraduationCap size={20} color="#059669" />
-              <Text className="text-lg font-semibold text-green-900 ml-2">Volunteer Counselor</Text>
+              <Text className="text-lg font-semibold text-green-900 ml-2">
+                Free Counselor
+              </Text>
             </View>
-            
-            {isStudent && !loadingStudentData && (
-              <View className="mt-3 bg-indigo-100/60 p-3 rounded-lg">
-                <View className="flex-row items-center">
-                  <GraduationCap size={16} color="#4F46E5" className="mr-2" />
-                  <Text className="text-indigo-800 font-medium">Student Benefits Apply</Text>
-                </View>
-                <Text className="text-indigo-700 text-sm mt-1">
-                  Sessions with volunteer counselors count toward your {freeSessionsRemaining} remaining free student sessions.
-                </Text>
-                {nextResetDate && (
-                  <View className="flex-row items-center mt-2">
-                    <Calendar size={14} color="#4F46E5" className="mr-1" />
-                    <Text className="text-indigo-800 text-xs font-medium">
-                      Plan resets on {formatResetDate(nextResetDate)}
-                    </Text>
-                  </View>
-                )}
+            <Text className="text-green-700 text-sm">
+              This counselor provides free sessions for everyone.
+            </Text>
+          </View>
+        ) : (counselor.isVolunteer && counselor.sessionFee > 0 && isStudent) ? (
+          <View className="bg-green-50 mx-5 mt-4 p-5 rounded-2xl">
+            <View className="flex-row items-center mb-3">
+              <GraduationCap size={20} color="#059669" />
+              <Text className="text-lg font-semibold text-green-900 ml-2">
+                Volunteer Counselor
+              </Text>
+            </View>
+            <View className="mt-3 bg-indigo-100/60 p-3 rounded-lg">
+              <View className="flex-row items-center">
+                <GraduationCap size={16} color="#4F46E5" className="mr-2" />
+                <Text className="text-indigo-800 font-medium">Student Benefits Apply</Text>
               </View>
-            )}
+              <Text className="text-indigo-700 text-sm mt-1">
+                As a verified student, you get free sessions with this volunteer counselor.
+                {!loadingStudentData && ` Sessions count toward your ${freeSessionsRemaining} remaining free student sessions.`}
+              </Text>
+              {nextResetDate && (
+                <View className="flex-row items-center mt-2">
+                  <Calendar size={14} color="#4F46E5" className="mr-1" />
+                  <Text className="text-indigo-800 text-xs font-medium">
+                    Plan resets on {formatResetDate(nextResetDate)}
+                  </Text>
+                </View>
+              )}
+            </View>
           </View>
         ) : isStudent ? (
           <View className="bg-indigo-50 mx-5 mt-4 p-5 rounded-2xl">
@@ -822,8 +834,8 @@ export default function BookSessionScreen() {
                 </View>
                 
                 <View>
-                  {counselor.isVolunteer ? (
-                    // This is a free counselor
+                  {counselor.isVolunteer && counselor.sessionFee > 0 ? (
+                    // This is a volunteer counselor that provides free sessions for students
                     freeSessionsRemaining > 0 ? (
                       <View>
                         <Text className="text-indigo-800">
@@ -846,7 +858,7 @@ export default function BookSessionScreen() {
                     ) : (
                       <View>
                         <Text className="text-yellow-800">
-                          You've used all your free student sessions this period. You can still book a paid session.
+                          You've used all your free student sessions this period. You can still book a paid session for Rs.{counselor.sessionFee}.
                         </Text>
                         {nextResetDate && (
                           <View className="flex-row items-center mt-2">
@@ -862,7 +874,7 @@ export default function BookSessionScreen() {
                     // This is a paid counselor
                     <View>
                       <Text className="text-indigo-800">
-                        Student benefits apply only to free counselors. This is a paid counselor.
+                        Student benefits apply only to volunteer counselors. This counselor charges Rs.{counselor.sessionFee} for sessions.
                       </Text>
                       <Text className="text-indigo-700 mt-1">
                         You have {freeSessionsRemaining} free sessions remaining with volunteer counselors.
@@ -988,8 +1000,8 @@ export default function BookSessionScreen() {
               Please select a time slot
             </Text>
           )}
-          {/* Show message if student has no free sessions left */}
-          {isStudent && !counselor.isVolunteer && freeSessionsRemaining === 0 && (
+          {/* Show message if student has no free sessions left with volunteer counselors */}
+          {isStudent && counselor.isVolunteer && counselor.sessionFee > 0 && freeSessionsRemaining === 0 && (
             <Text className="text-center text-yellow-500 mb-2 text-sm">
               You've used all your free sessions this month
             </Text>
@@ -998,9 +1010,9 @@ export default function BookSessionScreen() {
             title={
               isCreatingPayment 
                 ? "Processing..." 
-                : counselor.isVolunteer && isStudent && freeSessionsRemaining > 0
+                : isSessionFree()
                   ? "Book Free Session"
-                    : `Book Session - Rs.${counselor.sessionFee}`
+                  : `Book Session - Rs.${counselor.sessionFee}`
             }
             onPress={() => {
               if (!isCreatingPayment) {

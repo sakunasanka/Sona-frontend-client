@@ -10,6 +10,7 @@ export default function SessionLayout() {
       <Stack.Screen name="StudentPackageApply" />
       {/* Optional: include other session routes to inherit header behavior */}
       <Stack.Screen name="bookPsychiatrist" />
+      <Stack.Screen name="VideoCallPage" />
     </Stack>
   );
 }

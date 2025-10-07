@@ -1,7 +1,7 @@
 // app/components/AddPostModal.tsx
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -16,6 +16,8 @@ import {
   View
 } from 'react-native';
 import { createPost, Post } from '../../api/Posts';
+import { getProfile, ProfileData } from '../../api/auth';
+import { getDisplayName } from '../../util/asyncName';
 import { uploadImageToCloudinary } from '../../utils/cloudinary';
 
 interface AddPostModalProps {
@@ -32,6 +34,27 @@ const AddPostModal: React.FC<AddPostModalProps> = ({ visible, onClose, onSubmit 
   const [loading, setLoading] = useState(false);
   const [imageUploading, setImageUploading] = useState(false);
   const [isAnonymous, setIsAnonymous] = useState(false);
+  const [userProfile, setUserProfile] = useState<ProfileData | null>(null);
+  const [displayName, setDisplayName] = useState<string>('');
+
+  // Fetch user profile when modal becomes visible
+  useEffect(() => {
+    if (visible) {
+      const fetchUserData = async () => {
+        try {
+          const [profile, name] = await Promise.all([
+            getProfile(),
+            getDisplayName()
+          ]);
+          setUserProfile(profile);
+          setDisplayName(name || profile.name);
+        } catch (error) {
+          console.error('Error fetching user data:', error);
+        }
+      };
+      fetchUserData();
+    }
+  }, [visible]);
 
   const handleClose = useCallback(() => {
     if (!loading && !imageUploading) {
@@ -172,11 +195,11 @@ const AddPostModal: React.FC<AddPostModalProps> = ({ visible, onClose, onSubmit 
           {/* User Info */}
           <View className="flex-row items-center p-4">
             <Image 
-              source={{ uri: 'https://images.icon-icons.com/1378/PNG/512/avatardefault_92824.png' }} 
+              source={{ uri: userProfile?.avatar || 'https://images.icon-icons.com/1378/PNG/512/avatardefault_92824.png' }} 
               className="w-12 h-12 rounded-full mr-3"
             />
             <View>
-              <Text className="font-semibold text-base">John Doe</Text>
+              <Text className="font-semibold text-base">{userProfile?.nickName || displayName || 'User'}</Text>
             </View>
           </View>
 

@@ -12,6 +12,7 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
+import { getProfile, ProfileData } from '../../api/auth';
 import { fetchPosts, getPostLikeStatus, incrementPostView, Post, toggleLikePost } from '../../api/Posts';
 import TopBar from '../../components/TopBar';
 import AddPostModal from '../components/AddPostModal';
@@ -27,6 +28,7 @@ export default function Feed() {
   const [error, setError] = useState<string | null>(null);
   const [showAddPostModal, setShowAddPostModal] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+  const [userProfile, setUserProfile] = useState<ProfileData | null>(null);
   // Track which posts have already been counted for views during this session
   const viewedPostsRef = useRef<Set<string>>(new Set());
   const viewTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
@@ -75,7 +77,18 @@ export default function Feed() {
         console.error('Error getting current user ID:', error);
       }
     };
+
+    const getUserProfile = async () => {
+      try {
+        const profile = await getProfile();
+        setUserProfile(profile);
+      } catch (error) {
+        console.error('Error getting user profile:', error);
+      }
+    };
+
     getCurrentUserId();
+    getUserProfile();
   }, []);
 
   // Initial load
@@ -260,7 +273,7 @@ export default function Feed() {
             <View className="p-4 border-b border-gray-100">
               <View className="flex-row items-center space-x-3 mb-3">
                 <Image 
-                  source={{ uri: 'https://images.icon-icons.com/1378/PNG/512/avatardefault_92824.png' }} 
+                  source={{ uri: userProfile?.avatar || 'https://images.icon-icons.com/1378/PNG/512/avatardefault_92824.png' }} 
                   className="w-10 h-10 rounded-full"
                 />
                 <TouchableOpacity 

@@ -421,6 +421,20 @@ export default function SessionHistory() {
         );
     }
     
+    if (loading || hasPlatformFeeAccess === null) {
+        return (
+            <View className="flex-1 bg-gray-50 justify-center items-center">
+                <View className="bg-white rounded-2xl p-8 shadow-lg items-center max-w-sm">
+                    <ActivityIndicator size="large" color="#6366F1" />
+                    <Text className="text-gray-700 text-lg font-medium mt-4">Loading your sessions...</Text>
+                    <Text className="text-gray-500 text-sm text-center mt-2">
+                        Please wait while we fetch your session history
+                    </Text>
+                </View>
+            </View>
+        );
+    }
+    
     if (error) {
         return (
             <View className="flex-1 justify-center items-center bg-white px-6">

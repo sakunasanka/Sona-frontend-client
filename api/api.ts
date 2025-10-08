@@ -50,3 +50,17 @@ export const checkIsStudent = async (token: string): Promise<boolean> => {
   }
 };
 
+export const applyStudentPackage = async (token: string, data: {
+  fullName: string;
+  university: string;
+  studentIDCopy: string;
+  uniEmail: string;
+}) => {
+  return apiRequest({
+    method: 'post',
+    path: '/students/apply',
+    data,
+    token,
+  });
+};
+

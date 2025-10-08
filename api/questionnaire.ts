@@ -205,22 +205,21 @@ export const hasCompletedPHQ9ThisPeriod = async (): Promise<boolean> => {
       `${API_BASE_URL}/questionnaire/phq9/user/${userId}/history`,
       { headers: await authHeaders(), validateStatus: () => true }
     );
-    
+
     if (response.status === 200) {
       const data = response.data?.data || [];
       const now = getCurrentColomboDate();
-      // Calculate start of current 2-week period
-      const daysSinceEpoch = Math.floor(now.getTime() / (1000 * 60 * 60 * 24));
-      const twoWeekPeriodStart = daysSinceEpoch - (daysSinceEpoch % 14);
-      const startOfTwoWeeks = new Date(twoWeekPeriodStart * 1000 * 60 * 60 * 24);
 
-      // Check if any submission is from this 2-week period
-      const thisPeriodSubmission = data.find((submission: any) => {
+      // Check if user has completed questionnaire within the last 14 days
+      const fourteenDaysAgo = new Date(now.getTime() - (14 * 24 * 60 * 60 * 1000));
+
+      // Check if any submission is from within the last 14 days
+      const recentSubmission = data.find((submission: any) => {
         const completedAt = new Date(submission.completedAt || submission.createdAt);
-        return completedAt >= startOfTwoWeeks;
+        return completedAt >= fourteenDaysAgo;
       });
 
-      return !!thisPeriodSubmission;
+      return !!recentSubmission;
     }
 
     return false;
@@ -228,9 +227,7 @@ export const hasCompletedPHQ9ThisPeriod = async (): Promise<boolean> => {
     console.error('Error checking PHQ-9 completion this period:', error);
     return false; // Fail safely - show popup if there's an error
   }
-};
-
-// Helper functions for scoring and interpretation
+};// Helper functions for scoring and interpretation
 export const calculatePHQ9Score = (responses: number[]): number => {
   return responses.reduce((sum, score) => sum + score, 0);
 };

@@ -124,7 +124,7 @@ export const confirmPlatformFeePayment = async (data: PaymentConfirmationData, t
   try {
     const response = await apiRequest({
       method: 'post',
-      path: 'payments/confirm-platform-fee',
+      path: 'payments/initiate-platform-fee',
       data,
       token
     });

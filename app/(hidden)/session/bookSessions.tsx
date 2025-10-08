@@ -325,13 +325,36 @@ export default function BookSessionScreen() {
               text: 'Confirm',
               onPress: async () => {
                 try {
-                  // Here you would make an API call to book the free session
-                  // For now, we'll simulate a successful booking
-                  
-                  // Simulate API call delay
-                  setIsCreatingPayment(true);
-                  await new Promise(resolve => setTimeout(resolve, 1500));
-                  
+                  // Make API call to book the free session
+                  const bookingRequestBody = {
+                    counselorId: counselor.id,
+                    date: `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`,
+                    timeSlot: selectedTime,
+                    duration: 50,
+                    price: 0 // Free session
+                  };
+
+                  console.log('📤 Booking free session with payload:', bookingRequestBody);
+
+                  const bookingResponse = await fetch(`${API_BASE_URL}/sessions/book`, {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                      'Authorization': `Bearer ${authToken}`,
+                      'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(bookingRequestBody)
+                  });
+
+                  if (!bookingResponse.ok) {
+                    const errorText = await bookingResponse.text();
+                    console.error('🚫 Free session booking failed:', errorText);
+                    throw new Error(`Booking failed: ${bookingResponse.status}`);
+                  }
+
+                  const bookingData = await bookingResponse.json();
+                  console.log('✅ Free session booked successfully:', bookingData);
+
                   // Update remaining free sessions if it's a student session with volunteer counselor
                   if (isStudent && counselor.isVolunteer && counselor.sessionFee > 0) {
                     setFreeSessionsRemaining(prev => Math.max(0, prev - 1));

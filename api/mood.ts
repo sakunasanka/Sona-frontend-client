@@ -4,12 +4,16 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import { getProfile } from './auth';
 
-// Helper function to get current local date in YYYY-MM-DD format
+// Helper function to get current date in Asia/Colombo timezone (YYYY-MM-DD format)
 const getCurrentLocalDate = (): string => {
+  // Asia/Colombo is UTC+5:30
   const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
+  const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+  const colomboTime = new Date(utc + (5.5 * 3600000)); // Add 5.5 hours for Asia/Colombo
+
+  const year = colomboTime.getFullYear();
+  const month = String(colomboTime.getMonth() + 1).padStart(2, '0');
+  const day = String(colomboTime.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 };
 
@@ -69,7 +73,7 @@ export const saveDailyMood = async (moodData: {
   try {
     const userId = await getCurrentUserId();
     const payload = {
-      local_date: getCurrentLocalDate(), // Use local date instead of UTC
+      local_date: getCurrentLocalDate(), // Use Asia/Colombo timezone date
       mood: moodData.mood,
       valence: moodData.valence,
       arousal: moodData.arousal,
@@ -124,14 +128,14 @@ export const saveDailyMood = async (moodData: {
 export const hasSubmittedTodaysMood = async (): Promise<boolean> => {
   try {
     const userId = await getCurrentUserId();
-    const today = getCurrentLocalDate(); // Use local date instead of UTC
+    const today = getCurrentLocalDate(); // Use Asia/Colombo timezone date
 
     // Get all moods for the user
     const response = await axios.get(
       `${API_BASE_URL}/users/${userId}/moods`,
       { headers: await authHeaders(), validateStatus: () => true }
     );
-
+    
     if (response.status === 200) {
       const moods = response.data?.data || response.data || [];
       // Check if any mood exists for today
@@ -155,7 +159,7 @@ export const hasSubmittedTodaysMood = async (): Promise<boolean> => {
 export const getTodaysMood = async (): Promise<DailyMood | null> => {
   try {
     const userId = await getCurrentUserId();
-    const today = getCurrentLocalDate(); // Use local date instead of UTC
+    const today = getCurrentLocalDate(); // Use Asia/Colombo timezone date
 
     // Get all moods for the user and find today's
     const response = await axios.get(

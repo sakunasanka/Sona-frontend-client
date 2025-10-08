@@ -4,7 +4,7 @@ import { usePlatformFee } from '@/contexts/PlatformFeeContext';
 import { getDisplayName } from '@/util/asyncName';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router, useFocusEffect } from 'expo-router';
-import { AlertCircle, AlertTriangle, ArrowLeft, BadgeCheck, BarChart3, Edit, GraduationCap, HelpCircle, History, LogOut, Shield } from 'lucide-react-native';
+import { AlertCircle, AlertTriangle, ArrowLeft, BadgeCheck, Edit, GraduationCap, HelpCircle, History, LogOut, Shield } from 'lucide-react-native';
 import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Image, SafeAreaView, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import PlatformFeePayment from '../../../components/PlatformFeePayment';
@@ -42,6 +42,9 @@ export default function Profile() {
         const studentStatus = await checkIsStudent(token);
         setIsStudent(studentStatus);
       }
+
+      // Refresh platform fee status
+      refreshFeeStatus();
     } catch (error) {
       console.error('Error initializing profile:', error);
     } finally {

@@ -13,6 +13,15 @@ if (Platform.OS === 'android') {
   API_BASE_URL = 'http://localhost:' + PORT + '/api';
 }
 
+// Helper function to get current date in Asia/Colombo timezone
+const getCurrentColomboDate = (): Date => {
+  // Asia/Colombo is UTC+5:30
+  // Get current UTC time and add 5.5 hours
+  const now = new Date();
+  const colomboOffset = 5.5 * 60 * 60 * 1000; // 5.5 hours in milliseconds
+  return new Date(now.getTime() + colomboOffset);
+};
+
 const authHeaders = async () => {
   try {
     const token = await AsyncStorage.getItem('token');
@@ -196,10 +205,10 @@ export const hasCompletedPHQ9ThisPeriod = async (): Promise<boolean> => {
       `${API_BASE_URL}/questionnaire/phq9/user/${userId}/history`,
       { headers: await authHeaders(), validateStatus: () => true }
     );
-
+    
     if (response.status === 200) {
       const data = response.data?.data || [];
-      const now = new Date();
+      const now = getCurrentColomboDate();
       // Calculate start of current 2-week period
       const daysSinceEpoch = Math.floor(now.getTime() / (1000 * 60 * 60 * 24));
       const twoWeekPeriodStart = daysSinceEpoch - (daysSinceEpoch % 14);

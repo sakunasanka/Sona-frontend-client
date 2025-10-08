@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { hasCompletedPHQ9ThisPeriod } from '../api/questionnaire';
-import QuestionnairePopup from '../components/QuestionnairePopup';
+import QuestionnairePopup from './QuestionnairePopup';
 
 export default function QuestionnaireManager() {
   const [showQuestionnairePopup, setShowQuestionnairePopup] = useState(false);

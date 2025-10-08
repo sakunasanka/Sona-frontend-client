@@ -193,7 +193,7 @@ export default function RegularHome() {
                 <Text className='font-bold font-alegreya'>{name}</Text>
               </Text>
               <View className='mt-2' />
-              <Text className='text-gray-500 text-lg mt-1'>How are you feeling today?</Text>
+              {/* <Text className='text-gray-500 text-lg mt-1'>How are you feeling today?</Text> */}
             </View>
             
             {/* Mood Tracker Card - Only show if user hasn't submitted today's mood */}

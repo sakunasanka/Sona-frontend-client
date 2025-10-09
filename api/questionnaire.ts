@@ -1,4 +1,6 @@
 import { API_URL, PORT } from '@/config/env';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import axios from 'axios';
 import { Platform } from 'react-native';
 import { apiRequest } from "./api";
 
@@ -10,6 +12,42 @@ if (Platform.OS === 'android') {
 } else {
   API_BASE_URL = 'http://localhost:' + PORT + '/api';
 }
+
+// Helper function to get current date in Asia/Colombo timezone
+const getCurrentColomboDate = (): Date => {
+  // Asia/Colombo is UTC+5:30
+  // Get current UTC time and add 5.5 hours
+  const now = new Date();
+  const colomboOffset = 5.5 * 60 * 60 * 1000; // 5.5 hours in milliseconds
+  return new Date(now.getTime() + colomboOffset);
+};
+
+const authHeaders = async () => {
+  try {
+    const token = await AsyncStorage.getItem('token');
+    if (token) return { Authorization: `Bearer ${token}` };
+  } catch {}
+  return {} as Record<string, string>;
+};
+
+// Try to get current user id (cache in AsyncStorage to avoid extra calls)
+const getCurrentUserId = async (): Promise<number> => {
+  try {
+    const cached = await AsyncStorage.getItem('userId');
+    if (cached) return Number(cached);
+
+    // Import getProfile here to avoid circular dependency
+    const { getProfile } = await import('./auth');
+    const profile = await getProfile();
+    if (profile?.id != null) {
+      await AsyncStorage.setItem('userId', String(profile.id));
+      return profile.id;
+    }
+  } catch (e) {
+    console.warn('Unable to resolve current user id:', e);
+  }
+  throw new Error('User ID not available. Ensure the user is authenticated.');
+};
 
 export interface PHQ9Response {
   questionIndex: number;
@@ -158,23 +196,38 @@ export const getPHQ9Analytics = async (token: string, filters?: {
 };
 
 /**
- * Check if user has completed PHQ-9 within the specified days
+ * Check if user has completed PHQ-9 questionnaire in the current 2-week period
  */
-export const hasRecentPHQ9Assessment = async (token: string, withinDays: number = 7): Promise<boolean> => {
+export const hasCompletedPHQ9ThisPeriod = async (): Promise<boolean> => {
   try {
-    const response = await apiRequest({
-      method: 'get',
-      path: `questionnaire/phq9/recent-check?days=${withinDays}`,
-      token
-    });
-    return response.data.hasRecent;
-  } catch (error) {
-    console.error('Error checking recent PHQ-9 assessment:', error);
-    return false; // Fail safely - show the card if there's an error
-  }
-};
+    const userId = await getCurrentUserId();
+    const response = await axios.get(
+      `${API_BASE_URL}/questionnaire/phq9/user/${userId}/history`,
+      { headers: await authHeaders(), validateStatus: () => true }
+    );
 
-// Helper functions for scoring and interpretation
+    if (response.status === 200) {
+      const data = response.data?.data || [];
+      const now = getCurrentColomboDate();
+
+      // Check if user has completed questionnaire within the last 14 days
+      const fourteenDaysAgo = new Date(now.getTime() - (14 * 24 * 60 * 60 * 1000));
+
+      // Check if any submission is from within the last 14 days
+      const recentSubmission = data.find((submission: any) => {
+        const completedAt = new Date(submission.completedAt || submission.createdAt);
+        return completedAt >= fourteenDaysAgo;
+      });
+
+      return !!recentSubmission;
+    }
+
+    return false;
+  } catch (error) {
+    console.error('Error checking PHQ-9 completion this period:', error);
+    return false; // Fail safely - show popup if there's an error
+  }
+};// Helper functions for scoring and interpretation
 export const calculatePHQ9Score = (responses: number[]): number => {
   return responses.reduce((sum, score) => sum + score, 0);
 };

@@ -1,5 +1,6 @@
 import { checkIsStudent } from '@/api/api';
 import { getAvailablePsychiatrists, Psychiatrist } from '@/api/psychiatrist';
+import { usePlatformFee } from '@/contexts/PlatformFeeContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import { ArrowLeft, Clock, Star, Stethoscope } from 'lucide-react-native';
@@ -157,6 +158,15 @@ export default function PsychiatristsScreen() {
   const [error, setError] = useState<string | null>(null);
   const [availableSpecialties, setAvailableSpecialties] = useState<string[]>(['All']);
 
+  const { feeStatus } = usePlatformFee();
+
+  // Reset specialty selection for non-paid users
+  useEffect(() => {
+    if (feeStatus && !feeStatus.hasPaid) {
+      setSelectedSpecialty('All');
+    }
+  }, [feeStatus]);
+
   // Fetch psychiatrists and check student status when component mounts
   useEffect(() => {
     const fetchData = async () => {
@@ -243,8 +253,8 @@ export default function PsychiatristsScreen() {
   const filteredPsychiatrists = useMemo(() => {
     let filtered = psychiatrists;
     
-    // Filter by specialty
-    if (selectedSpecialty !== 'All') {
+    // Only apply specialty filtering for paid users
+    if (feeStatus?.hasPaid && selectedSpecialty !== 'All') {
       filtered = filtered.filter((psychiatrist) => 
         psychiatrist.specialties?.includes(selectedSpecialty)
       );
@@ -259,7 +269,7 @@ export default function PsychiatristsScreen() {
       // Then by rating
       return (b.rating || 0) - (a.rating || 0);
     });
-  }, [selectedSpecialty, psychiatrists]);
+  }, [selectedSpecialty, psychiatrists, feeStatus]);
 
   return (
     <SafeAreaView className="flex-1 bg-primary">
@@ -274,9 +284,26 @@ export default function PsychiatristsScreen() {
         <View className="w-6" />
       </View>
 
-      {/* Specialty tabs remain in the blue header */}
+      {/* Specialty tabs - only show for paid users */}
       <View className="py-2 bg-primary">
-        <SpecialtyTabs selected={selectedSpecialty} onSelect={setSelectedSpecialty} specialties={availableSpecialties} />
+        {feeStatus?.hasPaid ? (
+          <SpecialtyTabs selected={selectedSpecialty} onSelect={setSelectedSpecialty} specialties={availableSpecialties} />
+        ) : (
+          <View className="px-5 py-3">
+            <View className="bg-white/20 rounded-xl p-4">
+              <Text className="text-white text-center font-semibold mb-2">🔍 Specialty Search</Text>
+              <Text className="text-white/90 text-center text-sm mb-3">
+                Filter psychiatrists by their specialties with our premium platform fee.
+              </Text>
+              <TouchableOpacity 
+                className="bg-white rounded-lg py-2 px-4"
+                onPress={() => router.push('/(hidden)/profile/view_profile')}
+              >
+                <Text className="text-primary font-semibold text-center">Upgrade for Rs. 500/month</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
       </View>
     
       <View className="flex-1 bg-gray-50 rounded-t-3xl">

@@ -1,7 +1,9 @@
-import { Stack, SplashScreen } from "expo-router";
 import { useFonts } from "expo-font";
+import { SplashScreen, Stack } from "expo-router";
 import { useEffect } from "react";
 import 'react-native-reanimated';
+import { PlatformFeeProvider } from "../contexts/PlatformFeeContext";
+import { useSessionTimeout } from "../hooks/useSessionTimeout";
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
@@ -10,6 +12,9 @@ export default function RootLayout() {
     'AlegreyaSCB' : require('../assets/fonts/AlegreyaSC-Black.otf'),
     'AlegreyaSC' : require('../assets/fonts/AlegreyaSC-Regular.otf'),
   });
+
+  // Initialize session timeout tracking for the entire app
+  const { updateActivity } = useSessionTimeout();
 
   useEffect(() => {
     if (fontsLoaded) {
@@ -21,5 +26,9 @@ export default function RootLayout() {
     return null;
   }
 
-  return <Stack screenOptions={{ headerShown: false }} />;
+  return (
+    <PlatformFeeProvider>
+      <Stack screenOptions={{ headerShown: false }} />
+    </PlatformFeeProvider>
+  );
 }

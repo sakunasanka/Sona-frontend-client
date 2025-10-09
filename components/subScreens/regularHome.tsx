@@ -1,17 +1,17 @@
 import Homecard from '@/components/HomescreenCard';
-import IconButton from '@/components/Iconbutton';
 import FallingLeaves from '@/components/LeafFalling';
 import PinkOverlay from '@/components/Pinkoverlay'; // Import your overlay components
 //import FallingLeaves from '@/components/PurpleLeaves';
-import { hasRecentPHQ9Assessment } from '@/api/questionnaire';
+import { hasCompletedPHQ9ThisPeriod } from '@/api/questionnaire';
 import CloudFloatingAnimation from '@/components/Cloud';
 import FocusAnimation from '@/components/Focused';
 import { icons } from '@/constants/icons';
 import { getDisplayName } from '@/util/asyncName';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { router } from 'expo-router';
-import React, { useEffect, useState } from 'react';
-import { FlatList, Text, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { router, useFocusEffect } from 'expo-router';
+import React, { useCallback, useEffect, useState } from 'react';
+import { FlatList, Text, TouchableOpacity, View } from 'react-native';
+import { hasSubmittedTodaysMood } from '../../api/mood';
 import TopBar from '../TopBar';
 
 const moodData = [
@@ -30,7 +30,7 @@ const baseHomescreenCards = [
     icon: icons.meetup,
     focusIcon: icons.play,
     focusText: "Start Session",
-    // onPress: () => router.push('/(hidden)/meditation/')
+    onPress: () => router.push('../(hidden)/session/VideoCallPage'),
   },
   {
     title: "Meditation",
@@ -52,7 +52,12 @@ const wellBeingCard = {
   icon: icons.quiz,
   focusIcon: icons.play,
   focusText: 'Start',
-  onPress: () => router.push('/(hidden)/question/start'),
+  onPress: () => {
+    // Trigger the questionnaire popup instead of navigating
+    if ((global as any).triggerQuestionnairePopup) {
+      (global as any).triggerQuestionnairePopup();
+    }
+  },
 }
 
 export default function RegularHome() {
@@ -63,37 +68,64 @@ export default function RegularHome() {
   const [showRelaxedAnimation, setShowRelaxedAnimation] = useState(false);
   const [showWellBeingCard, setShowWellBeingCard] = useState(true);
   const [homescreenCards, setHomescreenCards] = useState(baseHomescreenCards);
+  const [hasSubmittedMoodToday, setHasSubmittedMoodToday] = useState(false);
 
-  // Check if user has completed PHQ-9 in the last week
+  // Check if user has submitted today's mood
   useEffect(() => {
-    const checkRecentAssessment = async () => {
+    const checkTodaysMood = async () => {
       try {
-        const token = await AsyncStorage.getItem('token');
-        if (!token) {
-          // If no token, show the card (user might be offline)
-          setShowWellBeingCard(true);
-          return;
-        }
-
-        const hasRecent = await hasRecentPHQ9Assessment(token, 7); // Check last 7 days
-        setShowWellBeingCard(!hasRecent); // Show card only if NO recent assessment
-        
-        // Update cards array based on whether to show well-being card
-        if (!hasRecent) {
-          setHomescreenCards([...baseHomescreenCards, wellBeingCard]);
-        } else {
-          setHomescreenCards(baseHomescreenCards);
-        }
+        const hasSubmitted = await hasSubmittedTodaysMood();
+        setHasSubmittedMoodToday(hasSubmitted);
       } catch (error) {
-        console.error('Error checking recent PHQ-9 assessment:', error);
-        // On error, show the card (fail safe)
-        setShowWellBeingCard(true);
-        setHomescreenCards([...baseHomescreenCards, wellBeingCard]);
+        console.error('Error checking today\'s mood:', error);
+        setHasSubmittedMoodToday(false); // Default to showing mood tracker on error
       }
     };
 
-    checkRecentAssessment();
+    checkTodaysMood();
   }, []);
+
+  // Refresh mood status when screen comes back into focus (e.g., after submitting mood)
+  useFocusEffect(
+    useCallback(() => {
+      const refreshMoodStatus = async () => {
+        try {
+          const hasSubmitted = await hasSubmittedTodaysMood();
+          setHasSubmittedMoodToday(hasSubmitted);
+        } catch (error) {
+          console.error('Error refreshing mood status:', error);
+        }
+      };
+
+      refreshMoodStatus();
+    }, [])
+  );
+
+  // Refresh questionnaire status when screen comes back into focus (e.g., after submitting questionnaire)
+  useFocusEffect(
+    useCallback(() => {
+      const refreshQuestionnaireStatus = async () => {
+        try {
+          const hasCompleted = await hasCompletedPHQ9ThisPeriod();
+          setShowWellBeingCard(!hasCompleted); // Show card only if NOT completed this period
+          
+          // Update cards array based on whether to show well-being card
+          if (!hasCompleted) {
+            setHomescreenCards([...baseHomescreenCards, wellBeingCard]);
+          } else {
+            setHomescreenCards(baseHomescreenCards);
+          }
+        } catch (error) {
+          console.error('Error refreshing questionnaire status:', error);
+          // On error, show the card (fail safe)
+          setShowWellBeingCard(true);
+          setHomescreenCards([...baseHomescreenCards, wellBeingCard]);
+        }
+      };
+
+      refreshQuestionnaireStatus();
+    }, [])
+  );
 
   const handleMoodPress = (mood: string) => {
     switch (mood) {
@@ -161,27 +193,42 @@ export default function RegularHome() {
                 <Text className='font-bold font-alegreya'>{name}</Text>
               </Text>
               <View className='mt-2' />
-              <Text className='text-gray-500 text-lg mt-1'>How are you feeling today?</Text>
+              {/* <Text className='text-gray-500 text-lg mt-1'>How are you feeling today?</Text> */}
             </View>
-            <View className='px-4 pt-4'>
-              <FlatList
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{ paddingHorizontal: 8 }}
-                data={moodData}
-                keyExtractor={(item, index) => `${item.text}-${index}`}
-                renderItem={({ item }) => (
-                  <View className="mr-4">
-                    <IconButton
-                      icon={item.icon}
-                      text={item.text}
-                      color={item.color}
-                      onPress={() => handleMoodPress(item.mood)}
-                    />
-                  </View>
-                )}
-              />
-            </View>
+            
+            {/* Mood Tracker Card - Only show if user hasn't submitted today's mood */}
+            {!hasSubmittedMoodToday && (
+              <View className='px-4 pt-4'>
+                <TouchableOpacity
+                  className="rounded-2xl shadow-lg overflow-hidden"
+                  onPress={() => router.push('/(hidden)/mood/' as any)}
+                >
+                  <LinearGradient
+                    colors={['#60A5FA', '#A78BFA']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={{ padding: 24 }}
+                  >
+                    <View className="flex-row items-center justify-between">
+                      <View className="flex-1">
+                        <Text className="text-white text-xl font-bold mb-2">
+                          Track Your Mood
+                        </Text>
+                        <Text className="text-blue-100 text-sm">
+                          How are you feeling today? Express your emotions with our advanced mood tracker.
+                        </Text>
+                      </View>
+                      <View className="ml-4">
+                        <View className="w-16 h-16 bg-white/20 rounded-full items-center justify-center">
+                          <Text className="text-2xl">😊</Text>
+                        </View>
+                      </View>
+                    </View>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
+            )}
+            
             <Text className='text-gray-700 text-2xl font-alegreya px-4 pt-4 mt-5'>
               Today&apos;s Recommendations
             </Text>

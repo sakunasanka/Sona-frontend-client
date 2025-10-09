@@ -1,7 +1,7 @@
 // app/components/AddPostModal.tsx
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -16,6 +16,9 @@ import {
   View
 } from 'react-native';
 import { createPost, Post } from '../../api/Posts';
+import { getProfile, ProfileData } from '../../api/auth';
+import { getDisplayName } from '../../util/asyncName';
+import { uploadImageToCloudinary } from '../../utils/cloudinary';
 
 interface AddPostModalProps {
   visible: boolean;
@@ -26,17 +29,43 @@ interface AddPostModalProps {
 const AddPostModal: React.FC<AddPostModalProps> = ({ visible, onClose, onSubmit }) => {
   const [postText, setPostText] = useState('');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [cloudinaryImageUrl, setCloudinaryImageUrl] = useState<string | null>(null);
   const [hashtags, setHashtags] = useState<string>('');
   const [loading, setLoading] = useState(false);
+  const [imageUploading, setImageUploading] = useState(false);
+  const [isAnonymous, setIsAnonymous] = useState(false);
+  const [userProfile, setUserProfile] = useState<ProfileData | null>(null);
+  const [displayName, setDisplayName] = useState<string>('');
+
+  // Fetch user profile when modal becomes visible
+  useEffect(() => {
+    if (visible) {
+      const fetchUserData = async () => {
+        try {
+          const [profile, name] = await Promise.all([
+            getProfile(),
+            getDisplayName()
+          ]);
+          setUserProfile(profile);
+          setDisplayName(name || profile.name);
+        } catch (error) {
+          console.error('Error fetching user data:', error);
+        }
+      };
+      fetchUserData();
+    }
+  }, [visible]);
 
   const handleClose = useCallback(() => {
-    if (!loading) {
+    if (!loading && !imageUploading) {
       setPostText('');
       setSelectedImage(null);
+      setCloudinaryImageUrl(null);
       setHashtags('');
+      setIsAnonymous(false);
       onClose();
     }
-  }, [loading, onClose]);
+  }, [loading, imageUploading, onClose]);
 
   const handleImagePicker = useCallback(async () => {
     try {
@@ -55,59 +84,68 @@ const AddPostModal: React.FC<AddPostModalProps> = ({ visible, onClose, onSubmit 
       });
 
       if (!result.canceled && result.assets[0]) {
-        setSelectedImage(result.assets[0].uri);
+        const localUri = result.assets[0].uri;
+        setSelectedImage(localUri);
+        
+        // Upload to Cloudinary
+        setImageUploading(true);
+        try {
+          const uploadResult = await uploadImageToCloudinary(localUri, 'blog_posts');
+          setCloudinaryImageUrl(uploadResult.secure_url);
+          console.log('Image uploaded to Cloudinary:', uploadResult.secure_url);
+        } catch (uploadError) {
+          console.error('Cloudinary upload failed:', uploadError);
+          Alert.alert('Upload Error', 'Failed to upload image. You can still post but the image won\'t be saved.');
+          setCloudinaryImageUrl(null);
+        } finally {
+          setImageUploading(false);
+        }
       }
     } catch (error) {
       Alert.alert('Error', 'Failed to pick image');
+      setImageUploading(false);
     }
   }, []);
 
   const handleRemoveImage = useCallback(() => {
     setSelectedImage(null);
+    setCloudinaryImageUrl(null);
   }, []);
 
   const handleSubmit = useCallback(async () => {
-    if (!postText.trim() && !selectedImage) {
+    if (!postText.trim()) {
       Alert.alert('Error', 'Please add some content to your post');
       return;
     }
 
+    if (imageUploading) {
+      Alert.alert('Please wait', 'Image is still uploading. Please wait for upload to complete.');
+      return;
+    }
+
+    setLoading(true);
+    
     try {
-      setLoading(true);
-      
-      // Create post data
-      const tags = hashtags
-        .split(/\s|,/) // split by spaces or commas
-        .map(t => t.trim())
-        .filter(Boolean)
-        .map(t => (t.startsWith('#') ? t.slice(1) : t));
+      const hashtagsArray = hashtags
+        .split(' ')
+        .filter((tag) => tag.trim().length > 0)
+        .map((tag) => tag.startsWith('#') ? tag : `#${tag}`);
 
-      const postData = {
+      const post = await createPost({
         content: postText.trim(),
-        image: selectedImage,
-  hashtags: tags,
-      };
-
-      // Call API to create post
-      const newPost = await createPost(postData);
+        image: cloudinaryImageUrl, // Use Cloudinary URL instead of local URI
+        hashtags: hashtagsArray,
+        isAnonymous: isAnonymous,
+      });
       
-      // Call parent callback with new post
-      onSubmit(newPost);
-      
-      // Reset form
-      setPostText('');
-  setSelectedImage(null);
-  setHashtags('');
-      
+      onSubmit(post);
+      handleClose();
     } catch (error) {
-      Alert.alert('Error', 'Failed to create post. Please try again.');
-      console.error('Create post error:', error);
+      Alert.alert('Error', 'Failed to create post');
     } finally {
       setLoading(false);
     }
-  }, [postText, selectedImage, onSubmit]);
-
-  return (
+  }, [postText, cloudinaryImageUrl, hashtags, isAnonymous, handleClose, imageUploading, onSubmit]);  return (
     <Modal
       visible={visible}
       animationType="slide"
@@ -132,18 +170,18 @@ const AddPostModal: React.FC<AddPostModalProps> = ({ visible, onClose, onSubmit 
           
           <TouchableOpacity 
             onPress={handleSubmit}
-            disabled={loading || (!postText.trim() && !selectedImage)}
+            disabled={loading || imageUploading || (!postText.trim() && !selectedImage)}
             className={`px-4 py-2 rounded-full ${
-              loading || (!postText.trim() && !selectedImage) 
+              loading || imageUploading || (!postText.trim() && !selectedImage) 
                 ? 'bg-gray-300' 
                 : 'bg-blue-500'
             }`}
           >
-            {loading ? (
+            {loading || imageUploading ? (
               <ActivityIndicator size="small" color="white" />
             ) : (
               <Text className={`font-medium ${
-                loading || (!postText.trim() && !selectedImage) 
+                loading || imageUploading || (!postText.trim() && !selectedImage) 
                   ? 'text-gray-500' 
                   : 'text-white'
               }`}>
@@ -157,11 +195,11 @@ const AddPostModal: React.FC<AddPostModalProps> = ({ visible, onClose, onSubmit 
           {/* User Info */}
           <View className="flex-row items-center p-4">
             <Image 
-              source={{ uri: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg' }} 
+              source={{ uri: userProfile?.avatar || 'https://images.icon-icons.com/1378/PNG/512/avatardefault_92824.png' }} 
               className="w-12 h-12 rounded-full mr-3"
             />
             <View>
-              <Text className="font-semibold text-base">John Doe</Text>
+              <Text className="font-semibold text-base">{userProfile?.nickName || displayName || 'User'}</Text>
             </View>
           </View>
 
@@ -174,17 +212,28 @@ const AddPostModal: React.FC<AddPostModalProps> = ({ visible, onClose, onSubmit 
               multiline
               value={postText}
               onChangeText={setPostText}
-              style={{ textAlignVertical: 'top', paddingRight: 40 }} // Added padding for the icon
+              style={{ textAlignVertical: 'top' }}
               editable={!loading}
             />
-            {/* Add image icon near cursor */}
-            <TouchableOpacity 
-              onPress={handleImagePicker}
-              disabled={loading}
-              className="absolute right-4 top-2 p-2"
-            >
-              <Ionicons name="image" size={24} color="#22C55E" />
-            </TouchableOpacity>
+          </View>
+
+          {/* Media Options */}
+          <View className="px-4 mt-4">
+            <View className="flex-row items-center space-x-4">
+              <TouchableOpacity 
+                onPress={handleImagePicker}
+                disabled={loading || imageUploading}
+                className={`p-3 rounded-lg ${
+                  loading || imageUploading ? 'bg-gray-100' : 'bg-gray-50'
+                }`}
+              >
+                <Ionicons 
+                  name="image" 
+                  size={24} 
+                  color={loading || imageUploading ? "#9CA3AF" : "#22C55E"} 
+                />
+              </TouchableOpacity>
+            </View>
           </View>
 
           {/* Hashtags input (optional) */}
@@ -199,6 +248,26 @@ const AddPostModal: React.FC<AddPostModalProps> = ({ visible, onClose, onSubmit 
             />
           </View>
 
+          {/* Anonymous checkbox */}
+          <View className="px-4 mt-4">
+            <TouchableOpacity 
+              onPress={() => setIsAnonymous(!isAnonymous)}
+              disabled={loading}
+              className="flex-row items-center"
+            >
+              <View className={`w-5 h-5 mr-3 rounded border-2 ${
+                isAnonymous 
+                  ? 'bg-blue-500 border-blue-500' 
+                  : 'border-gray-300'
+              } flex items-center justify-center`}>
+                {isAnonymous && (
+                  <Ionicons name="checkmark" size={12} color="white" />
+                )}
+              </View>
+              <Text className="text-base text-gray-700">Post anonymously</Text>
+            </TouchableOpacity>
+          </View>
+
           {/* Selected Image */}
           {selectedImage && (
             <View className="mx-4 mt-4">
@@ -208,10 +277,26 @@ const AddPostModal: React.FC<AddPostModalProps> = ({ visible, onClose, onSubmit 
                   className="w-full h-64 rounded-lg"
                   resizeMode="cover"
                 />
+                
+                {/* Upload overlay */}
+                {imageUploading && (
+                  <View className="absolute inset-0 bg-black bg-opacity-50 rounded-lg flex items-center justify-center">
+                    <ActivityIndicator size="large" color="white" />
+                    <Text className="text-white text-sm mt-2">Uploading image...</Text>
+                  </View>
+                )}
+                
+                {/* Success indicator */}
+                {cloudinaryImageUrl && !imageUploading && (
+                  <View className="absolute bottom-2 left-2 bg-green-500 rounded-full p-1">
+                    <Ionicons name="checkmark" size={16} color="white" />
+                  </View>
+                )}
+                
                 <TouchableOpacity 
                   onPress={handleRemoveImage}
                   className="absolute top-2 right-2 bg-black bg-opacity-50 rounded-full p-2"
-                  disabled={loading}
+                  disabled={loading || imageUploading}
                 >
                   <Ionicons name="close" size={20} color="white" />
                 </TouchableOpacity>

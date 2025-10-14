@@ -81,7 +81,7 @@ export default function TakePHQ9() {
   const router = useRouter();
   const totalSteps = PHQ9_ITEMS.length + 1; // include impact item
   const [step, setStep] = useState(0); // 0..9 (last is impact)
-  const [answers, setAnswers] = useState<Array<0 | 1 | 2 | 3 | null>>(Array(PHQ9_ITEMS.length).fill(null));
+  const [answers, setAnswers] = useState<(0 | 1 | 2 | 3 | null)[]>(Array(PHQ9_ITEMS.length).fill(null));
   const [impact, setImpact] = useState<typeof IMPACT_OPTIONS[number] | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -310,7 +310,7 @@ export default function TakePHQ9() {
           <View className="bg-gray-50 rounded-xl p-4 mt-6 border border-gray-100">
             <Text className="text-xs text-gray-600 text-center font-alegreya leading-5 font-medium">
               🔒 Your responses are private and confidential{'\n'}
-              If you're in crisis, seek immediate help from a mental health professional
+              If you&#39;re in crisis, seek immediate help from a mental health professional
             </Text>
           </View>
         </View>

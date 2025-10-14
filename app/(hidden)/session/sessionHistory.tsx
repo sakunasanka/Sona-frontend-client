@@ -1,7 +1,6 @@
 import { checkIsStudent } from '@/api/api';
 import { fetchUserSessions, getRemainingFreeSessions } from '@/api/sessions';
 import { usePlatformFee } from '@/contexts/PlatformFeeContext';
-import { usePlatformFeeGuard } from '@/hooks/usePlatformFeeGuard';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -37,9 +36,7 @@ type UISession = {
 
 export default function SessionHistory() {
     const router = useRouter();
-    const { checkPlatformFeeAccess } = usePlatformFeeGuard();
-    const { feeStatus } = usePlatformFee();
-    const [hasPlatformFeeAccess, setHasPlatformFeeAccess] = useState<boolean | null>(null);
+    const { feeStatus, isLoading: feeLoading } = usePlatformFee();
     const [sessions, setSessions] = useState<UISession[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
@@ -56,17 +53,8 @@ export default function SessionHistory() {
     const [totalSessionsThisPeriod, setTotalSessionsThisPeriod] = useState<number>(0);
     const [loadingStudentData, setLoadingStudentData] = useState<boolean>(false);
 
-    // Check platform fee access on mount and when fee status changes
-    useEffect(() => {
-        const checkAccess = async () => {
-            const hasAccess = await checkPlatformFeeAccess();
-            setHasPlatformFeeAccess(hasAccess);
-            if (!hasAccess) {
-                setLoading(false);
-            }
-        };
-        checkAccess();
-    }, [checkPlatformFeeAccess, feeStatus]);
+    // Platform fee status comes directly from context - no need to check again!
+    const hasPlatformFeeAccess = feeStatus?.hasPaid ?? false;
 
     // Check if user is a student and fetch free sessions data
     useEffect(() => {
@@ -399,7 +387,20 @@ export default function SessionHistory() {
         }
     };
 
-    if (hasPlatformFeeAccess === false) {
+    // Show loading while context is still loading fee status
+    if (feeLoading) {
+        return (
+            <View className="flex-1 bg-gray-50 justify-center items-center">
+                <View className="bg-white rounded-2xl p-8 shadow-lg items-center max-w-sm">
+                    <ActivityIndicator size="large" color="#6366F1" />
+                    <Text className="text-gray-700 text-lg font-medium mt-4">Checking access...</Text>
+                </View>
+            </View>
+        );
+    }
+
+    // Show platform fee required if user hasn't paid
+    if (!hasPlatformFeeAccess) {
         return (
             <View className="flex-1 bg-gray-50 justify-center items-center px-6">
                 <View className="bg-white rounded-2xl p-8 shadow-lg items-center max-w-sm">
@@ -421,7 +422,8 @@ export default function SessionHistory() {
         );
     }
     
-    if (loading || hasPlatformFeeAccess === null) {
+    // Show loading while fetching sessions
+    if (loading) {
         return (
             <View className="flex-1 bg-gray-50 justify-center items-center">
                 <View className="bg-white rounded-2xl p-8 shadow-lg items-center max-w-sm">
@@ -737,7 +739,12 @@ export default function SessionHistory() {
                                     {session.status !== 'past' ? (
                                         <TouchableOpacity 
                                             className="flex-1 ml-2 py-3 bg-primary rounded-lg items-center justify-center flex-row"
-                                            onPress={() => Alert.alert('Join Session', 'This would navigate to the video call screen in a real app.')}
+                                            onPress={
+                                                () => {
+                                                    router.push(`/(hidden)/session/VideoCallPage?sessionId=${session.id}`);
+                                                    console.log('Join session', session.id);
+                                                }
+                                            }
                                         >
                                             <ExternalLink size={16} color="#FFFFFF" className="mr-1" />
                                             <Text className="text-white font-medium text-sm">Join Session</Text>

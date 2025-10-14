@@ -1,23 +1,23 @@
-import React, { useState } from 'react';
+import { LinearGradient } from 'expo-linear-gradient';
+import React, { useEffect, useState } from 'react';
 import {
+  Dimensions,
   Modal,
-  View,
   Text,
   TouchableOpacity,
-  Dimensions,
+  View,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { GestureHandlerRootView, PanGestureHandler, PanGestureHandlerGestureEvent } from 'react-native-gesture-handler';
+import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, {
   runOnJS,
-  useAnimatedGestureHandler,
   useAnimatedStyle,
   useSharedValue,
+  withSpring,
 } from 'react-native-reanimated';
 import { saveDailyMood } from '../api/mood';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const SLIDER_WIDTH = SCREEN_WIDTH - 120;
+const SLIDER_WIDTH = Math.max(200, SCREEN_WIDTH - 120); // Ensure minimum width
 const THUMB_SIZE = 28;
 
 // Simplified preset moods for popup
@@ -43,7 +43,8 @@ const getMoodFromValues = (valence: number, arousal: number) => {
 };
 
 const getIntensityFromValues = (valence: number, arousal: number) => {
-  return Math.sqrt(valence * valence + arousal * arousal) / Math.sqrt(2);
+  const intensity = Math.sqrt(valence * valence + arousal * arousal) / Math.sqrt(2);
+  return isNaN(intensity) ? 0 : Math.max(0, Math.min(1, intensity));
 };
 
 interface MoodPopupProps {
@@ -61,74 +62,147 @@ export default function MoodPopup({ visible, onClose, onMoodSubmitted }: MoodPop
 
   const valenceSlider = useSharedValue(SLIDER_WIDTH / 2);
   const arousalSlider = useSharedValue(SLIDER_WIDTH / 2);
+  const valenceStart = useSharedValue(0);
+  const arousalStart = useSharedValue(0);
 
   const updateMood = (newValence: number, newArousal: number) => {
-    const mood = getMoodFromValues(newValence, newArousal);
-    const intensityValue = getIntensityFromValues(newValence, newArousal);
+    // Validate inputs to prevent NaN
+    const validValence = isNaN(newValence) ? 0 : newValence;
+    const validArousal = isNaN(newArousal) ? 0 : newArousal;
+    
+    console.log('updateMood called:', { 
+      input: { newValence, newArousal }, 
+      valid: { validValence, validArousal },
+      sliderValues: { 
+        valence: valenceSlider.value, 
+        arousal: arousalSlider.value,
+        SLIDER_WIDTH 
+      }
+    });
+    
+    const mood = getMoodFromValues(validValence, validArousal);
+    const intensityValue = getIntensityFromValues(validValence, validArousal);
+    const validIntensity = isNaN(intensityValue) ? 0 : intensityValue;
+    
+    console.log('Calculated mood:', { mood, intensityValue: validIntensity });
+    
     setCurrentMood(mood);
-    setIntensity(intensityValue);
-    setValence(newValence);
-    setArousal(newArousal);
+    setIntensity(validIntensity);
+    setValence(validValence);
+    setArousal(validArousal);
   };
+
+  // Initialize mood on popup open
+  useEffect(() => {
+    if (visible) {
+      console.log('Initializing sliders - SLIDER_WIDTH:', SLIDER_WIDTH);
+      // Reset to neutral position
+      valenceSlider.value = SLIDER_WIDTH / 2;
+      arousalSlider.value = SLIDER_WIDTH / 2;
+      // Initialize mood state
+      updateMood(0, 0);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible]);
 
   const selectPresetMood = (preset: typeof PRESET_MOODS[0]) => {
     const valencePos = ((preset.valence + 1) / 2) * SLIDER_WIDTH;
     const arousalPos = ((preset.arousal + 1) / 2) * SLIDER_WIDTH;
 
-    valenceSlider.value = valencePos;
-    arousalSlider.value = arousalPos;
+    valenceSlider.value = withSpring(valencePos);
+    arousalSlider.value = withSpring(arousalPos);
 
     updateMood(preset.valence, preset.arousal);
   };
 
-  const valenceGestureHandler = useAnimatedGestureHandler<PanGestureHandlerGestureEvent>({
-    onStart: (_, context: any) => {
-      context.startX = valenceSlider.value;
-    },
-    onActive: (event, context: any) => {
-      const newX = Math.max(0, Math.min(SLIDER_WIDTH, context.startX + event.translationX));
+  // Modern Gesture API for valence slider
+  const valenceGesture = Gesture.Pan()
+    .onBegin((event) => {
+      valenceStart.value = valenceSlider.value;
+      console.log('Valence gesture begin:', { event, current: valenceSlider.value });
+    })
+    .onUpdate((event) => {
+      const newX = Math.max(0, Math.min(SLIDER_WIDTH, valenceStart.value + event.translationX));
       valenceSlider.value = newX;
-
+      console.log('Valence gesture update:', { newX, translation: event.translationX });
+      
+      // Update mood in real-time during drag
       const newValence = (newX / SLIDER_WIDTH) * 2 - 1;
       const currentArousal = (arousalSlider.value / SLIDER_WIDTH) * 2 - 1;
-      runOnJS(updateMood)(newValence, currentArousal);
-    },
-  });
+      
+      if (!isNaN(newValence) && !isNaN(currentArousal)) {
+        runOnJS(updateMood)(newValence, currentArousal);
+      }
+    })
+    .onEnd(() => {
+      const newValence = (valenceSlider.value / SLIDER_WIDTH) * 2 - 1;
+      const currentArousal = (arousalSlider.value / SLIDER_WIDTH) * 2 - 1;
+      
+      console.log('Valence gesture end:', { final: valenceSlider.value });
+      
+      // Final update when gesture ends
+      if (!isNaN(newValence) && !isNaN(currentArousal)) {
+        runOnJS(updateMood)(newValence, currentArousal);
+      }
+    });
 
-  const arousalGestureHandler = useAnimatedGestureHandler<PanGestureHandlerGestureEvent>({
-    onStart: (_, context: any) => {
-      context.startX = arousalSlider.value;
-    },
-    onActive: (event, context: any) => {
-      const newX = Math.max(0, Math.min(SLIDER_WIDTH, context.startX + event.translationX));
+  // Modern Gesture API for arousal slider
+  const arousalGesture = Gesture.Pan()
+    .onBegin((event) => {
+      arousalStart.value = arousalSlider.value;
+      console.log('Arousal gesture begin:', { event, current: arousalSlider.value });
+    })
+    .onUpdate((event) => {
+      const newX = Math.max(0, Math.min(SLIDER_WIDTH, arousalStart.value + event.translationX));
       arousalSlider.value = newX;
-
+      console.log('Arousal gesture update:', { newX, translation: event.translationX });
+      
+      // Update mood in real-time during drag
       const newArousal = (newX / SLIDER_WIDTH) * 2 - 1;
       const currentValence = (valenceSlider.value / SLIDER_WIDTH) * 2 - 1;
-      runOnJS(updateMood)(currentValence, newArousal);
-    },
-  });
+      
+      if (!isNaN(newArousal) && !isNaN(currentValence)) {
+        runOnJS(updateMood)(currentValence, newArousal);
+      }
+    })
+    .onEnd(() => {
+      const newArousal = (arousalSlider.value / SLIDER_WIDTH) * 2 - 1;
+      const currentValence = (valenceSlider.value / SLIDER_WIDTH) * 2 - 1;
+      
+      console.log('Arousal gesture end:', { final: arousalSlider.value });
+      
+      // Final update when gesture ends
+      if (!isNaN(newArousal) && !isNaN(currentValence)) {
+        runOnJS(updateMood)(currentValence, newArousal);
+      }
+    });
 
   const valenceThumbStyle = useAnimatedStyle(() => {
+    const clampedValue = Math.max(0, Math.min(SLIDER_WIDTH, valenceSlider.value));
     return {
-      transform: [{ translateX: valenceSlider.value - THUMB_SIZE / 2 }],
+      left: clampedValue - THUMB_SIZE / 2,
     };
   });
 
   const arousalThumbStyle = useAnimatedStyle(() => {
+    const clampedValue = Math.max(0, Math.min(SLIDER_WIDTH, arousalSlider.value));
     return {
-      transform: [{ translateX: arousalSlider.value - THUMB_SIZE / 2 }],
+      left: clampedValue - THUMB_SIZE / 2,
     };
   });
 
   const handleSaveMood = async () => {
     setIsLoading(true);
     try {
+      const validIntensity = isNaN(intensity) ? 0 : intensity;
+      const validValence = isNaN(valence) ? 0 : valence;
+      const validArousal = isNaN(arousal) ? 0 : arousal;
+      
       await saveDailyMood({
         mood: currentMood,
-        valence: Number(valence.toFixed(2)),
-        arousal: Number(arousal.toFixed(2)),
-        intensity: Number(intensity.toFixed(2)),
+        valence: Number(validValence.toFixed(2)),
+        arousal: Number(validArousal.toFixed(2)),
+        intensity: Number(validIntensity.toFixed(2)),
       });
 
       onMoodSubmitted();
@@ -194,23 +268,24 @@ export default function MoodPopup({ visible, onClose, onMoodSubmitted }: MoodPop
                   <Text className="text-xs text-gray-600">😔 Unpleasant</Text>
                   <Text className="text-xs text-gray-600">Pleasant 😊</Text>
                 </View>
-                <View className="relative">
-                  <LinearGradient
-                    colors={['#EF4444', '#64748B', '#22C55E']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={{
-                      height: 6,
-                      borderRadius: 3,
-                      width: SLIDER_WIDTH
-                    }}
-                  />
-                  <PanGestureHandler onGestureEvent={valenceGestureHandler}>
+                <GestureDetector gesture={valenceGesture}>
+                  <Animated.View className="relative" style={{ height: 28, width: SLIDER_WIDTH }}>
+                    <LinearGradient
+                      colors={['#EF4444', '#64748B', '#22C55E']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      style={{
+                        height: 6,
+                        borderRadius: 3,
+                        width: SLIDER_WIDTH,
+                        marginTop: 11,
+                      }}
+                    />
                     <Animated.View
                       style={[
                         {
                           position: 'absolute',
-                          top: -11,
+                          top: 0,
                           width: THUMB_SIZE,
                           height: THUMB_SIZE,
                           borderRadius: THUMB_SIZE / 2,
@@ -225,8 +300,8 @@ export default function MoodPopup({ visible, onClose, onMoodSubmitted }: MoodPop
                         valenceThumbStyle,
                       ]}
                     />
-                  </PanGestureHandler>
-                </View>
+                  </Animated.View>
+                </GestureDetector>
               </View>
 
               {/* Arousal Slider */}
@@ -235,23 +310,24 @@ export default function MoodPopup({ visible, onClose, onMoodSubmitted }: MoodPop
                   <Text className="text-xs text-gray-600">😴 Low Energy</Text>
                   <Text className="text-xs text-gray-600">High Energy ⚡</Text>
                 </View>
-                <View className="relative">
-                  <LinearGradient
-                    colors={['#6366F1', '#64748B', '#EF4444']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={{
-                      height: 6,
-                      borderRadius: 3,
-                      width: SLIDER_WIDTH
-                    }}
-                  />
-                  <PanGestureHandler onGestureEvent={arousalGestureHandler}>
+                <GestureDetector gesture={arousalGesture}>
+                  <Animated.View className="relative" style={{ height: 28, width: SLIDER_WIDTH }}>
+                    <LinearGradient
+                      colors={['#6366F1', '#64748B', '#EF4444']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      style={{
+                        height: 6,
+                        borderRadius: 3,
+                        width: SLIDER_WIDTH,
+                        marginTop: 11,
+                      }}
+                    />
                     <Animated.View
                       style={[
                         {
                           position: 'absolute',
-                          top: -11,
+                          top: 0,
                           width: THUMB_SIZE,
                           height: THUMB_SIZE,
                           borderRadius: THUMB_SIZE / 2,
@@ -266,8 +342,8 @@ export default function MoodPopup({ visible, onClose, onMoodSubmitted }: MoodPop
                         arousalThumbStyle,
                       ]}
                     />
-                  </PanGestureHandler>
-                </View>
+                  </Animated.View>
+                </GestureDetector>
               </View>
             </View>
 
@@ -281,7 +357,7 @@ export default function MoodPopup({ visible, onClose, onMoodSubmitted }: MoodPop
                   {currentMood}
                 </Text>
                 <Text className="text-xs text-gray-600 mt-1">
-                  Intensity: {Math.round(intensity * 100)}%
+                  Intensity: {isNaN(intensity) ? 0 : Math.round(intensity * 100)}%
                 </Text>
               </View>
             </View>

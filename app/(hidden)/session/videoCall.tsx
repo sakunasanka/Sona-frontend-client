@@ -1,88 +1,69 @@
-import React, { useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, Linking, View } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, Linking, Text, TouchableOpacity, View } from 'react-native';
 import { WebView, WebViewNavigation } from 'react-native-webview';
 
 type Props = {
-  roomName: string;
   displayName?: string;
-  jitsiDomain?: string;
-  jwtToken?: string;
-  userRole?: 'moderator' | 'guest' | 'client'; // Add role prop
+  url: string | '';
+  jwtToken: string;
+  userRole?: 'moderator' | 'guest' | 'client';
   onEvent?: (event: any) => void;
 };
 
 export default function JitsiWebView({
-  roomName,
   displayName = 'Guest',
-  jitsiDomain = 'sona.org.lk',
+  url,
   jwtToken,
-  userRole = 'client', // Default to client/guest role
+  userRole = 'client',
   onEvent
 }: Props) {
-  // For now, let's use direct URL instead of HTML to bypass prejoin
-  const [useFallbackUrl, setUseFallbackUrl] = useState<string | null>('DIRECT_URL');
+  const [meetingUrl, setMeetingUrl] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // sanitize domain: remove protocol and trailing slash
-  const domainHost = useMemo(
-    () => (jitsiDomain || 'sona.org.lk').replace(/^https?:\/\//i, '').replace(/\/+$/, '').trim(),
-    [jitsiDomain]
-  );
+  useEffect(() => {
+    const fetchUrl = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        console.log('Fetched session link:', url);
+        setMeetingUrl(url);
+      } catch (error) {
+        console.error('Error fetching session link:', error);
+        setError('Failed to load meeting. Please try again.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  const safeRoom = (roomName || `room-${Date.now()}`).replace(/'/g, "\\'");
-  const safeName = (displayName || 'Guest').replace(/'/g, "\\'");
-
-  // Construct fallback URL with browser join parameter - USE THIS AS PRIMARY URL
-  const fallbackUrl = useMemo(() => {
-    const roleParam = userRole === 'moderator' ? 'moderator' : 'guest';
-    const params = new URLSearchParams({
-      // Force browser join and bypass prejoin
-      'config.prejoinPageEnabled': 'false',
-      'config.welcomePage.disabled': 'true',
-      'config.startWithAudioMuted': 'false',
-      'config.startWithVideoMuted': 'false',
-      'config.requireDisplayName': 'false',
-      'interfaceConfig.MOBILE_APP_PROMO': 'false',
-      'interfaceConfig.SHOW_JITSI_WATERMARK': 'false'
-    });
-    
-    if (jwtToken) {
-      params.append('jwt', jwtToken);
-    }
-    
-    return `https://${domainHost}/${safeRoom}?${params.toString()}#userInfo.displayName="${encodeURIComponent(displayName)}"&userInfo.role="${roleParam}"`;
-  }, [domainHost, safeRoom, userRole, jwtToken, displayName]);
+    fetchUrl();
+  }, []);
 
   const handleMessage = useCallback(
     (e: any) => {
       try {
         const payload = JSON.parse(e.nativeEvent.data);
         console.log('Jitsi WebView message:', payload);
-        if (payload?.event === 'scriptError' || payload?.event === 'initError') {
-          // switch to direct Jitsi URL so user sees the meeting UI
-          setUseFallbackUrl(fallbackUrl);
-        }
         onEvent?.(payload);
       } catch (err) {
         console.warn('Failed to parse webview message', err);
         onEvent?.({ event: 'parseError', data: err });
       }
     },
-    [fallbackUrl, onEvent]
+    [onEvent]
   );
 
   const handleError = useCallback((evt: any) => {
     console.error('WebView onError', evt.nativeEvent);
-    // attempt fallback on serious errors
-    setUseFallbackUrl(fallbackUrl);
+    setError('Failed to load meeting. Please check your connection.');
     onEvent?.({ event: 'webviewError', data: evt.nativeEvent });
-  }, [fallbackUrl, onEvent]);
+  }, [onEvent]);
 
   const handleHttpError = useCallback((evt: any) => {
     console.error('WebView httpError', evt.nativeEvent);
-    // attempt fallback on HTTP errors
-    setUseFallbackUrl(fallbackUrl);
+    setError('Network error. Please try again.');
     onEvent?.({ event: 'webviewHttpError', data: evt.nativeEvent });
-  }, [fallbackUrl, onEvent]);
+  }, [onEvent]);
 
   const handleNavState = useCallback((nav: WebViewNavigation) => {
     console.log('WebView nav:', { url: nav.url, loading: nav.loading });
@@ -90,53 +71,108 @@ export default function JitsiWebView({
   }, [onEvent]);
 
   const handleShouldStartLoad = useCallback((request: any) => {
-  const url: string = request?.url || '';
-  console.log('ShouldStartLoadWithRequest:', url);
+    const url: string = request?.url || '';
+    console.log('ShouldStartLoadWithRequest:', url);
 
-  if (!url) return false;
+    if (!url) return false;
 
-  const lower = url.toLowerCase();
+    const lower = url.toLowerCase();
 
-  // Allow the initial about:blank (needed when using source: { html })
-  if (lower.startsWith('about:')) {
-    return true;
-  }
-
-  // Allow http(s) to be loaded inside the WebView
-  if (lower.startsWith('http://') || lower.startsWith('https://')) {
-    return true;
-  }
-
-  // For any other scheme (tel:, mailto:, intent:, jitsi-meet:, etc.)
-  // try to open externally using Linking and prevent the WebView from loading them
-  (async () => {
-    try {
-      const can = await Linking.canOpenURL(url);
-      if (can) {
-        await Linking.openURL(url);
-      } else {
-        console.warn('Cannot open external URL from WebView (no app):', url);
-      }
-    } catch (e) {
-      console.warn('Failed to open external URL from WebView:', e, url);
+    // Allow about:blank
+    if (lower.startsWith('about:')) {
+      return true;
     }
-  })();
 
-  return false;
-}, []);
+    // Allow http(s)
+    if (lower.startsWith('http://') || lower.startsWith('https://')) {
+      return true;
+    }
 
-  // debug logs
-  console.log('Jitsi domainHost:', domainHost);
-  console.log('Using fallback?', useFallbackUrl, 'fallbackUrl:', fallbackUrl);
+    // Block Jitsi native app schemes
+    if (lower.startsWith('org.jitsi.meet:') || lower.startsWith('jitsi-meet:') || lower.startsWith('intent:')) {
+      console.log('Blocked native app scheme from WebView:', url);
+      onEvent?.({ event: 'blockedScheme', data: url });
+      return false;
+    }
+
+    // Try to open other schemes externally
+    (async () => {
+      try {
+        const can = await Linking.canOpenURL(url);
+        if (can) {
+          await Linking.openURL(url);
+        } else {
+          console.warn('Cannot open external URL from WebView (no app):', url);
+        }
+      } catch (e) {
+        console.warn('Failed to open external URL from WebView:', e, url);
+      }
+    })();
+
+    return false;
+  }, [onEvent]);
+
+  const handleRetry = useCallback(() => {
+    setError(null);
+    setIsLoading(true);
+    const fetchUrl = async () => {
+      try {
+        console.log('Fetched session link:', url);
+        setMeetingUrl(url);
+      } catch (error) {
+        console.error('Error fetching session link:', error);
+        setError('Failed to load meeting. Please try again.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchUrl();
+  }, []);
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" />
+        <Text style={{ marginTop: 10 }}>Loading meeting...</Text>
+      </View>
+    );
+  }
+
+  // Show error state with retry
+  if (error) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+        <Text style={{ color: 'red', textAlign: 'center', marginBottom: 20 }}>{error}</Text>
+        <TouchableOpacity 
+          onPress={handleRetry}
+          style={{ backgroundColor: '#007AFF', padding: 15, borderRadius: 8 }}
+        >
+          <Text style={{ color: 'white', fontWeight: 'bold' }}>Retry</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  // Show WebView only when we have a valid URL
+  if (!url) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <Text>No meeting URL available</Text>
+      </View>
+    );
+  }
+
+  console.log('Loading meeting URL:', url);
 
   return (
     <View style={{ flex: 1 }}>
       <WebView
         originWhitelist={['*']}
-        source={{ uri: fallbackUrl }} // Use direct URL instead of HTML
+        source={{ uri: url }}
         javaScriptEnabled={true}
         domStorageEnabled={true}
-        allowsInlineMediaPlaybook={true}
+        allowsInlineMediaPlayback={true}
         mediaPlaybackRequiresUserAction={false}
         mixedContentMode="compatibility"
         allowsFullscreenVideo={true}

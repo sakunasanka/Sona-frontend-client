@@ -201,7 +201,7 @@ export default function RegularHome() {
               <View className='px-4 pt-4'>
                 <TouchableOpacity
                   className="rounded-2xl shadow-lg overflow-hidden"
-                  onPress={() => router.push('/(hidden)/mood/' as any)}
+                  onPress={() => router.push('/(hidden)/mood/sampleMood' as any)}
                 >
                   <LinearGradient
                     colors={['#60A5FA', '#A78BFA']}

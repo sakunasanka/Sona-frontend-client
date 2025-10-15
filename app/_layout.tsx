@@ -45,10 +45,10 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView>
-    <PlatformFeeProvider>
-      <Stack screenOptions={{ headerShown: false }} />
-      <GlobalPaymentModal /> {/* Add this */}
-    </PlatformFeeProvider>
+      <PlatformFeeProvider>
+          <Stack screenOptions={{ headerShown: false }} />
+          <GlobalPaymentModal /> 
+      </PlatformFeeProvider>
     </GestureHandlerRootView>
   );
 }

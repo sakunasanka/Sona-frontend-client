@@ -18,13 +18,13 @@ import {
 import { PrimaryButton } from '../../components/Buttons';
 import SpecialtyTabs from '../../components/SpecialtyTabs';
 
+// Get screen dimensions for proper sizing
+const { width: screenWidth } = Dimensions.get('window');
+
 // Extended type that includes processed specialties for UI
 type PsychiatristType = Psychiatrist & {
   specialties?: string[]; // UI field processed from backend's 'specialities'
 };
-
-// Get screen dimensions for proper sizing
-const { width: screenWidth } = Dimensions.get('window');
 
 const PsychiatristCard = ({ psychiatrist, isUserStudent }: { psychiatrist: PsychiatristType, isUserStudent: boolean }) => {
   const [imageError, setImageError] = useState(false);
@@ -33,7 +33,6 @@ const PsychiatristCard = ({ psychiatrist, isUserStudent }: { psychiatrist: Psych
   const psychiatristDisplay = {
     ...psychiatrist,
     title: psychiatrist.title || 'Psychiatrist',
-    // Use processed specialties field (created from backend's specialities)
     specialties: psychiatrist.specialties || psychiatrist.specialities || ['General Psychiatry'],
     rating: psychiatrist.rating || 4.7,
     experience: psychiatrist.experience || '5+ years',
@@ -65,7 +64,7 @@ const PsychiatristCard = ({ psychiatrist, isUserStudent }: { psychiatrist: Psych
               <Text className="text-gray-600 font-semibold">
                 {psychiatrist.name
                   .split(' ')
-                  .map((n) => n[0])
+                  .map((n: string) => n[0])
                   .join('')}
               </Text>
             </View>
@@ -157,15 +156,7 @@ export default function PsychiatristsScreen() {
   const [psychiatrists, setPsychiatrists] = useState<PsychiatristType[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [availableSpecialties, setAvailableSpecialties] = useState<string[]>(['All']);
-
-  const { feeStatus } = usePlatformFee();
-
-  // Reset specialty selection for non-paid users
-  useEffect(() => {
-    if (feeStatus && !feeStatus.hasPaid) {
-      setSelectedSpecialty('All');
-    }
-  }, [feeStatus]);
+  const { feeStatus, isLoading: feeLoading } = usePlatformFee();
 
   // Fetch psychiatrists and check student status when component mounts
   useEffect(() => {
@@ -173,64 +164,36 @@ export default function PsychiatristsScreen() {
       try {
         setIsLoading(true);
         
-        // Fetch psychiatrists from API (no token needed like counselors)
-        console.log('Fetching psychiatrists...');
+        // Fetch psychiatrists from API
         const response = await getAvailablePsychiatrists();
-        console.log('Psychiatrists API response:', response);
         
-        if (response.success && response.data) {
-          // Handle both possible response formats
-          const psychiatristsList = response.data.psychiatrists || response.data;
-          console.log('Psychiatrists list:', psychiatristsList);
-          console.log('Sample psychiatrist specialities (backend):', psychiatristsList[0]?.specialities);
-          console.log('Sample psychiatrist specialties (frontend):', psychiatristsList[0]?.specialties);
-          
-          if (Array.isArray(psychiatristsList)) {
-            // Process psychiatrists to ensure specialties are arrays
-            const processedPsychiatrists = psychiatristsList.map(psychiatrist => ({
+        if (response.success && response.data.psychiatrists) {
+          // Process psychiatrists from API response
+          const processedPsychiatrists: PsychiatristType[] = response.data.psychiatrists.map((psychiatrist: any) => {
+            // Handle the specialities field from the API
+            const apiPsychiatrist = psychiatrist as any;
+            
+            return {
               ...psychiatrist,
-              // Create a specialties field for UI from backend's specialities field
-              specialties: (() => {
-                // Backend uses 'specialities' field
-                const backendSpecialities = psychiatrist.specialities || psychiatrist.specialties;
-                
-                if (Array.isArray(backendSpecialities)) {
-                  return backendSpecialities;
-                } else if (typeof backendSpecialities === 'string') {
-                  // Handle case where specialities is a string (e.g., "Depression,Anxiety")
-                  return backendSpecialities.split(',').map((s: string) => s.trim());
-                } else if (backendSpecialities) {
-                  // Handle other formats by converting to string then array
-                  return String(backendSpecialities).split(',').map((s: string) => s.trim());
-                } else {
-                  return ['General Psychiatry'];
+              // Map API's specialities to our interface's specialties
+              specialties: apiPsychiatrist.specialities || []
+            };
+          });
+          
+          setPsychiatrists(processedPsychiatrists);
+          
+          // Extract unique specialties for filter tabs
+          const allSpecialties = ['All'];
+          processedPsychiatrists.forEach(psychiatrist => {
+            if (psychiatrist.specialties) {
+              psychiatrist.specialties.forEach((specialty: string) => {
+                if (!allSpecialties.includes(specialty)) {
+                  allSpecialties.push(specialty);
                 }
-              })()
-            }));
-            
-            setPsychiatrists(processedPsychiatrists);
-            
-            // Extract unique specialties for filter tabs
-            const allSpecialties = ['All'];
-            processedPsychiatrists.forEach(psychiatrist => {
-              if (psychiatrist.specialties && Array.isArray(psychiatrist.specialties)) {
-                psychiatrist.specialties.forEach((specialty: string) => {
-                  if (specialty && !allSpecialties.includes(specialty)) {
-                    allSpecialties.push(specialty);
-                  }
-                });
-              }
-            });
-            setAvailableSpecialties(allSpecialties);
-            console.log(`Loaded ${processedPsychiatrists.length} psychiatrists with specialties:`, allSpecialties);
-          } else {
-            console.log('Psychiatrists data is not an array:', psychiatristsList);
-            setPsychiatrists([]);
-            setError('Invalid data format received from server.');
-          }
-        } else {
-          console.log('Failed API response:', response);
-          setError('Failed to load psychiatrists. Please try again later.');
+              });
+            }
+          });
+          setAvailableSpecialties(allSpecialties);
         }
 
         // Check if user is a student
@@ -250,11 +213,18 @@ export default function PsychiatristsScreen() {
     fetchData();
   }, []);
 
+  // Reset specialty filter if platform fee is not paid
+  useEffect(() => {
+    if (!feeStatus?.hasPaid && selectedSpecialty !== 'All') {
+      setSelectedSpecialty('All');
+    }
+  }, [feeStatus?.hasPaid, selectedSpecialty]);
+
   const filteredPsychiatrists = useMemo(() => {
     let filtered = psychiatrists;
     
-    // Only apply specialty filtering for paid users
-    if (feeStatus?.hasPaid && selectedSpecialty !== 'All') {
+    // Filter by specialty - only if platform fee is paid
+    if (selectedSpecialty !== 'All' && feeStatus?.hasPaid) {
       filtered = filtered.filter((psychiatrist) => 
         psychiatrist.specialties?.includes(selectedSpecialty)
       );
@@ -269,7 +239,7 @@ export default function PsychiatristsScreen() {
       // Then by rating
       return (b.rating || 0) - (a.rating || 0);
     });
-  }, [selectedSpecialty, psychiatrists, feeStatus]);
+  }, [selectedSpecialty, psychiatrists, feeStatus?.hasPaid]);
 
   return (
     <SafeAreaView className="flex-1 bg-primary">
@@ -284,123 +254,87 @@ export default function PsychiatristsScreen() {
         <View className="w-6" />
       </View>
 
-      {/* Specialty tabs - only show for paid users */}
-      <View className="py-2 bg-primary">
-        {feeStatus?.hasPaid ? (
+      {/* Specialty tabs remain in the blue header - only show if platform fee is paid */}
+      {feeStatus?.hasPaid ? (
+        <View className="py-2 bg-primary">
           <SpecialtyTabs selected={selectedSpecialty} onSelect={setSelectedSpecialty} specialties={availableSpecialties} />
-        ) : (
-          <View className="px-5 py-3">
-            <View className="bg-white/20 rounded-xl p-4">
-              <Text className="text-white text-center font-semibold mb-2">🔍 Specialty Search</Text>
-              <Text className="text-white/90 text-center text-sm mb-3">
-                Filter psychiatrists by their specialties with our premium platform fee.
-              </Text>
-              <TouchableOpacity 
-                className="bg-white rounded-lg py-2 px-4"
-                onPress={() => router.push('/(hidden)/profile/view_profile')}
-              >
-                <Text className="text-primary font-semibold text-center">Upgrade for Rs. 500/month</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-      </View>
+        </View>
+      ) : (
+        <View className="py-3 bg-primary px-5">
+          <Text className="text-white/80 text-sm text-center">
+            💡 Upgrade with platform fee to filter by specialties like anxiety, depression, stress, and more
+          </Text>
+        </View>
+      )}
     
       <View className="flex-1 bg-gray-50 rounded-t-3xl">
         {/* Added proper padding at the top */}
         <View className="pt-6">
-          {/* Info banner about psychiatrists */}
-          <View className="mx-5 mb-4 bg-purple-50 p-3 rounded-xl flex-row items-center">
-            <Stethoscope size={20} color="#7C3AED" />
-            <View className="ml-3 flex-1">
-              <Text className="text-purple-900 font-semibold">Medical Consultation</Text>
-              <Text className="text-purple-700 text-sm">
-                Psychiatrists are medical doctors who can prescribe medication and provide comprehensive mental health treatment.
-              </Text>
+          
+          {/* Psychiatrist list with proper width and padding */}
+          {isLoading ? (
+            <View className="items-center justify-center py-12">
+              <Text className="text-gray-500 text-lg">Loading psychiatrists...</Text>
             </View>
-          </View>
-        </View>
-      
-        {/* Psychiatrist list with proper width and padding */}
-        {isLoading ? (
-          <View className="items-center justify-center py-12">
-            <Text className="text-gray-500 text-lg">Loading psychiatrists...</Text>
-          </View>
-        ) : error ? (
-          <View className="items-center justify-center py-12 px-5">
-            <Text className="text-red-500 text-lg font-medium">{error}</Text>
-            <TouchableOpacity 
-              className="mt-4 bg-primary px-4 py-2 rounded-lg"
-              onPress={async () => {
-                setError(null);
-                setIsLoading(true);
-                try {
-                  const response = await getAvailablePsychiatrists();
-                  if (response.success && response.data) {
-                    // Handle both possible response formats
-                    const psychiatristsList = response.data.psychiatrists || response.data;
-                    if (Array.isArray(psychiatristsList)) {
-                      // Process psychiatrists to ensure specialties are arrays
-                      const processedPsychiatrists = psychiatristsList.map(psychiatrist => ({
-                        ...psychiatrist,
-                        // Create a specialties field for UI from backend's specialities field
-                        specialties: (() => {
-                          // Backend uses 'specialities' field
-                          const backendSpecialities = psychiatrist.specialities || psychiatrist.specialties;
+          ) : error ? (
+            <View className="items-center justify-center py-12 px-5">
+              <Text className="text-red-500 text-lg font-medium">{error}</Text>
+              <TouchableOpacity 
+                className="mt-4 bg-primary px-4 py-2 rounded-lg"
+                onPress={() => {
+                  setError(null);
+                  setIsLoading(true);
+                  // Retry fetching psychiatrists
+                  getAvailablePsychiatrists()
+                    .then(response => {
+                      if (response.success && response.data.psychiatrists) {
+                        // Process psychiatrists from API response
+                        const processedPsychiatrists: PsychiatristType[] = response.data.psychiatrists.map((psychiatrist: any) => {
+                          // Handle the specialities field from the API
+                          const apiPsychiatrist = psychiatrist as any;
                           
-                          if (Array.isArray(backendSpecialities)) {
-                            return backendSpecialities;
-                          } else if (typeof backendSpecialities === 'string') {
-                            return backendSpecialities.split(',').map((s: string) => s.trim());
-                          } else if (backendSpecialities) {
-                            return String(backendSpecialities).split(',').map((s: string) => s.trim());
-                          } else {
-                            return ['General Psychiatry'];
-                          }
-                        })()
-                      }));
-                      setPsychiatrists(processedPsychiatrists);
-                    } else {
-                      setPsychiatrists([]);
-                    }
-                  } else {
-                    setError('Failed to load psychiatrists. Please try again later.');
-                  }
-                } catch (error) {
-                  console.error('Error retrying fetch:', error);
-                  setError('Failed to load psychiatrists. Please try again later.');
-                } finally {
-                  setIsLoading(false);
-                }
-              }}
-            >
-              <Text className="text-white font-medium">Retry</Text>
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <FlatList
-            data={filteredPsychiatrists}
-            keyExtractor={(item) => item.id.toString()}
-            renderItem={({ item }) => (
-              <View className="px-5 w-full">
-                <PsychiatristCard 
-                  psychiatrist={item} 
-                  isUserStudent={isStudent} 
-                />
-              </View>
-            )}
-            contentContainerStyle={{ paddingBottom: 20 }}
-            showsVerticalScrollIndicator={false}
-            ListEmptyComponent={() => (
-              <View className="items-center justify-center py-12 px-5">
-                <Text className="text-gray-500 text-lg font-medium">No psychiatrists found</Text>
-                <Text className="text-gray-400 text-center mt-2 px-8">
-                  Try adjusting your filters
-                </Text>
-              </View>
-            )}
-          />
-        )}
+                          return {
+                            ...psychiatrist,
+                            // Map API's specialities to our interface's specialties
+                            specialties: apiPsychiatrist.specialities || []
+                          };
+                        });
+                        
+                        setPsychiatrists(processedPsychiatrists);
+                      }
+                    })
+                    .catch(err => setError('Failed to load psychiatrists. Please try again later.'))
+                    .finally(() => setIsLoading(false));
+                }}
+              >
+                <Text className="text-white font-medium">Retry</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <FlatList
+              data={filteredPsychiatrists}
+              keyExtractor={(item) => item.id.toString()}
+              renderItem={({ item }) => (
+                <View className="px-5 w-full">
+                  <PsychiatristCard 
+                    psychiatrist={item} 
+                    isUserStudent={isStudent} 
+                  />
+                </View>
+              )}
+              contentContainerStyle={{ paddingBottom: 20 }}
+              showsVerticalScrollIndicator={false}
+              ListEmptyComponent={() => (
+                <View className="items-center justify-center py-12 px-5">
+                  <Text className="text-gray-500 text-lg font-medium">No psychiatrists found</Text>
+                  <Text className="text-gray-400 text-center mt-2 px-8">
+                    Try adjusting your filters
+                  </Text>
+                </View>
+              )}
+            />
+          )}
+        </View>
       </View>
     </SafeAreaView>
   );

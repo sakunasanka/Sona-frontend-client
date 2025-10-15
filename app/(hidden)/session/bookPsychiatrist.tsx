@@ -174,88 +174,82 @@ const fetchTimeSlots = async (psychiatristId: string, date: Date): Promise<TimeS
   }
 };
 
-// Helper function for formatting a date as YYYY-MM-DD consistently
-const formatDateKey = (year: number, month: number, day: number): string => {
-  // month is 0-indexed in JS Date but we want 1-indexed in our format
-  return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-};
+
 
 // Fetch monthly availability from backend API
-// This function checks each day of the month by fetching timeslots
-// and only marks a day as unavailable if it has no available timeslots
+// This function calls the new monthly availability endpoint
 const fetchMonthlyAvailability = async (psychiatristId: string, year: number, month: number): Promise<{ [dateKey: string]: { isAvailable: boolean, hasImmediateSlot?: boolean } }> => {
   // Month is 0-indexed in JS Date, but we want 1-indexed for API
   const monthForApi = month + 1;
   const monthString = String(monthForApi).padStart(2, '0');
   
-  // console.log(`[API] Fetching psychiatrist availability for ${year}-${monthString}`);
+  console.log(`[API] Fetching psychiatrist availability for ${year}-${monthString} (psychiatrist ${psychiatristId})`);
   
   try {
-    // Get the number of days in the month
-    const daysInMonth = new Date(year, monthForApi, 0).getDate();
-    const formattedData: { [dateKey: string]: { isAvailable: boolean, hasImmediateSlot?: boolean } } = {};
+    const token = await AsyncStorage.getItem('token');
     
-    // console.log(`[API] Checking availability for ${daysInMonth} days in ${year}-${monthString}`);
+    const apiUrl = `${API_BASE_URL}/sessions/counselors/${psychiatristId}/availability/${year}/${monthForApi}`;
     
-    // Create an array of promises for fetching timeslots for each day
-    const dayPromises = Array.from({ length: daysInMonth }, (_, i) => {
-      const day = i + 1;
-      const date = new Date(year, month, day);
-      
-      // Format the date key (YYYY-MM-DD)
-      const dateKey = formatDateKey(year, month, day);
-      
-      // Return a promise for fetching timeslots for this day
-      return fetchTimeSlots(psychiatristId, date)
-        .then(slots => {
-          // Check if any timeslot is available for this day
-          const hasAvailableSlot = slots.some(slot => slot.available === true);
-          
-          // If there are any available slots, mark the day as available
-          formattedData[dateKey] = {
-            isAvailable: hasAvailableSlot,
-            // Check if there's an immediate slot (within next few hours)
-            hasImmediateSlot: slots.some(slot => {
-              if (!slot.available) return false;
-              // Extract hours from time string (assuming format like "09:00" or "9:00 AM")
-              const timeStr = slot.time;
-              const hour = parseInt(timeStr.split(':')[0], 10);
-              const now = new Date();
-              // Consider slots in the next 4 hours as immediate if today
-              return date.setHours(0,0,0,0) === now.setHours(0,0,0,0) && 
-                     hour >= now.getHours() && 
-                     hour <= now.getHours() + 4;
-            })
-          };
-          
-          // console.log(`[API] Day ${dateKey}: ${hasAvailableSlot ? 'Available' : 'Not Available'} (${slots.length} slots, ${slots.filter(s => s.available).length} available)`);
-          
-          return formattedData[dateKey];
-        })
-        .catch(error => {
-          // console.warn(`[API] Failed to fetch timeslots for ${dateKey}:`, error);
-          // If we fail to fetch for a specific day, provide mock availability for testing
-          const date = new Date(year, month, day);
-          const dayOfWeek = date.getDay();
-          const today = new Date();
-          
-          // Mock availability: weekdays that are not in the past
-          const isAvailable = dayOfWeek >= 1 && dayOfWeek <= 5 && date >= today;
-          
-          formattedData[dateKey] = { isAvailable };
-          return formattedData[dateKey];
-        });
+    console.log(`[API] Request URL: ${apiUrl}`);
+    console.log(`[API] Token available: ${!!token}`);
+    
+    const response = await fetch(apiUrl, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/json'
+      }
     });
     
-    // Wait for all day checks to complete
-    await Promise.all(dayPromises);
+    console.log(`[API] Response status: ${response.status} ${response.statusText}`);
+    
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status} - ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    console.log(`[API] Monthly availability response:`, data);
+    
+    // Process the new response format
+    const formattedData: { [dateKey: string]: { isAvailable: boolean, hasImmediateSlot?: boolean } } = {};
+    
+    if (data.success && data.data && data.data.availability) {
+      data.data.availability.forEach((dayData: any) => {
+        const dateKey = dayData.date; // Already in YYYY-MM-DD format
+        const slots = dayData.slots || [];
+        
+        // Check if any slots are available for this day
+        const hasAvailableSlot = slots.some((slot: any) => slot.isAvailable === true && slot.isBooked === false);
+        
+        // Check if there's an immediate slot (within next few hours)
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const slotDate = new Date(dateKey);
+        
+        let hasImmediateSlot = false;
+        if (slotDate.toDateString() === today.toDateString()) {
+          // Today - check for slots in the next 4 hours
+          hasImmediateSlot = slots.some((slot: any) => {
+            if (!slot.isAvailable || slot.isBooked) return false;
+            const hour = parseInt(slot.time.split(':')[0], 10);
+            return hour >= now.getHours() && hour <= now.getHours() + 4;
+          });
+        }
+        
+        formattedData[dateKey] = {
+          isAvailable: hasAvailableSlot,
+          hasImmediateSlot
+        };
+      });
+    }
     
     console.log(`[API] Successfully processed availability for ${Object.keys(formattedData).length} days in ${year}-${monthString}`);
     console.log(`[API] Available days: ${Object.keys(formattedData).filter(key => formattedData[key].isAvailable).join(', ') || 'None'}`);
     
     return formattedData;
   } catch (error) {
-    // console.error('Error fetching monthly availability:', error);
+    console.error(`[API] Error fetching monthly availability for ${year}-${month + 1}:`, error);
     throw error;
   }
 };
@@ -482,7 +476,7 @@ export default function BookPsychiatristScreen() {
           
           // Prepare the request body
           const bookingRequestBody = {
-            psychiatristId: psychiatrist!.id,
+            counselorId: psychiatrist!.id, // Map psychiatristId to counselorId for API compatibility
             date: `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`,
             timeSlot: selectedTimeSlot,
             duration: 50, // 50 minute session
@@ -491,14 +485,14 @@ export default function BookPsychiatristScreen() {
           };
           
           console.log('📤 Sending psychiatrist booking request to API:', bookingRequestBody);
-          console.log('🔗 API URL:', `${API_BASE_URL}/sessions/book-psychiatrist`);
+          console.log('🔗 API URL:', `${API_BASE_URL}/sessions/book`);
           
           // Set up a timeout for the fetch request
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
           
           // Call the session booking API
-          const bookingResponse = await fetch(`${API_BASE_URL}/sessions/book-psychiatrist`, {
+          const bookingResponse = await fetch(`${API_BASE_URL}/sessions/book`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -715,11 +709,6 @@ export default function BookPsychiatristScreen() {
           <Text className="text-purple-800 text-sm leading-5">
             This is a medical consultation with a licensed psychiatrist. Dr. {psychiatrist.name} can prescribe medication and provide comprehensive mental health treatment.
           </Text>
-          <View className="bg-purple-100/60 p-3 rounded-lg mt-3">
-            <Text className="text-purple-800 text-sm font-medium">
-              📞 The doctor will contact you within 24 hours to schedule the exact consultation time.
-            </Text>
-          </View>
         </View>
 
         {/* Date Selection */}

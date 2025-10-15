@@ -69,7 +69,7 @@ export const useChat = (
         let hasMore = false;
 
         if (response && response.success && response.data && response.data.message && Array.isArray(response.data.message)) {
-          // ✅ Your actual structure: response.data.message contains the array
+          
           messages = response.data.message.map(transformMessage);
           hasMore = response.data.pagination?.hasMore || false;
           console.log('✅ Successfully processed', messages.length, 'messages');
@@ -104,7 +104,7 @@ export const useChat = (
         // Connect to WebSocket
         chatWebSocketService.connect(chatId, currentUserId, token);
       } catch (error) {
-        console.error('Error initializing chat:', error);
+        console.log('Error initializing chat:', error);
       } finally {
         setIsLoading(false);
       }

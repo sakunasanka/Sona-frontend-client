@@ -384,7 +384,7 @@ export default function SampleMood() {
         })
         .onEnd(() => {
             // Update rotation speed based on final slider position
-            const normalizedPosition = (translateSpeed.value - MIN_TRANSLATE_X) / (MAX_TRANSLATE_X - MIN_TRANSLATE_X);
+            const normalizedPosition = (MAX_TRANSLATE_X - translateSpeed.value) / (MAX_TRANSLATE_X - MIN_TRANSLATE_X);
             const duration = 5000 + (normalizedPosition * 20000); // Left=5s (fast), Right=25s (slow)
             
             runOnJS(updateRotationSpeed)(duration);
@@ -422,9 +422,9 @@ export default function SampleMood() {
                 <Svg width="600" height="600" viewBox="0 0 600 600">
                     <Defs>
                         <RadialGradient id="backgroundRadialGradient" cx="50%" cy="50%" r="50%">
-                            <Stop offset="0%" stopColor={centerColorState} stopOpacity="0.4" />
-                            <Stop offset="50%" stopColor={centerColorState} stopOpacity="0.2" />
-                            <Stop offset="100%" stopColor={centerColorState} stopOpacity="0" />
+                            <Stop offset="0%" stopColor={centerColorState} stopOpacity={(arousalValue + 1)/2 * 0.4} />
+                            <Stop offset="50%" stopColor={centerColorState} stopOpacity={(arousalValue + 1)/2 * 0.2} />
+                            <Stop offset="100%" stopColor={centerColorState} stopOpacity={(arousalValue + 1)/2 * 0.0} />
                         </RadialGradient>
                     </Defs>
                     <Circle 
@@ -527,7 +527,7 @@ export default function SampleMood() {
             <View className='absolute bottom-44 left-0 right-0 items-center justify-center'>
                 {/* Gradient Track */}
                 <LinearGradient 
-                    colors={['#FFD230', '#A2F4FD']}
+                    colors={['#A2F4FD', '#FFD230']}
                     start={{ x: 0, y: 0.5 }}
                     end={{ x: 1, y: 0.5 }}
                     style={{ 

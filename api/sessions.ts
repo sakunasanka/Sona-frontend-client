@@ -274,3 +274,18 @@ export const getSessionLink = async (sessionId: string, token: string) => {
     throw error;
   }
 }
+
+export const getUpcomingSessions = async (token: string) => {
+  try {
+    const response = await apiRequest({
+      method: 'get',
+      path: 'sessions/bookedSessions',
+      token
+    })
+
+    return response;
+  }catch (error) {
+    console.error('Error fetching upcoming sessions:', error);
+    throw error;
+  }
+}

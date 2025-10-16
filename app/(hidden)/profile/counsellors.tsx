@@ -33,6 +33,9 @@ interface ExtendedCounselor extends Omit<Counselor, 'specialties'> {
 const CounselorCard = ({ counselor, isUserStudent, freeSessionsRemaining }: { counselor: ExtendedCounselor, isUserStudent: boolean, freeSessionsRemaining: number }) => {
   const [imageError, setImageError] = useState(false);
 
+  // Default avatar URL
+  const defaultAvatar = 'https://images.icon-icons.com/1378/PNG/512/avatardefault_92824.png';
+
   // Default values for UI display if not provided by API
   const counselorDisplay = {
     ...counselor,
@@ -88,7 +91,7 @@ const CounselorCard = ({ counselor, isUserStudent, freeSessionsRemaining }: { co
         >
           {!imageError ? (
             <Image
-              source={{ uri: counselor.avatar }}
+              source={{ uri: counselor.avatar || defaultAvatar }}
               className="w-16 h-16 rounded-full bg-gray-200"
               onError={() => setImageError(true)}
             />

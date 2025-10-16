@@ -30,6 +30,9 @@ type PsychiatristType = Psychiatrist & {
 const PsychiatristCard = ({ psychiatrist, isUserStudent }: { psychiatrist: PsychiatristType, isUserStudent: boolean }) => {
   const [imageError, setImageError] = useState(false);
 
+  // Default avatar URL
+  const defaultAvatar = 'https://images.icon-icons.com/1378/PNG/512/avatardefault_92824.png';
+
   // Default values for UI display
   const psychiatristDisplay = {
     ...psychiatrist,
@@ -56,7 +59,7 @@ const PsychiatristCard = ({ psychiatrist, isUserStudent }: { psychiatrist: Psych
         >
           {!imageError ? (
             <Image
-              source={{ uri: psychiatrist.avatar }}
+              source={{ uri: psychiatrist.avatar || defaultAvatar }}
               className="w-16 h-16 rounded-full bg-gray-200"
               onError={() => setImageError(true)}
             />

@@ -197,7 +197,7 @@ export default function RegularHome() {
             </View>
             
             {/* Mood Tracker Card - Only show if user hasn't submitted today's mood */}
-            {hasSubmittedMoodToday && (
+            {!hasSubmittedMoodToday && (
               <View className='px-4 pt-4'>
                 <TouchableOpacity
                   className="rounded-2xl shadow-lg overflow-hidden"

@@ -1,4 +1,5 @@
 import { checkIsStudent } from '@/api/api';
+import { getChatRoom } from '@/api/chat';
 import { getUpcomingSessions } from '@/api/sessions';
 import { usePlatformFee } from '@/contexts/PlatformFeeContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -47,11 +48,16 @@ export default function UpcomingSessions() {
     const [dateSearchTerm, setDateSearchTerm] = useState<string>('');
     const [isStudent, setIsStudent] = useState<boolean>(false);
     const [refreshing, setRefreshing] = useState<boolean>(false);
+    const [token, setToken] = useState<string>('');
 
 
-    // Check if user is a student and fetch free sessions data
+    
     useEffect(() => {
-
+        const getToken = async () => {
+            const token = await AsyncStorage.getItem('token');
+            setToken(token || '');
+        };
+        getToken();
     }, []);
     
     // Separate function to fetch student sessions data
@@ -296,8 +302,9 @@ export default function UpcomingSessions() {
         router.push(`/(hidden)/profile/counsellor_profile?id=${counselorId}`);
     };
     
-    const handleChatWithCounselor = (counselorId: string): void => {
-        router.push(`/(hidden)/profile/counsellor-chat?counselorId=${counselorId}`);
+    const handleChatWithCounselor = async (counselorId: string): Promise<void> => {
+        const chatId = await getChatRoom(parseInt(counselorId), token);
+        router.push(`/(hidden)/session/messageWithCouncilor?id=${chatId}`);
     };
 
     // Show loading while context is still loading fee status

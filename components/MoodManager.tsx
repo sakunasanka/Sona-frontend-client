@@ -1,8 +1,6 @@
-import { router } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 import { hasSubmittedTodaysMood } from '../api/mood';
-import MoodPopup from '../components/MoodPopup';
 
 export default function MoodManager() {
   const [showMoodPopup, setShowMoodPopup] = useState(false);
@@ -57,23 +55,23 @@ export default function MoodManager() {
     };
   }, []);
 
-  const handleMoodSubmitted = () => {
-    // Mood was submitted, hide popup and refresh home page
-    setShowMoodPopup(false);
-    // Navigate to home to trigger refresh
-    router.replace('/');
-  };
+  // const handleMoodSubmitted = () => {
+  //   // Mood was submitted, hide popup and refresh home page
+  //   setShowMoodPopup(false);
+  //   // Navigate to home to trigger refresh
+  //   router.replace('/');
+  // };
 
-  const handleClosePopup = () => {
-    // User skipped, hide popup
-    setShowMoodPopup(false);
-  };
+  // const handleClosePopup = () => {
+  //   // User skipped, hide popup
+  //   setShowMoodPopup(false);
+  // };
 
-  return (
-    <MoodPopup
-      visible={showMoodPopup}
-      onClose={handleClosePopup}
-      onMoodSubmitted={handleMoodSubmitted}
-    />
-  );
+  // return (
+  //   <MoodPopup
+  //     visible={showMoodPopup}
+  //     onClose={handleClosePopup}
+  //     onMoodSubmitted={handleMoodSubmitted}
+  //   />
+  // );
 }

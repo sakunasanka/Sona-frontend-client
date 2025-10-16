@@ -3,11 +3,10 @@ import { Platform } from 'react-native';
 import { apiRequest } from "./api";
 
 let API_BASE_URL = '';
-if (Platform.OS === 'android') {
-  API_BASE_URL = API_URL + ':' + PORT + '/api';
-} else if (Platform.OS === 'ios') {
+if (Platform.OS === 'android' || Platform.OS === 'ios') {
   API_BASE_URL = API_URL + ':' + PORT + '/api';
 } else {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   API_BASE_URL = 'http://localhost:' + PORT + '/api';
 }
 
@@ -259,3 +258,34 @@ export const bookFreePsychiatristSession = async (sessionData: {
     throw error;
   }
 }; 
+
+//get session link from backend
+export const getSessionLink = async (sessionId: string, token: string) => {
+  try {
+    const response = await apiRequest({
+      method: 'get',
+      path: `sessions/getSessionLink/${sessionId}`,
+      token
+    })
+
+    return response;
+  }catch (error) {
+    console.error('Error fetching session link:', error);
+    throw error;
+  }
+}
+
+export const getUpcomingSessions = async (token: string) => {
+  try {
+    const response = await apiRequest({
+      method: 'get',
+      path: 'sessions/bookedSessions',
+      token
+    })
+
+    return response;
+  }catch (error) {
+    console.error('Error fetching upcoming sessions:', error);
+    throw error;
+  }
+}

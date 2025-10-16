@@ -16,7 +16,10 @@
         "NSCameraUsageDescription": "Camera is required for video calls.",
         "NSMicrophoneUsageDescription": "Microphone is required for audio in video calls.",
         "NSPhotoLibraryUsageDescription": "Photo library access is required to choose profile images (optional).",
-        "LSApplicationQueriesSchemes": ["jitsi-meet", "intent"]
+        "LSApplicationQueriesSchemes": [
+          "jitsi-meet",
+          "intent"
+        ]
       }
     },
     "android": {
@@ -29,8 +32,13 @@
         "CAMERA",
         "RECORD_AUDIO",
         "MODIFY_AUDIO_SETTINGS",
+        "INTERNET",
+        "CAMERA",
+        "RECORD_AUDIO",
+        "MODIFY_AUDIO_SETTINGS",
         "INTERNET"
-      ]
+      ],
+      "package": "com.anonymous.SonaClientFrontend"
     },
     "web": {
       "bundler": "metro",

@@ -1,12 +1,11 @@
 import { checkIsStudent } from '@/api/api';
-import { fetchUserSessions, getRemainingFreeSessions } from '@/api/sessions';
+import { getUpcomingSessions } from '@/api/sessions';
 import { usePlatformFee } from '@/contexts/PlatformFeeContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { ArrowLeft, Calendar, Check, ChevronDown, Clock, ExternalLink, Filter, GraduationCap, MessageCircle, Search, Star, User } from 'lucide-react-native';
+import { ArrowLeft, Calendar, Clock, ExternalLink, Filter, GraduationCap, MessageCircle, Star, User } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Image, RefreshControl, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 
 // Define types
 type SessionStatus = 'upcoming' | 'past' | 'all' | 'student' | 'free';
@@ -34,7 +33,7 @@ type UISession = {
     isFreeForAll?: boolean;
 };
 
-export default function SessionHistory() {
+export default function UpcomingSessions() {
     const router = useRouter();
     const { feeStatus, isLoading: feeLoading } = usePlatformFee();
     const [sessions, setSessions] = useState<UISession[]>([]);
@@ -48,53 +47,14 @@ export default function SessionHistory() {
     const [dateSearchTerm, setDateSearchTerm] = useState<string>('');
     const [isStudent, setIsStudent] = useState<boolean>(false);
     const [refreshing, setRefreshing] = useState<boolean>(false);
-    const [freeSessionsRemaining, setFreeSessionsRemaining] = useState<number>(0);
-    const [nextResetDate, setNextResetDate] = useState<string>('');
-    const [totalSessionsThisPeriod, setTotalSessionsThisPeriod] = useState<number>(0);
-    const [loadingStudentData, setLoadingStudentData] = useState<boolean>(false);
 
-    // Platform fee status comes directly from context - no need to check again!
-    const hasPlatformFeeAccess = feeStatus?.hasPaid ?? false;
 
     // Check if user is a student and fetch free sessions data
     useEffect(() => {
-        const checkStudentStatus = async () => {
-            try {
-                const token = await AsyncStorage.getItem('token');
-                if (token) {
-                    const studentStatus = await checkIsStudent(token);
-                    setIsStudent(studentStatus);
-                    
-                    // If student, immediately fetch remaining free sessions
-                    if (studentStatus) {
-                        await fetchStudentSessionsData(token);
-                    }
-                }
-            } catch (error) {
-                console.error('Error checking student status:', error);
-            }
-        };
-        
-        checkStudentStatus();
+
     }, []);
     
     // Separate function to fetch student sessions data
-    const fetchStudentSessionsData = async (token: string) => {
-        setLoadingStudentData(true);
-        try {
-            const freeSessionsResponse = await getRemainingFreeSessions(token);
-            if (freeSessionsResponse && freeSessionsResponse.data) {
-                const sessionInfo = freeSessionsResponse.data;
-                setFreeSessionsRemaining(sessionInfo.remainingSessions);
-                setNextResetDate(sessionInfo.nextResetDate);
-                setTotalSessionsThisPeriod(sessionInfo.totalSessionsThisPeriod);
-            }
-        } catch (error) {
-            console.error('Failed to fetch remaining free sessions:', error);
-        } finally {
-            setLoadingStudentData(false);
-        }
-    };
 
     const fetchSessions = async () => {
         setLoading(true);
@@ -107,7 +67,7 @@ export default function SessionHistory() {
             }
             
             // Use the API function from our sessions.ts file
-            const response = await fetchUserSessions(authToken);
+            const response = await getUpcomingSessions(authToken);
             
             // Get data from the response
             let sessionsArray = Array.isArray(response.data) ? response.data : response.sessions || [];
@@ -142,11 +102,6 @@ export default function SessionHistory() {
             });
             
             setSessions(processedSessions);
-            
-            // If user is a student, fetch remaining free sessions
-            if (isStudent) {
-                await fetchStudentSessionsData(authToken);
-            }
         } catch (err: any) {
             console.error('Failed to fetch sessions:', err);
             setError(err.message || 'Failed to load sessions. Please try again.');
@@ -175,21 +130,17 @@ export default function SessionHistory() {
     };
     
     const today = getTodayDate();
-    
-    const counselors: FilterOption[] = React.useMemo(() => {
-        const uniqueCounselors = new Set(sessions.map(session => session.counselorId));
-        return [
-            { label: 'All Counselors', value: 'all' },
-            ...Array.from(uniqueCounselors).map(id => {
-                const counselor = sessions.find(s => s.counselorId === id);
-                return { 
-                    label: counselor?.counselorName || 'Unknown Counselor', 
-                    value: id as string 
-                };
-            })
-        ];
-    }, [sessions]);
-    
+
+    const getDatePart = (dateString: string): string => {
+        const datePart = dateString.split('T')[0];
+        console.log('Date part:', datePart);
+        return datePart;
+    }
+
+    const todayString = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+    console.log('Today string:', todayString);
+
     const formatDateForSearch = (dateString: string): string => {
         try {
             const date = new Date(dateString);
@@ -348,44 +299,6 @@ export default function SessionHistory() {
     const handleChatWithCounselor = (counselorId: string): void => {
         router.push(`/(hidden)/profile/counsellor-chat?counselorId=${counselorId}`);
     };
-    
-    const handleBookSession = (counselorId: string): void => {
-        router.push(`/(hidden)/session/bookSessions?counselorId=${counselorId}`);
-    };
-
-    const formatResetDate = (dateString: string): string => {
-        try {
-            const date = new Date(dateString);
-            
-            if (isNaN(date.getTime())) {
-                throw new Error('Invalid date');
-            }
-            
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            
-            const tomorrow = new Date(today);
-            tomorrow.setDate(tomorrow.getDate() + 1);
-            
-            const resetDate = new Date(date);
-            resetDate.setHours(0, 0, 0, 0);
-            
-            if (resetDate.getTime() === today.getTime()) {
-                return 'Today';
-            } else if (resetDate.getTime() === tomorrow.getTime()) {
-                return 'Tomorrow';
-            }
-            
-            return date.toLocaleDateString('en-US', { 
-                month: 'short', 
-                day: 'numeric',
-                year: 'numeric'
-            });
-        } catch (e) {
-            console.warn('Invalid date string:', dateString);
-            return dateString;
-        }
-    };
 
     // Show loading while context is still loading fee status
     if (feeLoading) {
@@ -394,29 +307,6 @@ export default function SessionHistory() {
                 <View className="bg-white rounded-2xl p-8 shadow-lg items-center max-w-sm">
                     <ActivityIndicator size="large" color="#6366F1" />
                     <Text className="text-gray-700 text-lg font-medium mt-4">Checking access...</Text>
-                </View>
-            </View>
-        );
-    }
-
-    // Show platform fee required if user hasn't paid
-    if (!hasPlatformFeeAccess) {
-        return (
-            <View className="flex-1 bg-gray-50 justify-center items-center px-6">
-                <View className="bg-white rounded-2xl p-8 shadow-lg items-center max-w-sm">
-                    <View className="w-16 h-16 rounded-full bg-red-50 justify-center items-center mb-4">
-                        <Calendar size={32} color="#DC2626" />
-                    </View>
-                    <Text className="text-xl font-semibold text-gray-900 mb-2 text-center">Platform Fee Required</Text>
-                    <Text className="text-gray-600 text-center mb-6 leading-5">
-                        You need to pay the monthly platform fee to view your session history.
-                    </Text>
-                    <TouchableOpacity
-                        className="my-4 bg-primary py-3 rounded-xl items-center"
-                        onPress={() => router.push('/(hidden)/profile/view_profile')}
-                    >
-                        <Text className="text-white font-semibold mx-4">Pay Platform Fee</Text>
-                    </TouchableOpacity>
                 </View>
             </View>
         );
@@ -469,7 +359,7 @@ export default function SessionHistory() {
                         <Filter size={20} color="#6366F1" />
                     </TouchableOpacity>
                 </View>
-                <Text className="text-gray-900 text-2xl font-bold ml-1">Session History</Text>
+                <Text className="text-gray-900 text-2xl font-bold ml-1">Upcoming Sessions</Text>
             </View>
             
             <ScrollView 
@@ -487,11 +377,6 @@ export default function SessionHistory() {
                                 const studentStatus = await checkIsStudent(authToken);
                                 setIsStudent(studentStatus);
                                 
-                                // If student, fetch the latest free sessions data
-                                if (studentStatus) {
-                                    await fetchStudentSessionsData(authToken);
-                                }
-                                
                                 // Fetch sessions data
                                 fetchSessions();
                             } else {
@@ -503,116 +388,7 @@ export default function SessionHistory() {
                         tintColor="#6366F1"
                     />
                 }>
-                {/* Search and Filters */}
-                <View className="mb-4">
-                    <View className="flex-row items-center bg-white rounded-xl shadow-sm p-3 mb-4">
-                        <Search size={18} color="#6366F1" className="mr-2 ml-1" />
-                        <TextInput
-                            placeholder="Search by counselor name"
-                            className="flex-1 text-gray-700 py-1"
-                            value={searchTerm}
-                            onChangeText={setSearchTerm}
-                            placeholderTextColor="#9CA3AF"
-                        />
-                        {searchTerm.length > 0 && (
-                            <TouchableOpacity 
-                                onPress={() => setSearchTerm('')}
-                                className="bg-gray-100 px-2 py-1 rounded-md"
-                            >
-                                <Text className="text-primary font-medium">Clear</Text>
-                            </TouchableOpacity>
-                        )}
-                    </View>
-                    
-                    {/* Filter Tabs */}
-                    <ScrollView 
-                        horizontal 
-                        showsHorizontalScrollIndicator={false} 
-                        className="mb-4"
-                        contentContainerStyle={{ paddingHorizontal: 2 }}
-                    >
-                        {filterOptions.map((tab) => (
-                            <TouchableOpacity
-                                key={tab.id}
-                                onPress={() => setActiveFilter(tab.id as SessionStatus)}
-                                className={`mr-3 px-5 py-2.5 rounded-full ${
-                                    activeFilter === tab.id 
-                                        ? 'bg-primary shadow-sm' 
-                                        : 'bg-white border border-gray-200'
-                                }`}
-                                style={activeFilter === tab.id ? { elevation: 2 } : {}}
-                            >
-                                <Text className={`font-medium text-sm ${
-                                    activeFilter === tab.id ? 'text-white' : 'text-gray-700'
-                                }`}>
-                                    {tab.label}
-                                </Text>
-                            </TouchableOpacity>
-                        ))}
-                    </ScrollView>
-                    
-                    {/* Advanced Filters */}
-                    {showFilters && (
-                        <View className="bg-white p-5 rounded-xl shadow-md mb-5 border border-gray-100">
-                            <Text className="text-gray-800 font-semibold text-lg mb-4">Filter Options</Text>
-                            
-                            <View className="mb-4">
-                                <Text className="text-gray-600 mb-2 text-sm font-medium">Counselor</Text>
-                                <TouchableOpacity
-                                    className="flex-row justify-between items-center bg-gray-50 p-4 rounded-lg border border-gray-200"
-                                    onPress={() => setShowCounselorDropdown(!showCounselorDropdown)}
-                                >
-                                    <Text className="text-gray-700 font-medium">
-                                        {counselors.find(c => c.value === selectedCounselor)?.label || 'All Counselors'}
-                                    </Text>
-                                    <ChevronDown size={18} color="#6366F1" />
-                                </TouchableOpacity>
-                                
-                                {showCounselorDropdown && (
-                                    <View className="bg-white mt-2 rounded-xl shadow-lg absolute top-20 left-0 right-0 z-10 border border-gray-100 overflow-hidden">
-                                        {counselors.map((counselor) => (
-                                            <TouchableOpacity
-                                                key={counselor.value}
-                                                className="p-4 border-b border-gray-100 flex-row justify-between items-center"
-                                                onPress={() => {
-                                                    setSelectedCounselor(counselor.value);
-                                                    setShowCounselorDropdown(false);
-                                                }}
-                                            >
-                                                <Text className="text-gray-700 font-medium">{counselor.label}</Text>
-                                                {selectedCounselor === counselor.value && (
-                                                    <Check size={18} color="#6366F1" />
-                                                )}
-                                            </TouchableOpacity>
-                                        ))}
-                                    </View>
-                                )}
-                            </View>
-                            
-                            <View>
-                                <Text className="text-gray-600 mb-2 text-sm font-medium">Date</Text>
-                                <View className="flex-row items-center bg-gray-50 rounded-lg p-4 border border-gray-200">
-                                    <Calendar size={18} color="#6366F1" className="mr-3" />
-                                    <TextInput
-                                        placeholder="Search by date (e.g., Jul 15, 2025)"
-                                        className="flex-1 text-gray-700"
-                                        value={dateSearchTerm}
-                                        onChangeText={setDateSearchTerm}
-                                        placeholderTextColor="#9CA3AF"
-                                    />
-                                    {dateSearchTerm.length > 0 && (
-                                        <TouchableOpacity 
-                                            onPress={() => setDateSearchTerm('')}
-                                            className="bg-gray-200 px-2 py-1 rounded-md"
-                                        >
-                                            <Text className="text-primary font-medium">Clear</Text>
-                                        </TouchableOpacity>
-                                    )}
-                                </View>
-                            </View>
-                        </View>
-                    )}
-                </View>
+                
                 
                 {/* Sessions List */}
                 {filteredSessions.length === 0 ? (
@@ -639,7 +415,7 @@ export default function SessionHistory() {
                     </View>
                 ) : (
                     <View className="space-y-3">
-                        {filteredSessions.map((session) => (
+                        {sessions.map((session) => (
                             <View 
                                 key={session.id} 
                                 className="bg-white rounded-xl p-5 border border-gray-300 mb-5"
@@ -735,110 +511,25 @@ export default function SessionHistory() {
                                         <MessageCircle size={16} color="#4B5563" className="mr-1" />
                                         <Text className="text-gray-700 font-medium text-sm">Message</Text>
                                     </TouchableOpacity>
-                                    
-                                    {session.status !== 'past' ? (
+
+                                    {session.date && getDatePart(session.date) === todayString ? (
                                         <TouchableOpacity 
-                                            className="flex-1 ml-2 py-3 bg-primary rounded-lg items-center justify-center flex-row"
-                                            onPress={
-                                                () => {
-                                                    router.push(`/(hidden)/session/VideoCallPage?sessionId=${session.id}`);
-                                                    console.log('Join session', session.id);
-                                                }
+                                        className="flex-1 ml-2 py-3 bg-primary rounded-lg items-center justify-center flex-row"
+                                        onPress={
+                                            () => {
+                                                router.push(`/(hidden)/session/VideoCallPage?sessionId=${session.id}`);
+                                                console.log('Join session', session.id);
                                             }
-                                        >
-                                            <ExternalLink size={16} color="#FFFFFF" className="mr-1" />
-                                            <Text className="text-white font-medium text-sm">Join Session</Text>
-                                        </TouchableOpacity>
-                                    ) : (
-                                        <TouchableOpacity 
-                                            className="flex-1 ml-2 py-3 bg-primary rounded-lg items-center justify-center flex-row"
-                                            onPress={() => handleBookSession(session.counselorId)}
-                                        >
-                                            <Calendar size={16} color="#FFFFFF" className="mr-1" />
-                                            <Text className="text-white font-medium text-sm">Book Again</Text>
-                                        </TouchableOpacity>
-                                    )}
+                                        }
+                                    >
+                                        <ExternalLink size={16} color="#FFFFFF" className="mr-1" />
+                                        <Text className="text-white font-medium text-sm">Join Session</Text>
+                                    </TouchableOpacity>
+                                    ) : null}
                                 </View>
                             </View>
                         ))}
                     </View>
-                )}
-                
-                {/* Student Benefits Banner */}
-                {isStudent && (
-                    <View className="mt-4 p-4 bg-indigo-50 rounded-xl border border-indigo-100 shadow-sm">
-                        {loadingStudentData ? (
-                            <View className="items-center py-2">
-                                <ActivityIndicator size="small" color="#4F46E5" />
-                                <Text className="text-indigo-700 text-sm mt-1">Loading your benefits...</Text>
-                            </View>
-                        ) : (
-                            <>
-                                <View className="flex-row justify-between items-center">
-                                    <View className="flex-1">
-                                        <Text className="text-indigo-900 font-semibold text-lg">Student Benefits</Text>
-                                        <Text className="text-indigo-700 text-sm mt-1">
-                                            You get 4 free counseling sessions with volunteer counselors each period
-                                        </Text>
-                                        <Text className="text-indigo-600 text-xs mt-1 italic">
-                                            Note: Student benefits only apply to free/volunteer counselors
-                                        </Text>
-                                        {nextResetDate && (
-                                            <View className="flex-row items-center mt-2">
-                                                <Calendar size={14} color="#4F46E5" className="mr-1" />
-                                                <Text className="text-indigo-800 text-xs font-medium">
-                                                    Resets on {formatResetDate(nextResetDate)}
-                                                </Text>
-                                            </View>
-                                        )}
-                                    </View>
-                                    <View className="bg-indigo-100 px-4 py-3 rounded-lg">
-                                        <Text className="text-indigo-900 font-bold text-xl">{freeSessionsRemaining}</Text>
-                                        <Text className="text-indigo-700 text-xs text-center">remaining</Text>
-                                    </View>
-                                </View>
-                                {totalSessionsThisPeriod > 0 && (
-                                    <View className="mt-2 bg-indigo-100/50 p-2 rounded-lg">
-                                        <Text className="text-indigo-700 text-xs text-center">
-                                            You&apos;ve used {totalSessionsThisPeriod} of 4 free sessions this period
-                                        </Text>
-                                    </View>
-                                )}
-                            </>
-                        )}
-                    </View>
-                )}
-
-                {/* Student Package CTA */}
-                {!isStudent && (
-                    <TouchableOpacity
-    onPress={() => router.push('/session/StudentPackageApply')}
-    className="mt-6 rounded-xl shadow-lg overflow-hidden" // Added overflow-hidden for rounded corners
-    activeOpacity={0.8}
->
-    <LinearGradient
-        colors={['#4F46E5', '#6366F1']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0 }}
-        style={{ padding: 20 }} // Replace className="p-5" with style
-    >
-        <View className="flex-row justify-between items-center">
-            <View className="flex-1">
-                <Text className="text-white font-bold text-lg">Free Student Package</Text>
-                <Text className="text-blue-100 text-sm mt-1 pr-4">
-                    Get 4 free counseling sessions every month with your university credentials
-                </Text>
-                <View className="flex-row items-center mt-3">
-                    <Text className="text-white font-medium text-sm">Apply now</Text>
-                    <ExternalLink size={14} color="#FFFFFF" className="ml-1" />
-                </View>
-            </View>
-            <View className="bg-white/20 p-3 rounded-full">
-                <GraduationCap size={28} color="#FFFFFF" />
-            </View>
-        </View>
-    </LinearGradient>
-</TouchableOpacity>
                 )}
             </ScrollView>     
         </View>

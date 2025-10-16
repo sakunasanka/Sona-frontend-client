@@ -1,9 +1,8 @@
 import { apiRequest } from '@/api/api'; // Adjust the import path as necessary
 import { Link } from 'expo-router';
-import LottieView from 'lottie-react-native';
 import { Mail } from 'lucide-react-native';
 import React, { useState } from 'react';
-import { Image, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Image, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { PrimaryButton } from '../components/Buttons';
 
 export default function ForgotPassword() {
@@ -145,17 +144,13 @@ export default function ForgotPassword() {
   <View style={{
     position: 'absolute',
     top: 0, left: 0, right: 0, bottom: 0,
-    backgroundColor: 'rgba(255,255,255,0.7)',
+    backgroundColor: 'rgba(255,255,255,0.8)',
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 999
   }}>
-    <LottieView
-      source={require('@/assets/images/loadings/Animation - 1751005726286.json')}
-      autoPlay
-      loop
-      style={{ width: 120, height: 120 }}
-    />
+    <ActivityIndicator size="large" color="#007AFF" />
+    <Text style={{ marginTop: 12, color: '#666', fontSize: 16 }}>Loading...</Text>
   </View>
 )}
       </ScrollView>

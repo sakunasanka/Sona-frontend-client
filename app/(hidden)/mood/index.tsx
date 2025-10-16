@@ -7,10 +7,8 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { GestureHandlerRootView, PanGestureHandler, PanGestureHandlerGestureEvent } from 'react-native-gesture-handler';
+import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, {
-  runOnJS,
-  useAnimatedGestureHandler,
   useAnimatedStyle,
   useSharedValue,
 } from 'react-native-reanimated';
@@ -83,34 +81,30 @@ export default function MoodTracker() {
   };
 
   // Valence slider gesture handler
-  const valenceGestureHandler = useAnimatedGestureHandler<PanGestureHandlerGestureEvent>({
-    onStart: (_, context: any) => {
-      context.startX = valenceSlider.value;
-    },
-    onActive: (event, context: any) => {
-      const newX = Math.max(0, Math.min(SLIDER_WIDTH, context.startX + event.translationX));
-      valenceSlider.value = newX;
-      
-      const newValence = (newX / SLIDER_WIDTH) * 2 - 1;
-      const currentArousal = (arousalSlider.value / SLIDER_WIDTH) * 2 - 1;
-      runOnJS(updateMood)(newValence, currentArousal);
-    },
-  });
+  const valenceGestureHandler = (event: any) => {
+    'worklet';
+    const newX = Math.max(0, Math.min(SLIDER_WIDTH, event.translationX + valenceSlider.value));
+    valenceSlider.value = newX;
+    
+    const newValence = (newX / SLIDER_WIDTH) * 2 - 1;
+    const currentArousal = (arousalSlider.value / SLIDER_WIDTH) * 2 - 1;
+    
+    // Call updateMood directly - it will run on JS thread automatically
+    updateMood(newValence, currentArousal);
+  };
 
   // Arousal slider gesture handler
-  const arousalGestureHandler = useAnimatedGestureHandler<PanGestureHandlerGestureEvent>({
-    onStart: (_, context: any) => {
-      context.startX = arousalSlider.value;
-    },
-    onActive: (event, context: any) => {
-      const newX = Math.max(0, Math.min(SLIDER_WIDTH, context.startX + event.translationX));
-      arousalSlider.value = newX;
-      
-      const newArousal = (newX / SLIDER_WIDTH) * 2 - 1;
-      const currentValence = (valenceSlider.value / SLIDER_WIDTH) * 2 - 1;
-      runOnJS(updateMood)(currentValence, newArousal);
-    },
-  });
+  const arousalGestureHandler = (event: any) => {
+    'worklet';
+    const newX = Math.max(0, Math.min(SLIDER_WIDTH, event.translationX + arousalSlider.value));
+    arousalSlider.value = newX;
+    
+    const newArousal = (newX / SLIDER_WIDTH) * 2 - 1;
+    const currentValence = (valenceSlider.value / SLIDER_WIDTH) * 2 - 1;
+    
+    // Call updateMood directly - it will run on JS thread automatically
+    updateMood(currentValence, newArousal);
+  };
 
   const valenceThumbStyle = useAnimatedStyle(() => {
     return {
@@ -149,7 +143,7 @@ export default function MoodTracker() {
       
       <View className="flex-1 px-8 py-6">
         <Text className="text-2xl font-bold text-gray-800 text-center mb-2">
-          Choose how you've felt overall today
+          Choose how you&apos;ve felt overall today
         </Text>
         
         {showInstructions ? (
@@ -213,7 +207,7 @@ export default function MoodTracker() {
               />
               
               {/* Slider Thumb */}
-              <PanGestureHandler onGestureEvent={valenceGestureHandler}>
+                <GestureDetector gesture={Gesture.Pan().onUpdate(valenceGestureHandler)}>
                 <Animated.View
                   style={[
                     {
@@ -233,7 +227,7 @@ export default function MoodTracker() {
                     valenceThumbStyle,
                   ]}
                 />
-              </PanGestureHandler>
+                </GestureDetector>
             </View>
           </View>
 
@@ -261,7 +255,7 @@ export default function MoodTracker() {
               />
               
               {/* Slider Thumb */}
-              <PanGestureHandler onGestureEvent={arousalGestureHandler}>
+              <GestureDetector gesture={Gesture.Pan().onUpdate(arousalGestureHandler)}>
                 <Animated.View
                   style={[
                     {
@@ -281,7 +275,7 @@ export default function MoodTracker() {
                     arousalThumbStyle,
                   ]}
                 />
-              </PanGestureHandler>
+              </GestureDetector>
             </View>
           </View>
         </View>

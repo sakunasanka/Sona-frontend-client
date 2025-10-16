@@ -20,7 +20,7 @@ const Chat = () => {
   const scrollViewRef = useRef<ScrollView>(null);
   const tabBarHeight = useTabBarHeight();
 
-  const chatId = 2; // Example chat ID
+  const chatId = 1; // Example chat ID
   const currentUserId = 19; // Example current user ID
   const currentUserName = 'Current User'; // Example current user name
   const [token, setToken] = useState<string | null>(null);

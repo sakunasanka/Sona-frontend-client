@@ -1,3 +1,5 @@
+import { getSessionLink } from '@/api/sessions';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Audio } from 'expo-av';
 import { Camera } from 'expo-camera';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -8,16 +10,36 @@ import JitsiWebView from './videoCall';
 export default function VideoCallPage() {
   const params = useLocalSearchParams();
   const router = useRouter();
-  const roomName = (params.roomName as string) || `room-${Date.now()}`;
   const displayName = (params.displayName as string) || 'Guest';
-  const jitsiDomain = (params.jitsiDomain as string) || 'sona.org.lk';
   const userRole = (params.userRole as 'moderator' | 'client' | 'guest') || 'client';
 
   const [ready, setReady] = useState(false);
+  const [nullId, setNullId] = useState(false);
   const [permissionStatus, setPermissionStatus] = useState('checking');
   const [userConfirmedPermissions, setUserConfirmedPermissions] = useState(false);
+  const [sessionURL, setSessionURL] = useState<string>('');
+  const [jwtToken, setJwtToken] = useState<string>('');
 
   useEffect(() => {
+    if(!params.sessionId) {
+    setNullId(true);
+    console.error('❌ Missing sessionId parameter in route');
+    router.replace('/(hidden)/session/sessionHistory');
+    return;
+  }
+
+    async function fetchSessionURL() {
+      // Get token from AsyncStorage 
+      const token = await AsyncStorage.getItem('token') || '';
+      setJwtToken(token);
+      
+      const sessionData = await getSessionLink(params.sessionId as string, token);
+      console.log('Fetched session URL:', sessionData);
+      if(sessionData.data.sessionLink) {
+        setSessionURL(sessionData.data.sessionLink);
+      }
+    }
+
     // DON'T automatically request permissions - let user do it manually
     console.log('🔍 Component loaded - waiting for manual permission grant');
     setPermissionStatus('waiting-for-user-action');
@@ -54,7 +76,10 @@ export default function VideoCallPage() {
         setPermissionStatus(`error: ${err}`);
       }
     })();
-  }, []);
+
+    fetchSessionURL();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run once on mount - params.id is from URL and won't change
 
   const requestPermissionsManually = async () => {
     console.log('🔄 Manual permission request...');
@@ -103,7 +128,7 @@ export default function VideoCallPage() {
   };
 
   // TRIPLE CHECK: Absolutely prevent WebView from loading
-  if (!ready || !userConfirmedPermissions) {
+  if (!ready || !userConfirmedPermissions || nullId) {
     console.log('🚫 Blocking WebView - ready:', ready, 'userConfirmed:', userConfirmedPermissions);
     return (
       <View style={{ 
@@ -212,11 +237,11 @@ export default function VideoCallPage() {
   return (
     <View style={{ flex: 1 }}>
       <JitsiWebView
-        roomName={roomName}
         displayName={displayName}
-        jitsiDomain={jitsiDomain}
+        url={sessionURL}
         userRole={userRole}
         onEvent={(e) => console.log('📞 Jitsi event:', e)}
+        jwtToken={jwtToken}
       />
     </View>
   );

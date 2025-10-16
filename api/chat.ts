@@ -120,3 +120,19 @@ export const sendMessage = async (
     throw error;
   }
 };
+
+//get chatroom from clientId and counselorId
+export const getChatRoom = async (counselorId: number, token: string) => {
+  try {
+    const response = await apiRequest({
+      method: 'get',
+      path: `chat/rooms/getRoomFromCounselorId/${counselorId}`,
+      token
+    })
+    console.log("data ", response.data)
+    if(response.data.room) return response.data.room.id;
+  }catch (error) {
+    console.error('Error fetching chat room:', error);
+    throw error;
+  }
+}

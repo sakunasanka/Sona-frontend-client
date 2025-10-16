@@ -1,15 +1,16 @@
 import { checkIsStudent } from '@/api/api';
-import { getAvailablePsychiatrists, Psychiatrist } from '@/api/psychiatrist';
+import { getAvailablePsychiatrists, getRemainingPsychiatristSessions, Psychiatrist } from '@/api/psychiatrist';
 import { usePlatformFee } from '@/contexts/PlatformFeeContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
-import { ArrowLeft, Clock, Star, Stethoscope } from 'lucide-react-native';
+import { ArrowLeft, Clock, GraduationCap, Star, Stethoscope } from 'lucide-react-native';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   Dimensions,
   FlatList,
   Image,
   SafeAreaView,
+  ScrollView,
   StatusBar,
   Text,
   TouchableOpacity,
@@ -153,6 +154,8 @@ export default function PsychiatristsScreen() {
   const [selectedSpecialty, setSelectedSpecialty] = useState('All');
   const [isStudent, setIsStudent] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [selectedTab, setSelectedTab] = useState<string>('all');
+  const [psychiatristSessionsRemaining, setPsychiatristSessionsRemaining] = useState<number>(2); // Default to 2 free psychiatrist sessions per month
   const [psychiatrists, setPsychiatrists] = useState<PsychiatristType[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [availableSpecialties, setAvailableSpecialties] = useState<string[]>(['All']);
@@ -196,11 +199,49 @@ export default function PsychiatristsScreen() {
           setAvailableSpecialties(allSpecialties);
         }
 
-        // Check if user is a student
+        // Check if user is a student and get psychiatrist sessions data
         const token = await AsyncStorage.getItem('token');
         if (token) {
           const studentStatus = await checkIsStudent(token);
           setIsStudent(studentStatus);
+          
+          // If student, get psychiatrist sessions data (either from AsyncStorage or API)
+          if (studentStatus) {
+            // First try to get from AsyncStorage (prefetched in psychiatrist.tsx)
+            const storedPsychiatristSessionsRemaining = await AsyncStorage.getItem('psychiatristSessionsRemaining');
+            const lastFetchTime = await AsyncStorage.getItem('lastPsychiatristSessionsFetch');
+            
+            // Check if we have recently fetched data (within the last hour)
+            const useStoredData = storedPsychiatristSessionsRemaining && lastFetchTime && 
+              (new Date().getTime() - new Date(lastFetchTime).getTime() < 60 * 60 * 1000);
+            
+            if (useStoredData) {
+              // Use the stored data
+              setPsychiatristSessionsRemaining(parseInt(storedPsychiatristSessionsRemaining || '0'));
+            } else {
+              try {
+                // Fetch from API if data is not available or outdated
+                const psychiatristSessionsResponse = await getRemainingPsychiatristSessions(token);
+                
+                if (psychiatristSessionsResponse && psychiatristSessionsResponse.data) {
+                  const sessionInfo = psychiatristSessionsResponse.data;
+                  setPsychiatristSessionsRemaining(sessionInfo.remainingSessions);
+                  
+                  // Update the stored data
+                  await AsyncStorage.setItem('psychiatristSessionsRemaining', sessionInfo.remainingSessions.toString());
+                  await AsyncStorage.setItem('psychiatristNextResetDate', sessionInfo.nextResetDate);
+                  await AsyncStorage.setItem('totalPsychiatristSessionsThisPeriod', sessionInfo.totalSessionsThisPeriod.toString());
+                  await AsyncStorage.setItem('lastPsychiatristSessionsFetch', new Date().toISOString());
+                }
+              } catch (error) {
+                console.error('Error fetching psychiatrist sessions data:', error);
+                // Fallback to stored data if available
+                if (storedPsychiatristSessionsRemaining) {
+                  setPsychiatristSessionsRemaining(parseInt(storedPsychiatristSessionsRemaining));
+                }
+              }
+            }
+          }
         }
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -220,6 +261,13 @@ export default function PsychiatristsScreen() {
     }
   }, [feeStatus?.hasPaid, selectedSpecialty]);
 
+  // Simple filter tabs for psychiatrists (same as counselors)
+  const tabFilters = [
+    { id: 'all', label: 'All Psychiatrists' },
+    { id: 'free', label: 'Free Psychiatrists' },
+    { id: 'paid', label: 'Paid Psychiatrists' }
+  ];
+
   const filteredPsychiatrists = useMemo(() => {
     let filtered = psychiatrists;
     
@@ -228,6 +276,17 @@ export default function PsychiatristsScreen() {
       filtered = filtered.filter((psychiatrist) => 
         psychiatrist.specialties?.includes(selectedSpecialty)
       );
+    }
+    
+    // Filter by tab selection
+    if (selectedTab !== 'all') {
+      if (selectedTab === 'free') {
+        // For free tab, only include psychiatrists with sessionFee === 0
+        filtered = filtered.filter((psychiatrist) => psychiatrist.sessionFee === 0);
+      } else if (selectedTab === 'paid') {
+        // For paid tab, only include paid psychiatrists (sessionFee > 0)
+        filtered = filtered.filter((psychiatrist) => psychiatrist.sessionFee > 0);
+      }
     }
     
     // Sort the filtered psychiatrists
@@ -239,7 +298,7 @@ export default function PsychiatristsScreen() {
       // Then by rating
       return (b.rating || 0) - (a.rating || 0);
     });
-  }, [selectedSpecialty, psychiatrists, feeStatus?.hasPaid]);
+  }, [selectedSpecialty, selectedTab, psychiatrists, feeStatus?.hasPaid]);
 
   return (
     <SafeAreaView className="flex-1 bg-primary">
@@ -270,6 +329,62 @@ export default function PsychiatristsScreen() {
       <View className="flex-1 bg-gray-50 rounded-t-3xl">
         {/* Added proper padding at the top */}
         <View className="pt-6">
+          {/* Student badge at the top if user is a student */}
+          {isStudent && (
+            <View className="mx-5 mb-4 bg-indigo-50 p-3 rounded-xl flex-row items-center">
+              <GraduationCap size={20} color="#4F46E5" />
+              <View className="ml-3 flex-1">
+                <Text className="text-indigo-900 font-semibold">Student Benefits Active</Text>
+                <Text className="text-indigo-700 text-sm">
+                  {psychiatristSessionsRemaining > 0 
+                    ? `You have ${psychiatristSessionsRemaining} free sessions remaining this month` 
+                    : "You've used all your free psychiatrist sessions this month"}
+                </Text>
+              </View>
+            </View>
+          )}
+          
+          {/* Psychiatrist type filters in a ScrollView with fixed height - only shown to students */}
+          {isStudent && (
+            <View className="h-10 mb-4">
+              <ScrollView 
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ paddingHorizontal: 16 }}
+              >
+                
+                {tabFilters.map((filter) => {
+                  const isActive = selectedTab === filter.id;
+                  return (
+                    <TouchableOpacity
+                      key={filter.id}
+                      onPress={() => setSelectedTab(filter.id)}
+                      style={{ 
+                        height: 26,
+                        paddingHorizontal: 12,
+                        paddingVertical: 4,
+                        marginRight: 8,
+                        borderRadius: 9999,
+                        borderWidth: 1,
+                        borderColor: isActive ? '#2563EB' : '#D1D5DB',
+                        backgroundColor: isActive ? '#2563EB' : '#FFFFFF'
+                      }}
+                    >
+                      <Text 
+                        style={{ 
+                          fontSize: 12,
+                        fontWeight: '500',
+                        color: isActive ? '#FFFFFF' : '#4B5563'
+                      }}
+                    >
+                      {filter.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+          )}
           
           {/* Psychiatrist list with proper width and padding */}
           {isLoading ? (

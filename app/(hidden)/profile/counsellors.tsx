@@ -397,7 +397,7 @@ export default function CounselorsScreen() {
                 <Text className="text-indigo-900 font-semibold">Student Benefits Active</Text>
                 <Text className="text-indigo-700 text-sm">
                   {freeSessionsRemaining > 0 
-                    ? `You have ${freeSessionsRemaining} free counseling sessions remaining this month` 
+                    ? `You have ${freeSessionsRemaining} free sessions remaining this month` 
                     : "You've used all your free sessions this month"}
                 </Text>
               </View>

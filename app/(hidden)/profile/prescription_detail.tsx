@@ -1,9 +1,11 @@
+import { getUserPrescriptions, type Prescription as ApiPrescription } from '@/api/prescriptions';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router, useLocalSearchParams } from 'expo-router';
 import { ArrowLeft, Download, FileText, Printer, Share, User } from 'lucide-react-native';
-import React, { useState } from 'react';
-import { Alert, Image, SafeAreaView, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, Image, Linking, SafeAreaView, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 
-// Types for prescription data
+// Types for prescription data - extended from API types
 type Prescription = {
   id: string;
   doctorName: string;
@@ -16,69 +18,108 @@ type Prescription = {
   diagnosis?: string;
   downloadUrl: string;
   prescriptionNumber?: string;
+  psychiatristId: number;
+  clientId: number;
+  createdAt: string;
+  updatedAt: string;
 };
 
-// Mock data (same as in prescription_history.tsx but with more details)
-const mockPrescriptions: Prescription[] = [
-  {
-    id: '1',
-    doctorName: 'Dr. Sarath Perera',
-    doctorImage: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=150&h=150&fit=crop&crop=face',
-    doctorLicense: 'MD-12345',
-    doctorContact: 'sarath.perera@healthcenter.com',
-    prescriptionDate: '2024-10-15T10:30:00',
-    prescriptionNumber: 'RX-2024-001',
-    diagnosis: 'Generalized Anxiety Disorder, Major Depressive Disorder',
-    description: 'Prescription for anxiety and depression management. Continue with regular follow-ups and monitor for side effects.',
-    notes: 'Patient should avoid alcohol consumption. Schedule follow-up in 2 weeks. Monitor for suicidal ideation.',
-    downloadUrl: 'https://example.com/prescription1.pdf'
-  },
-  {
-    id: '2',
-    doctorName: 'Dr. Saman Rathnayake',
-    doctorImage: 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=150&h=150&fit=crop&crop=face',
-    doctorLicense: 'MD-67890',
-    doctorContact: 'saman.rathnayake@familymed.com',
-    prescriptionDate: '2024-09-28T14:15:00',
-    prescriptionNumber: 'RX-2024-002',
-    diagnosis: 'Vitamin D Deficiency, Magnesium Deficiency',
-    description: 'Vitamin supplements to support mental health and overall wellness. Recheck levels after 6 weeks.',
-    notes: 'Patient reports fatigue and mood changes. Monitor energy levels and mood improvements.',
-    downloadUrl: 'https://example.com/prescription2.pdf'
-  },
-  {
-    id: '3',
-    doctorName: 'Dr. Suranga Thennakoon',
-    doctorImage: 'https://images.unsplash.com/photo-1594824481882-0b2c9fedb2b3?w=150&h=150&fit=crop&crop=face',
-    doctorLicense: 'PSY-11111',
-    doctorContact: 'suranga.thennakoon@mindhealth.com',
-    prescriptionDate: '2024-08-20T09:00:00',
-    prescriptionNumber: 'RX-2024-003',
-    diagnosis: 'Insomnia, Sleep Disorder',
-    description: 'Sleep aid to help regulate sleep patterns and improve sleep quality. Part of comprehensive sleep hygiene plan.',
-    notes: 'Patient should maintain consistent sleep schedule. Avoid caffeine after 2 PM. Practice relaxation techniques.',
-    downloadUrl: 'https://example.com/prescription3.pdf'
-  },
-  {
-    id: '4',
-    doctorName: 'Dr. Namal Abeypussa',
-    doctorImage: 'https://images.unsplash.com/photo-1582750433449-648ed127bb54?w=150&h=150&fit=crop&crop=face',
-    doctorLicense: 'MD-22222',
-    doctorContact: 'namal.abeypussa@mentalhealth.org',
-    prescriptionDate: '2024-07-10T11:45:00',
-    prescriptionNumber: 'RX-2024-004',
-    diagnosis: 'Major Depressive Disorder',
-    description: 'Initial prescription for depression treatment. Start with low dose and monitor for side effects.',
-    notes: 'First-time SSRI prescription. Patient should report any unusual symptoms. Schedule follow-up in 2 weeks.',
-    downloadUrl: 'https://example.com/prescription4.pdf'
-  }
-];
+// Helper function to map API response to UI format
+const mapApiPrescriptionToUI = (apiPrescription: ApiPrescription): Prescription => {
+  return {
+    id: apiPrescription.id.toString(),
+    doctorName: apiPrescription.psychiatrist.name,
+    doctorImage: apiPrescription.psychiatrist.avatar,
+    doctorContact: apiPrescription.psychiatrist.email,
+    prescriptionDate: apiPrescription.createdAt,
+    createdAt: apiPrescription.createdAt,
+    updatedAt: apiPrescription.updatedAt,
+    description: apiPrescription.description,
+    downloadUrl: apiPrescription.prescription,
+    psychiatristId: apiPrescription.psychiatristId,
+    clientId: apiPrescription.clientId,
+    prescriptionNumber: `RX-${apiPrescription.id}`,
+    // These could be extended if the backend provides more data
+    doctorLicense: undefined,
+    notes: undefined,
+    diagnosis: undefined
+  };
+};
 
 export default function PrescriptionDetail() {
   const { id } = useLocalSearchParams();
-  const [prescription] = useState<Prescription | undefined>(
-    mockPrescriptions.find(p => p.id === id)
-  );
+  const [prescription, setPrescription] = useState<Prescription | undefined>(undefined);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch prescription details from API
+  useEffect(() => {
+    const fetchPrescriptionDetails = async () => {
+      try {
+        setLoading(true);
+        const token = await AsyncStorage.getItem('token');
+        
+        if (!token) {
+          setError('Authentication required. Please log in again.');
+          return;
+        }
+
+        const response = await getUserPrescriptions(token);
+        
+        if (response.success && response.data.prescriptions) {
+          const apiPrescription = response.data.prescriptions.find(p => p.id.toString() === id);
+          
+          if (apiPrescription) {
+            const mappedPrescription = mapApiPrescriptionToUI(apiPrescription);
+            setPrescription(mappedPrescription);
+            setError(null);
+          } else {
+            setError('Prescription not found');
+          }
+        } else {
+          setError(response.message || 'Failed to fetch prescription details');
+        }
+      } catch (error: any) {
+        console.error('Error fetching prescription details:', error);
+        setError(error.message || 'Failed to fetch prescription details');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (id) {
+      fetchPrescriptionDetails();
+    }
+  }, [id]);
+
+  if (loading) {
+    return (
+      <SafeAreaView className="flex-1 bg-gray-50 justify-center items-center">
+        <View className="bg-white rounded-2xl p-8 shadow-lg items-center max-w-sm">
+          <ActivityIndicator size="large" color="#2563EB" />
+          <Text className="text-gray-700 text-lg font-medium mt-4">Loading prescription...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (error) {
+    return (
+      <SafeAreaView className="flex-1 bg-gray-50 justify-center items-center">
+        <View className="bg-white rounded-2xl p-8 shadow-lg items-center max-w-sm">
+          <FileText size={48} color="#DC2626" />
+          <Text className="text-gray-700 text-lg font-medium mt-4">Error Loading Prescription</Text>
+          <Text className="text-gray-500 text-center mt-2">{error}</Text>
+          <TouchableOpacity
+            className="mt-4 bg-primary px-6 py-3 rounded-xl"
+            onPress={() => router.back()}
+          >
+            <Text className="text-white font-medium">Go Back</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   if (!prescription) {
     return (
@@ -115,27 +156,66 @@ export default function PrescriptionDetail() {
 
 
 
-  const handleDownload = () => {
-    Alert.alert(
-      'Download Prescription',
-      'This will download the prescription as a PDF file.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Download', onPress: () => console.log('Downloading prescription...') }
-      ]
-    );
+  const handleDownload = async () => {
+    try {
+      Alert.alert(
+        'Download Prescription',
+        'This will open the prescription PDF in your browser.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { 
+            text: 'Open', 
+            onPress: async () => {
+              try {
+                const canOpen = await Linking.canOpenURL(prescription.downloadUrl);
+                if (canOpen) {
+                  await Linking.openURL(prescription.downloadUrl);
+                } else {
+                  Alert.alert('Error', 'Cannot open the prescription file. Please check your internet connection.');
+                }
+              } catch (error) {
+                console.error('Error opening prescription URL:', error);
+                Alert.alert('Error', 'Failed to open prescription file.');
+              }
+            }
+          }
+        ]
+      );
+    } catch (error) {
+      console.error('Error in download handler:', error);
+      Alert.alert('Error', 'An unexpected error occurred.');
+    }
   };
 
-  const handleShare = () => {
-    Alert.alert(
-      'Share Prescription',
-      'Choose how you would like to share this prescription.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Email', onPress: () => console.log('Sharing via email...') },
-        { text: 'Message', onPress: () => console.log('Sharing via message...') }
-      ]
-    );
+  const handleShare = async () => {
+    try {
+      Alert.alert(
+        'Share Prescription',
+        'Choose how you would like to share this prescription.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { 
+            text: 'Open Link', 
+            onPress: async () => {
+              try {
+                const canOpen = await Linking.canOpenURL(prescription.downloadUrl);
+                if (canOpen) {
+                  await Linking.openURL(prescription.downloadUrl);
+                } else {
+                  Alert.alert('Error', 'Cannot open the prescription link.');
+                }
+              } catch (error) {
+                console.error('Error opening prescription URL:', error);
+                Alert.alert('Error', 'Failed to open prescription link.');
+              }
+            }
+          }
+        ]
+      );
+    } catch (error) {
+      console.error('Error in share handler:', error);
+      Alert.alert('Error', 'An unexpected error occurred.');
+    }
   };
 
   const handlePrint = () => {

@@ -1,9 +1,11 @@
+import { getUserPrescriptions, type Prescription as ApiPrescription } from '@/api/prescriptions';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import { ArrowLeft, Download, FileText, Search, User } from 'lucide-react-native';
-import React, { useState } from 'react';
-import { ActivityIndicator, Image, RefreshControl, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, Image, Linking, RefreshControl, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
-// Types for prescription data
+// Types for prescription data - mapping API response to UI
 type Prescription = {
   id: string;
   doctorName: string;
@@ -14,51 +16,61 @@ type Prescription = {
   downloadUrl: string;
 };
 
-// Mock data for prescriptions
-const mockPrescriptions: Prescription[] = [
-  {
-    id: '1',
-    doctorName: 'Dr. Sarath Perera',
-    doctorImage: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=150&h=150&fit=crop&crop=face',
-    prescriptionDate: '2024-10-15T10:30:00',
-    description: 'Prescription for anxiety and depression management. Continue with regular follow-ups.',
-    notes: 'Please bring this prescription to any registered pharmacy.',
-    downloadUrl: 'https://example.com/prescription1.pdf'
-  },
-  {
-    id: '2',
-    doctorName: 'Dr. Saman Rathnayake',
-    doctorImage: 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=150&h=150&fit=crop&crop=face',
-    prescriptionDate: '2024-09-28T14:15:00',
-    description: 'Vitamin supplements to support mental health and overall wellness.',
-    notes: 'Prescription has been used at City Pharmacy.',
-    downloadUrl: 'https://example.com/prescription2.pdf'
-  },
-  {
-    id: '3',
-    doctorName: 'Dr. Suranga Thennakoon',
-    doctorImage: 'https://images.unsplash.com/photo-1594824481882-0b2c9fedb2b3?w=150&h=150&fit=crop&crop=face',
-    prescriptionDate: '2024-08-20T09:00:00',
-    description: 'Sleep aid to help regulate sleep patterns and improve sleep quality.',
-    notes: 'Prescription validity has expired. Please consult doctor for new prescription.',
-    downloadUrl: 'https://example.com/prescription3.pdf'
-  },
-  {
-    id: '4',
-    doctorName: 'Dr. Namal Abeypussa',
-    doctorImage: 'https://images.unsplash.com/photo-1582750433449-648ed127bb54?w=150&h=150&fit=crop&crop=face',
-    prescriptionDate: '2024-07-10T11:45:00',
-    description: 'Initial prescription for depression treatment. Monitor for any side effects.',
-    notes: 'Follow-up consultation recommended.',
-    downloadUrl: 'https://example.com/prescription4.pdf'
-  }
-];
+// Helper function to map API response to UI format
+const mapApiPrescriptionToUI = (apiPrescription: ApiPrescription): Prescription => {
+  return {
+    id: apiPrescription.id.toString(),
+    doctorName: apiPrescription.psychiatrist.name,
+    doctorImage: apiPrescription.psychiatrist.avatar,
+    prescriptionDate: apiPrescription.createdAt,
+    description: apiPrescription.description,
+    downloadUrl: apiPrescription.prescription,
+    // You can add notes logic here if needed
+    notes: undefined
+  };
+};
 
 export default function PrescriptionHistory() {
-  const [prescriptions] = useState<Prescription[]>(mockPrescriptions);
-  const [loading] = useState<boolean>(false);
+  const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState<string>('');
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch prescriptions from API
+  const fetchPrescriptions = useCallback(async () => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      if (!token) {
+        setError('Authentication required. Please log in again.');
+        return;
+      }
+
+      const response = await getUserPrescriptions(token);
+      
+      if (response.success && response.data.prescriptions) {
+        const mappedPrescriptions = response.data.prescriptions.map(mapApiPrescriptionToUI);
+        setPrescriptions(mappedPrescriptions);
+        setError(null);
+      } else {
+        setError(response.message || 'Failed to fetch prescriptions');
+      }
+    } catch (error: any) {
+      console.error('Error fetching prescriptions:', error);
+      setError(error.message || 'Failed to fetch prescriptions');
+    }
+  }, []);
+
+  // Initial load
+  useEffect(() => {
+    const loadPrescriptions = async () => {
+      setLoading(true);
+      await fetchPrescriptions();
+      setLoading(false);
+    };
+    
+    loadPrescriptions();
+  }, [fetchPrescriptions]);
 
   const filteredPrescriptions = prescriptions.filter(prescription => {
     if (searchTerm && !prescription.doctorName.toLowerCase().includes(searchTerm.toLowerCase())) {
@@ -90,10 +102,39 @@ export default function PrescriptionHistory() {
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    // Simulate API call
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 1000);
+    await fetchPrescriptions();
+    setRefreshing(false);
+  };
+
+  const handleDownloadPrescription = async (prescriptionId: string, downloadUrl: string) => {
+    try {
+      Alert.alert(
+        'Download Prescription',
+        'This will open the prescription PDF in your browser.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { 
+            text: 'Open', 
+            onPress: async () => {
+              try {
+                const canOpen = await Linking.canOpenURL(downloadUrl);
+                if (canOpen) {
+                  await Linking.openURL(downloadUrl);
+                } else {
+                  Alert.alert('Error', 'Cannot open the prescription file. Please check your internet connection.');
+                }
+              } catch (error) {
+                console.error('Error opening prescription URL:', error);
+                Alert.alert('Error', 'Failed to open prescription file.');
+              }
+            }
+          }
+        ]
+      );
+    } catch (error) {
+      console.error('Error downloading prescription:', error);
+      Alert.alert('Error', 'Failed to download prescription. Please try again.');
+    }
   };
 
   if (loading) {
@@ -102,6 +143,28 @@ export default function PrescriptionHistory() {
         <View className="bg-white rounded-2xl p-8 shadow-lg items-center max-w-sm">
           <ActivityIndicator size="large" color="#2563EB" />
           <Text className="text-gray-700 text-lg font-medium mt-4">Loading prescriptions...</Text>
+        </View>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View className="flex-1 bg-gray-50 justify-center items-center">
+        <View className="bg-white rounded-2xl p-8 shadow-lg items-center max-w-sm">
+          <FileText size={48} color="#DC2626" />
+          <Text className="text-gray-700 text-lg font-medium mt-4">Error Loading Prescriptions</Text>
+          <Text className="text-gray-500 text-center mt-2">{error}</Text>
+          <TouchableOpacity
+            className="mt-4 bg-primary px-6 py-3 rounded-xl"
+            onPress={() => {
+              setError(null);
+              setLoading(true);
+              fetchPrescriptions().finally(() => setLoading(false));
+            }}
+          >
+            <Text className="text-white font-medium">Try Again</Text>
+          </TouchableOpacity>
         </View>
       </View>
     );
@@ -226,7 +289,7 @@ export default function PrescriptionHistory() {
                   
                   <TouchableOpacity 
                     className="flex-1 ml-2 py-2 bg-primary rounded-lg items-center justify-center flex-row"
-                    onPress={() => console.log('Download prescription', prescription.id)}
+                    onPress={() => handleDownloadPrescription(prescription.id, prescription.downloadUrl)}
                   >
                     <Download size={16} color="#FFFFFF" />
                     <Text className="text-white font-medium text-sm ml-2">Download</Text>

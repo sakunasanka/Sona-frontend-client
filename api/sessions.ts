@@ -4,7 +4,7 @@ import { apiRequest } from "./api";
 
 let API_BASE_URL = '';
 if (Platform.OS === 'android' || Platform.OS === 'ios') {
-  API_BASE_URL = API_URL + ':' + PORT + '/api';
+  API_BASE_URL = API_URL + '' + PORT + '/api';
 } else {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   API_BASE_URL = 'http://localhost:' + PORT + '/api';

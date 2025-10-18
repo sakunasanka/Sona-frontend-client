@@ -34,6 +34,7 @@ export const useChat = (
   const [isSending, setIsSending] = useState(false);
   
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const loadedMessageIds = useRef<Set<number>>(new Set());
 
   const transformMessage = (backendMessage: any): ChatMessage => {
     console.log('🔧 Transforming message:', backendMessage); // Debug log
@@ -73,6 +74,11 @@ export const useChat = (
           messages = response.data.message.map(transformMessage);
           hasMore = response.data.pagination?.hasMore || false;
           console.log('✅ Successfully processed', messages.length, 'messages');
+          
+          // Track loaded message IDs to prevent duplicates from WebSocket
+          loadedMessageIds.current.clear();
+          messages.forEach(msg => loadedMessageIds.current.add(Number(msg.id)));
+          console.log('📝 Tracked message IDs:', Array.from(loadedMessageIds.current));
         } else {
           console.warn('❌ Unexpected response structure:', response);
           messages = [];
@@ -115,28 +121,40 @@ export const useChat = (
     // WebSocket event listeners
     const unsubscribeMessage = chatWebSocketService.onMessage((message) => {
       setMessages(prev => {
-        const messageExists = prev.some(msg => Number(msg.id) === Number(message.id));
-        if (messageExists) return prev;
-        
+        const messageId = Number(message.id);
         const transformed = transformMessage(message);
         
-        // Check if this is a confirmation of an optimistic message
-        // Look for optimistic messages with same content and sender
-        const optimisticIndex = prev.findIndex(msg => 
-          msg.senderId === transformed.senderId && 
-          msg.message === transformed.message &&
-          msg.id > Date.now() - 60000 // Temporary ID from last 60 seconds
-        );
+        console.log('🔍 WebSocket received message:', {
+          id: messageId,
+          senderId: transformed.senderId,
+          currentUserId: currentUserId,
+          isFromCurrentUser: transformed.senderId === currentUserId,
+          message: transformed.message,
+          alreadyTracked: loadedMessageIds.current.has(messageId)
+        });
         
-        if (optimisticIndex !== -1) {
-          // Replace optimistic message with confirmed message
-          const updated = [...prev];
-          updated[optimisticIndex] = transformed;
-          console.log('✅ Replaced optimistic message with confirmed message');
-          return updated;
+        // Skip messages from current user (they're handled by HTTP response)
+        if (transformed.senderId === currentUserId) {
+          console.log('⏭️ Skipping WebSocket message from current user (handled by HTTP):', messageId);
+          return prev;
         }
         
-        // Add new message if no optimistic match found
+        // Check if this message was already processed
+        if (loadedMessageIds.current.has(messageId)) {
+          console.log('⏭️ WebSocket message already processed, skipping:', messageId);
+          return prev;
+        }
+        
+        // Check for existing message by ID in current state
+        const messageExists = prev.some(msg => Number(msg.id) === messageId);
+        if (messageExists) {
+          console.log('⏭️ WebSocket message already exists in state, skipping:', messageId);
+          return prev;
+        }
+        
+        // Add new message from other users
+        loadedMessageIds.current.add(messageId);
+        console.log('📨 Adding new WebSocket message from other user:', messageId);
         return [...prev, transformed];
       });
     });
@@ -200,10 +218,10 @@ export const useChat = (
     
     setIsSending(true);
     
-    // Create temporary message ID for optimistic update
-    const tempId = Date.now();
+    // Create temporary message ID for optimistic update (use negative ID to distinguish from server IDs)
+    const tempId = -(Date.now());
     
-    // Create optimistic message to show immediately
+    // Create optimistic message to show immediately (user's text input)
     const optimisticMessage: ChatMessage = {
       id: tempId,
       roomId: chatId,
@@ -216,8 +234,9 @@ export const useChat = (
       avatarColor: undefined
     };
     
-    // Add message immediately to UI (optimistic update)
+    // Add optimistic message immediately to UI
     setMessages(prev => [...prev, optimisticMessage]);
+    console.log('📤 Added optimistic message:', tempId);
     
     try {
       // Send via HTTP request
@@ -230,19 +249,29 @@ export const useChat = (
       
       console.log('✅ Message sent successfully via HTTP');
       
-      // If the HTTP response contains the message, replace the optimistic message
+      // When server responds, remove optimistic message and add server message
       if (response && response.success && response.data) {
-        const confirmedMessage = transformMessage(response.data);
+        const serverMessage = transformMessage(response.data);
+        const messageId = Number(serverMessage.id);
+        
         setMessages(prev => {
-          const optimisticIndex = prev.findIndex(msg => msg.id === tempId);
-          if (optimisticIndex !== -1) {
-            const updated = [...prev];
-            updated[optimisticIndex] = confirmedMessage;
-            console.log('✅ Replaced optimistic message with HTTP response');
-            return updated;
-          }
-          return prev;
+          // Remove optimistic message and add server message
+          const filtered = prev.filter(msg => msg.id !== tempId);
+          const updated = [...filtered, serverMessage];
+          
+          // Track server message ID to prevent WebSocket duplicates
+          loadedMessageIds.current.add(messageId);
+          console.log('🔄 Replaced optimistic message with server response:', {
+            removedOptimistic: tempId,
+            addedServer: messageId
+          });
+          
+          return updated;
         });
+      } else {
+        // If no server response, remove optimistic message
+        setMessages(prev => prev.filter(msg => msg.id !== tempId));
+        console.log('❌ No server response, removed optimistic message:', tempId);
       }
       
       // Also send via WebSocket for real-time updates to other users

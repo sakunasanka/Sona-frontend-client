@@ -54,7 +54,7 @@ export const getChatMessages = async (
     });
     return response;
   } catch (error) {
-    // console.error('Error fetching chat messages:', error);
+    console.error('Error fetching chat messages:', error);
     throw error;
   }
 };

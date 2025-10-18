@@ -1,5 +1,5 @@
 // api/mood.ts
-import { API_URL, PORT } from '@/config/env';
+import { API_URL, PORT, host, server_URL } from '@/config/env';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import { getProfile } from './auth';
@@ -18,7 +18,14 @@ const getCurrentLocalDate = (): string => {
 };
 
 // Always use configured host; avoid localhost fallbacks that break on web/device
-const API_BASE_URL = `${API_URL}:${PORT}/api`;
+let API_BASE_URL = '';
+
+if(host && server_URL){
+  API_BASE_URL = server_URL + '/api';
+  console.log("Using server_URL from config/env.ts as API_BASE_URL:", API_BASE_URL);
+}else {
+  API_BASE_URL = API_URL + ':' + PORT + '/api';
+}
 
 export interface DailyMood {
   id?: string;

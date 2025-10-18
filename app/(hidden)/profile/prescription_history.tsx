@@ -1,17 +1,14 @@
 import { router } from 'expo-router';
-import { ArrowLeft, Clock, Download, FileText, Filter, Pill, Search, User } from 'lucide-react-native';
+import { ArrowLeft, Download, FileText, Search, User } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { ActivityIndicator, Image, RefreshControl, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 // Types for prescription data
-type PrescriptionStatus = 'new' | 'completed' | 'expired';
-
 type Prescription = {
   id: string;
   doctorName: string;
   doctorImage?: string;
   prescriptionDate: string;
-  status: PrescriptionStatus;
   description: string;
   notes?: string;
   downloadUrl: string;
@@ -24,7 +21,6 @@ const mockPrescriptions: Prescription[] = [
     doctorName: 'Dr. Sarath Perera',
     doctorImage: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=150&h=150&fit=crop&crop=face',
     prescriptionDate: '2024-10-15T10:30:00',
-    status: 'new',
     description: 'Prescription for anxiety and depression management. Continue with regular follow-ups.',
     notes: 'Please bring this prescription to any registered pharmacy.',
     downloadUrl: 'https://example.com/prescription1.pdf'
@@ -34,7 +30,6 @@ const mockPrescriptions: Prescription[] = [
     doctorName: 'Dr. Saman Rathnayake',
     doctorImage: 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=150&h=150&fit=crop&crop=face',
     prescriptionDate: '2024-09-28T14:15:00',
-    status: 'completed',
     description: 'Vitamin supplements to support mental health and overall wellness.',
     notes: 'Prescription has been used at City Pharmacy.',
     downloadUrl: 'https://example.com/prescription2.pdf'
@@ -44,7 +39,6 @@ const mockPrescriptions: Prescription[] = [
     doctorName: 'Dr. Suranga Thennakoon',
     doctorImage: 'https://images.unsplash.com/photo-1594824481882-0b2c9fedb2b3?w=150&h=150&fit=crop&crop=face',
     prescriptionDate: '2024-08-20T09:00:00',
-    status: 'expired',
     description: 'Sleep aid to help regulate sleep patterns and improve sleep quality.',
     notes: 'Prescription validity has expired. Please consult doctor for new prescription.',
     downloadUrl: 'https://example.com/prescription3.pdf'
@@ -54,9 +48,8 @@ const mockPrescriptions: Prescription[] = [
     doctorName: 'Dr. Namal Abeypussa',
     doctorImage: 'https://images.unsplash.com/photo-1582750433449-648ed127bb54?w=150&h=150&fit=crop&crop=face',
     prescriptionDate: '2024-07-10T11:45:00',
-    status: 'expired',
     description: 'Initial prescription for depression treatment. Monitor for any side effects.',
-    notes: 'Prescription validity has expired. Follow-up consultation recommended.',
+    notes: 'Follow-up consultation recommended.',
     downloadUrl: 'https://example.com/prescription4.pdf'
   }
 ];
@@ -65,22 +58,9 @@ export default function PrescriptionHistory() {
   const [prescriptions] = useState<Prescription[]>(mockPrescriptions);
   const [loading] = useState<boolean>(false);
   const [refreshing, setRefreshing] = useState<boolean>(false);
-  const [activeFilter, setActiveFilter] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState<string>('');
-  const [showFilters, setShowFilters] = useState<boolean>(false);
-
-  const filterOptions = [
-    { id: 'all', label: 'All', color: 'bg-gray-100 text-gray-700' },
-    { id: 'new', label: 'New', color: 'bg-green-100 text-green-700' },
-    { id: 'completed', label: 'Completed', color: 'bg-blue-100 text-blue-700' },
-    { id: 'expired', label: 'Expired', color: 'bg-red-100 text-red-700' }
-  ];
 
   const filteredPrescriptions = prescriptions.filter(prescription => {
-    if (activeFilter !== 'all' && prescription.status !== (activeFilter as PrescriptionStatus)) {
-      return false;
-    }
-    
     if (searchTerm && !prescription.doctorName.toLowerCase().includes(searchTerm.toLowerCase())) {
       return false;
     }
@@ -98,24 +78,6 @@ export default function PrescriptionHistory() {
       });
     } catch (e) {
       return 'Invalid date';
-    }
-  };
-
-  const getStatusColor = (status: PrescriptionStatus) => {
-    switch (status) {
-      case 'new': return 'bg-green-100 text-green-700';
-      case 'completed': return 'bg-blue-100 text-blue-700';
-      case 'expired': return 'bg-red-100 text-red-700';
-      default: return 'bg-gray-100 text-gray-700';
-    }
-  };
-
-  const getStatusIcon = (status: PrescriptionStatus) => {
-    switch (status) {
-      case 'new': return <Pill size={12} color="#059669" />;
-      case 'completed': return <FileText size={12} color="#2563EB" />;
-      case 'expired': return <Clock size={12} color="#DC2626" />;
-      default: return <FileText size={12} color="#6B7280" />;
     }
   };
 
@@ -156,12 +118,6 @@ export default function PrescriptionHistory() {
           >
             <ArrowLeft size={20} color="#374151" />
           </TouchableOpacity>
-          <TouchableOpacity 
-            className="bg-gray-100 p-2 rounded-full"
-            onPress={() => setShowFilters(!showFilters)}
-          >
-            <Filter size={20} color="#2563EB" />
-          </TouchableOpacity>
         </View>
         <Text className="text-gray-900 text-2xl font-bold ml-1">Prescription History</Text>
         <Text className="text-gray-500 text-sm ml-1 mt-1">Manage your medical prescriptions</Text>
@@ -181,7 +137,9 @@ export default function PrescriptionHistory() {
       >
         {/* Search Bar */}
         <View className="flex-row items-center bg-white rounded-xl shadow-sm p-3 mb-4">
-          <Search size={18} color="#2563EB" className="mr-2 ml-1" />
+          <View className="mr-2 ml-1">
+            <Search size={18} color="#2563EB" />
+          </View>
           <TextInput
             placeholder="Search by doctor name"
             className="flex-1 text-gray-700 py-1"
@@ -199,33 +157,6 @@ export default function PrescriptionHistory() {
           )}
         </View>
 
-        {/* Filter Tabs */}
-        <ScrollView 
-          horizontal 
-          showsHorizontalScrollIndicator={false} 
-          className="mb-4"
-          contentContainerStyle={{ paddingHorizontal: 2 }}
-        >
-          {filterOptions.map((tab) => (
-            <TouchableOpacity
-              key={tab.id}
-              onPress={() => setActiveFilter(tab.id)}
-              className={`mr-3 px-5 py-2.5 rounded-full ${
-                activeFilter === tab.id 
-                  ? 'bg-primary shadow-sm' 
-                  : 'bg-white border border-gray-200'
-              }`}
-              style={activeFilter === tab.id ? { elevation: 2 } : {}}
-            >
-              <Text className={`font-medium text-sm ${
-                activeFilter === tab.id ? 'text-white' : 'text-gray-700'
-              }`}>
-                {tab.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-
         {/* Prescriptions List */}
         {filteredPrescriptions.length === 0 ? (
           <View className="items-center justify-center py-12">
@@ -234,9 +165,7 @@ export default function PrescriptionHistory() {
             </View>
             <Text className="text-gray-700 text-xl font-semibold mt-4">No prescriptions found</Text>
             <Text className="text-gray-500 text-center mt-2 px-8 leading-5">
-              {activeFilter === 'all' 
-                ? "You don't have any prescriptions in your history yet."
-                : `No ${activeFilter} prescriptions found.`}
+              You don't have any prescriptions in your history yet.
             </Text>
           </View>
         ) : (
@@ -250,14 +179,6 @@ export default function PrescriptionHistory() {
               >
                 {/* Prescription Header */}
                 <View className="flex-row items-center justify-between mb-4">
-                  <View className="flex-row items-center">
-                    <View className={`px-3 py-1 rounded-full flex-row items-center ${getStatusColor(prescription.status)}`}>
-                      {getStatusIcon(prescription.status)}
-                      <Text className="text-xs font-medium ml-1 capitalize">
-                        {prescription.status}
-                      </Text>
-                    </View>
-                  </View>
                   <Text className="text-gray-500 text-sm">
                     {formatDate(prescription.prescriptionDate)}
                   </Text>

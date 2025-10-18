@@ -1,11 +1,9 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { ArrowLeft, Clock, Download, FileText, Pill, Printer, Share, User } from 'lucide-react-native';
+import { ArrowLeft, Download, FileText, Printer, Share, User } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { Alert, Image, SafeAreaView, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 
 // Types for prescription data
-type PrescriptionStatus = 'new' | 'completed' | 'expired';
-
 type Prescription = {
   id: string;
   doctorName: string;
@@ -13,7 +11,6 @@ type Prescription = {
   doctorLicense?: string;
   doctorContact?: string;
   prescriptionDate: string;
-  status: PrescriptionStatus;
   description: string;
   notes?: string;
   diagnosis?: string;
@@ -30,7 +27,6 @@ const mockPrescriptions: Prescription[] = [
     doctorLicense: 'MD-12345',
     doctorContact: 'sarath.perera@healthcenter.com',
     prescriptionDate: '2024-10-15T10:30:00',
-    status: 'new',
     prescriptionNumber: 'RX-2024-001',
     diagnosis: 'Generalized Anxiety Disorder, Major Depressive Disorder',
     description: 'Prescription for anxiety and depression management. Continue with regular follow-ups and monitor for side effects.',
@@ -44,7 +40,6 @@ const mockPrescriptions: Prescription[] = [
     doctorLicense: 'MD-67890',
     doctorContact: 'saman.rathnayake@familymed.com',
     prescriptionDate: '2024-09-28T14:15:00',
-    status: 'completed',
     prescriptionNumber: 'RX-2024-002',
     diagnosis: 'Vitamin D Deficiency, Magnesium Deficiency',
     description: 'Vitamin supplements to support mental health and overall wellness. Recheck levels after 6 weeks.',
@@ -58,7 +53,6 @@ const mockPrescriptions: Prescription[] = [
     doctorLicense: 'PSY-11111',
     doctorContact: 'suranga.thennakoon@mindhealth.com',
     prescriptionDate: '2024-08-20T09:00:00',
-    status: 'expired',
     prescriptionNumber: 'RX-2024-003',
     diagnosis: 'Insomnia, Sleep Disorder',
     description: 'Sleep aid to help regulate sleep patterns and improve sleep quality. Part of comprehensive sleep hygiene plan.',
@@ -72,7 +66,6 @@ const mockPrescriptions: Prescription[] = [
     doctorLicense: 'MD-22222',
     doctorContact: 'namal.abeypussa@mentalhealth.org',
     prescriptionDate: '2024-07-10T11:45:00',
-    status: 'expired',
     prescriptionNumber: 'RX-2024-004',
     diagnosis: 'Major Depressive Disorder',
     description: 'Initial prescription for depression treatment. Start with low dose and monitor for side effects.',
@@ -120,23 +113,7 @@ export default function PrescriptionDetail() {
     }
   };
 
-  const getStatusColor = (status: PrescriptionStatus) => {
-    switch (status) {
-      case 'new': return 'bg-green-100 text-green-700 border-green-200';
-      case 'completed': return 'bg-blue-100 text-blue-700 border-blue-200';
-      case 'expired': return 'bg-red-100 text-red-700 border-red-200';
-      default: return 'bg-gray-100 text-gray-700 border-gray-200';
-    }
-  };
 
-  const getStatusIcon = (status: PrescriptionStatus) => {
-    switch (status) {
-      case 'new': return <Pill size={16} color="#059669" />;
-      case 'completed': return <FileText size={16} color="#2563EB" />;
-      case 'expired': return <Clock size={16} color="#DC2626" />;
-      default: return <FileText size={16} color="#6B7280" />;
-    }
-  };
 
   const handleDownload = () => {
     Alert.alert(
@@ -206,6 +183,9 @@ export default function PrescriptionDetail() {
             {prescription.prescriptionNumber}
           </Text>
         )}
+        <Text className="text-gray-500 text-sm ml-1 mt-1">
+          Issued: {formatDate(prescription.prescriptionDate)}
+        </Text>
       </View>
 
       <ScrollView 
@@ -213,21 +193,6 @@ export default function PrescriptionDetail() {
         contentContainerStyle={{ paddingBottom: 20 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Status Card */}
-        <View className="bg-white rounded-xl p-5 mb-4 shadow-sm border border-gray-200">
-          <View className="flex-row items-center justify-between mb-3">
-            <View className={`px-4 py-2 rounded-full flex-row items-center border ${getStatusColor(prescription.status)}`}>
-              {getStatusIcon(prescription.status)}
-              <Text className="text-sm font-medium ml-2 capitalize">
-                {prescription.status}
-              </Text>
-            </View>
-            <Text className="text-gray-500 text-sm">
-              Issued: {formatDate(prescription.prescriptionDate)}
-            </Text>
-          </View>
-        </View>
-
         {/* Doctor Information */}
         <View className="bg-white rounded-xl p-5 mb-4 shadow-sm border border-gray-200">
           <Text className="text-lg font-semibold text-gray-900 mb-4">Doctor Information</Text>

@@ -64,3 +64,32 @@ export const applyStudentPackage = async (token: string, data: {
   });
 };
 
+export const checkSessionFeedback = async (token: string, sessionId: string) => {
+  return apiRequest({
+    method: 'get',
+    path: `/users/reviews/session/${sessionId}`,
+    token,
+  });
+};
+
+export const getMostRecentSessionNeedingFeedback = async (token: string) => {
+  return apiRequest({
+    method: 'get',
+    path: '/users/reviews/session/most-recent',
+    token,
+  });
+};
+
+export const submitReview = async (token: string, reviewData: {
+  session_id: number;
+  rating: number;
+  comment: string;
+}) => {
+  return apiRequest({
+    method: 'post',
+    path: 'users/reviews',
+    data: reviewData,
+    token,
+  });
+};
+

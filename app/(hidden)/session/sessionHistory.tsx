@@ -132,7 +132,7 @@ export default function SessionHistory() {
                     counselorImage: counselor.avatar || '',
                     specialties: counselor.specialties || ['Counseling'],
                     rating: counselor.rating || 5,
-                    status: getSessionStatus(`${session.date}T${session.timeSlot || '00:00'}:00`),
+                    status: mapSessionStatus(session.status || 'upcoming'),
                     timeSlot: session.timeSlot || '',
                     sessionStatus: session.status || 'scheduled',
                     isStudentSession,
@@ -322,6 +322,22 @@ export default function SessionHistory() {
         } catch (e) {
             console.warn('Invalid date/time:', e);
             return 'Invalid time';
+        }
+    };
+    
+    const mapSessionStatus = (apiStatus: string): SessionStatus => {
+        // Map API status to UI status
+        switch (apiStatus.toLowerCase()) {
+            case 'completed':
+                return 'past';
+            case 'cancelled':
+                return 'past';
+            case 'upcoming':
+                return 'upcoming';
+            case 'ongoing':
+                return 'upcoming'; // Ongoing sessions are still active
+            default:
+                return 'upcoming';
         }
     };
     
@@ -525,7 +541,7 @@ export default function SessionHistory() {
                     </View>
                     
                     {/* Filter Tabs */}
-                    <ScrollView 
+                    {/* <ScrollView 
                         horizontal 
                         showsHorizontalScrollIndicator={false} 
                         className="mb-4"
@@ -549,7 +565,7 @@ export default function SessionHistory() {
                                 </Text>
                             </TouchableOpacity>
                         ))}
-                    </ScrollView>
+                    </ScrollView> */}
                     
                     {/* Advanced Filters */}
                     {showFilters && (
@@ -569,7 +585,7 @@ export default function SessionHistory() {
                                 </TouchableOpacity>
                                 
                                 {showCounselorDropdown && (
-                                    <View className="bg-white mt-2 rounded-xl shadow-lg absolute top-20 left-0 right-0 z-10 border border-gray-100 overflow-hidden">
+                                    <View className="bg-white mt-2 rounded-xl shadow-lg absolute top-20 left-0 right-0 z-[100] border border-gray-100 overflow-hidden">
                                         {counselors.map((counselor) => (
                                             <TouchableOpacity
                                                 key={counselor.value}
@@ -840,7 +856,7 @@ export default function SessionHistory() {
     </LinearGradient>
 </TouchableOpacity>
                 )}
-            </ScrollView>     
+            </ScrollView>
         </View>
     );
 }

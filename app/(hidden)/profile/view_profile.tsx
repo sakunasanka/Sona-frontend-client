@@ -4,7 +4,7 @@ import { usePlatformFee } from '@/contexts/PlatformFeeContext';
 import { getDisplayName } from '@/util/asyncName';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router, useFocusEffect } from 'expo-router';
-import { AlertCircle, AlertTriangle, ArrowLeft, BadgeCheck, Edit, GraduationCap, HelpCircle, History, LogOut, Shield } from 'lucide-react-native';
+import { AlertCircle, AlertTriangle, ArrowLeft, BadgeCheck, Edit, FileText, GraduationCap, HelpCircle, History, LogOut, Shield } from 'lucide-react-native';
 import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Image, SafeAreaView, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import PlatformFeePayment from '../../../components/PlatformFeePayment';
@@ -214,6 +214,16 @@ export default function Profile() {
               <History size={20} color="#2563EB" />
             </View>
             <Text className="text-base text-gray-900">Counselling sessions</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            className="flex-row items-center py-4 border-b border-gray-100"
+            onPress={() => router.push('/(hidden)/profile/prescription_history')}
+          >
+            <View className="w-9 h-9 rounded-full bg-blue-50 justify-center items-center mr-4">
+              <FileText size={20} color="#2563EB" />
+            </View>
+            <Text className="text-base text-gray-900">Prescription history</Text>
           </TouchableOpacity>
           
           {/* <TouchableOpacity 

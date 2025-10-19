@@ -6,20 +6,16 @@ import { hasCompletedPHQ9ThisPeriod } from '@/api/questionnaire';
 import CloudFloatingAnimation from '@/components/Cloud';
 import FocusAnimation from '@/components/Focused';
 import { icons } from '@/constants/icons';
+import { useShake } from '@/hooks/useShake';
 import { getDisplayName } from '@/util/asyncName';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
-import { FlatList, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, FlatList, Text, TouchableOpacity, View } from 'react-native';
 import { hasSubmittedTodaysMood } from '../../api/mood';
+import EmergencyPopup, { EmergencyContactData } from '../EmergencyPopUp';
 import TopBar from '../TopBar';
-
-const moodData = [
-  { icon: icons.happy, text: 'Happy', color: 'bg-buttonPink-100 w-32 h-32', mood: 'happy' },
-  { icon: icons.calm2, text: 'Calm', color: 'bg-buttonOrange-500 w-32 h-32', mood: 'calm' },
-  { icon: icons.focus, text: 'Focused', color: 'bg-buttonGreen-500 w-32 h-32', mood: 'focused' },
-  { icon: icons.relax, text: 'Relaxed', color: 'bg-buttonBlue-500 w-32 h-32', mood: 'relaxed' },
-]
 
 const baseHomescreenCards = [
   {
@@ -69,6 +65,54 @@ export default function RegularHome() {
   const [showWellBeingCard, setShowWellBeingCard] = useState(true);
   const [homescreenCards, setHomescreenCards] = useState(baseHomescreenCards);
   const [hasSubmittedMoodToday, setHasSubmittedMoodToday] = useState(false);
+  const [isEmergencyPopupVisible, setEmergencyPopupVisible] = useState(false);
+  const [token, setToken] = useState<string>('');
+  
+  // Fetch token on mount
+  useEffect(() => {
+    const fetchToken = async () => {
+      const storedToken = await AsyncStorage.getItem('token');
+      if (storedToken) {
+        setToken(storedToken);
+      }
+    };
+
+    fetchToken();
+  }, []);
+
+  //shake detection code. only work in this screen
+  const handleShake = () => {
+    // Show the popup *only if* it's not already visible
+    console.log("Shake detected!");
+    if (!isEmergencyPopupVisible) {
+      setEmergencyPopupVisible(true);
+    }
+  };
+
+  const [resetShake] = useShake(handleShake);
+
+  const handleEmergencyContact = (data: EmergencyContactData) => {
+    console.log('EMERGENCY DATA:', data);
+    // TODO: Send this data to your API
+    
+    // Close the popup and reset shake detection
+    setEmergencyPopupVisible(false);
+    resetShake();
+    
+    Alert.alert("Support Notified", "Your emergency request has been sent.");
+  };
+
+  const handleImFine = () => {
+    console.log("User is fine.");
+    setEmergencyPopupVisible(false);
+    resetShake();
+  };
+
+  const handleClose = () => {
+    console.log("Popup closed without action.");
+    setEmergencyPopupVisible(false);
+    resetShake();
+  };
 
   // Check if user has submitted today's mood
   useEffect(() => {
@@ -127,25 +171,7 @@ export default function RegularHome() {
     }, [])
   );
 
-  const handleMoodPress = (mood: string) => {
-    switch (mood) {
-      case 'happy':
-        setShowPinkOverlay(true);
-        break;
-      case 'calm':
-        setShowFallingLeaves(true);
-        break;
-      case 'focused':
-        setFocused(true);
-        break;
-      case 'relaxed':
-        setShowRelaxedAnimation(true);
-        console.log("Relaxed mood selected");
-        break;
-      default:
-        break;
-    }
-  };
+  
 
   const handlePinkOverlayComplete = () => {
     setShowPinkOverlay(false);
@@ -237,6 +263,17 @@ export default function RegularHome() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 24 }}
       />
+
+        {  
+        isEmergencyPopupVisible && (
+          <EmergencyPopup
+            visible={isEmergencyPopupVisible}
+            onClose={handleClose}
+            onEmergencyContact={handleEmergencyContact}
+            onImFine={handleImFine}
+            token={token}
+          />
+        )}
 
       <PinkOverlay
         visible={showPinkOverlay}

@@ -23,7 +23,8 @@ export const useChat = (
   chatId: number,
   currentUserId: number,
   currentUserName: string,
-  token?: string
+  token?: string,
+  shouldInitialize: boolean = true
 ) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [typingUsers, setTypingUsers] = useState<TypingUser[]>([]);
@@ -34,6 +35,7 @@ export const useChat = (
   const [isSending, setIsSending] = useState(false);
   
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const loadedMessageIds = useRef<Set<number>>(new Set());
 
   const transformMessage = (backendMessage: any): ChatMessage => {
     console.log('🔧 Transforming message:', backendMessage); // Debug log
@@ -56,7 +58,14 @@ export const useChat = (
 
   // Initialize chat
   useEffect(() => {
+    // Only initialize if we should and have a valid token
+    if (!shouldInitialize || !token) {
+      console.log('🚫 Skipping chat initialization:', { shouldInitialize, hasToken: !!token });
+      return;
+    }
+
     const initializeChat = async () => {
+      console.log('🚀 Initializing chat with token...');
       setIsLoading(true);
       try {
         // Load initial messages
@@ -73,6 +82,11 @@ export const useChat = (
           messages = response.data.message.map(transformMessage);
           hasMore = response.data.pagination?.hasMore || false;
           console.log('✅ Successfully processed', messages.length, 'messages');
+          
+          // Track loaded message IDs to prevent duplicates from WebSocket
+          loadedMessageIds.current.clear();
+          messages.forEach(msg => loadedMessageIds.current.add(Number(msg.id)));
+          console.log('📝 Tracked message IDs:', Array.from(loadedMessageIds.current));
         } else {
           console.warn('❌ Unexpected response structure:', response);
           messages = [];
@@ -115,28 +129,40 @@ export const useChat = (
     // WebSocket event listeners
     const unsubscribeMessage = chatWebSocketService.onMessage((message) => {
       setMessages(prev => {
-        const messageExists = prev.some(msg => Number(msg.id) === Number(message.id));
-        if (messageExists) return prev;
-        
+        const messageId = Number(message.id);
         const transformed = transformMessage(message);
         
-        // Check if this is a confirmation of an optimistic message
-        // Look for optimistic messages with same content and sender
-        const optimisticIndex = prev.findIndex(msg => 
-          msg.senderId === transformed.senderId && 
-          msg.message === transformed.message &&
-          msg.id > Date.now() - 60000 // Temporary ID from last 60 seconds
-        );
+        console.log('🔍 WebSocket received message:', {
+          id: messageId,
+          senderId: transformed.senderId,
+          currentUserId: currentUserId,
+          isFromCurrentUser: transformed.senderId === currentUserId,
+          message: transformed.message,
+          alreadyTracked: loadedMessageIds.current.has(messageId)
+        });
         
-        if (optimisticIndex !== -1) {
-          // Replace optimistic message with confirmed message
-          const updated = [...prev];
-          updated[optimisticIndex] = transformed;
-          console.log('✅ Replaced optimistic message with confirmed message');
-          return updated;
+        // Skip messages from current user (they're handled by HTTP response)
+        if (transformed.senderId === currentUserId) {
+          console.log('⏭️ Skipping WebSocket message from current user (handled by HTTP):', messageId);
+          return prev;
         }
         
-        // Add new message if no optimistic match found
+        // Check if this message was already processed
+        if (loadedMessageIds.current.has(messageId)) {
+          console.log('⏭️ WebSocket message already processed, skipping:', messageId);
+          return prev;
+        }
+        
+        // Check for existing message by ID in current state
+        const messageExists = prev.some(msg => Number(msg.id) === messageId);
+        if (messageExists) {
+          console.log('⏭️ WebSocket message already exists in state, skipping:', messageId);
+          return prev;
+        }
+        
+        // Add new message from other users
+        loadedMessageIds.current.add(messageId);
+        console.log('📨 Adding new WebSocket message from other user:', messageId);
         return [...prev, transformed];
       });
     });
@@ -169,16 +195,28 @@ export const useChat = (
       
       chatWebSocketService.disconnect();
     };
-  }, [chatId, currentUserId, token]);
+  }, [chatId, currentUserId, token, shouldInitialize]);
 
   // Load older messages (pagination)
   const loadOlderMessages = useCallback(async () => {
-    if (!hasMoreMessages || isLoadingMore || messages.length === 0) return;
+    // Validate prerequisites
+    if (!hasMoreMessages || isLoadingMore || messages.length === 0) {
+      console.log('🚫 Skip loading older messages:', { hasMoreMessages, isLoadingMore, messageCount: messages.length });
+      return;
+    }
+
+    // Validate authentication
+    if (!shouldInitialize || !token) {
+      console.log('🚫 Cannot load older messages: authentication required', { shouldInitialize, hasToken: !!token });
+      return;
+    }
 
     setIsLoadingMore(true);
     try {
       const oldestMessageId = messages[0]?.id;
-      const response = await getOlderMessages(chatId, oldestMessageId);
+      console.log('📜 Loading older messages before:', oldestMessageId);
+      
+      const response = await getOlderMessages(chatId, oldestMessageId, 50, token);
       
       // Add older messages to the beginning of the array
       // Assuming older messages API returns them in ascending order (oldest first)
@@ -186,24 +224,32 @@ export const useChat = (
         ...response.data.map(transformMessage),
         ...prev
       ]);
-      setHasMoreMessages(response.pagination.hasMore);
+      setHasMoreMessages(response.pagination?.hasMore || false);
+      
+      console.log('✅ Loaded', response.data.length, 'older messages');
     } catch (error) {
       console.error('Error loading older messages:', error);
     } finally {
       setIsLoadingMore(false);
     }
-  }, [chatId, hasMoreMessages, isLoadingMore, messages]);
+  }, [chatId, hasMoreMessages, isLoadingMore, messages, shouldInitialize, token]);
 
   // Send message
   const sendMessage = useCallback(async (text: string) => {
     if (!text.trim() || isSending) return; // Don't send empty messages or while sending
     
+    // Validate authentication
+    if (!shouldInitialize || !token) {
+      console.log('🚫 Cannot send message: authentication required', { shouldInitialize, hasToken: !!token });
+      return;
+    }
+    
     setIsSending(true);
     
-    // Create temporary message ID for optimistic update
-    const tempId = Date.now();
+    // Create temporary message ID for optimistic update (use negative ID to distinguish from server IDs)
+    const tempId = -(Date.now());
     
-    // Create optimistic message to show immediately
+    // Create optimistic message to show immediately (user's text input)
     const optimisticMessage: ChatMessage = {
       id: tempId,
       roomId: chatId,
@@ -216,8 +262,9 @@ export const useChat = (
       avatarColor: undefined
     };
     
-    // Add message immediately to UI (optimistic update)
+    // Add optimistic message immediately to UI
     setMessages(prev => [...prev, optimisticMessage]);
+    console.log('📤 Added optimistic message:', tempId);
     
     try {
       // Send via HTTP request
@@ -230,19 +277,29 @@ export const useChat = (
       
       console.log('✅ Message sent successfully via HTTP');
       
-      // If the HTTP response contains the message, replace the optimistic message
+      // When server responds, remove optimistic message and add server message
       if (response && response.success && response.data) {
-        const confirmedMessage = transformMessage(response.data);
+        const serverMessage = transformMessage(response.data);
+        const messageId = Number(serverMessage.id);
+        
         setMessages(prev => {
-          const optimisticIndex = prev.findIndex(msg => msg.id === tempId);
-          if (optimisticIndex !== -1) {
-            const updated = [...prev];
-            updated[optimisticIndex] = confirmedMessage;
-            console.log('✅ Replaced optimistic message with HTTP response');
-            return updated;
-          }
-          return prev;
+          // Remove optimistic message and add server message
+          const filtered = prev.filter(msg => msg.id !== tempId);
+          const updated = [...filtered, serverMessage];
+          
+          // Track server message ID to prevent WebSocket duplicates
+          loadedMessageIds.current.add(messageId);
+          console.log('🔄 Replaced optimistic message with server response:', {
+            removedOptimistic: tempId,
+            addedServer: messageId
+          });
+          
+          return updated;
         });
+      } else {
+        // If no server response, remove optimistic message
+        setMessages(prev => prev.filter(msg => msg.id !== tempId));
+        console.log('❌ No server response, removed optimistic message:', tempId);
       }
       
       // Also send via WebSocket for real-time updates to other users
@@ -269,7 +326,7 @@ export const useChat = (
     
     // Stop typing when message is sent
     chatWebSocketService.sendTypingStatus(false, chatId, currentUserId, currentUserName);
-  }, [chatId, currentUserId, currentUserName, token, isSending]);
+  }, [chatId, currentUserId, currentUserName, token, isSending, shouldInitialize]);
 
   // Typing indicators
   const startTyping = useCallback(() => {

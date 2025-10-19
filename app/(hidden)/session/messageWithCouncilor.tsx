@@ -1,3 +1,4 @@
+import { getProfile } from "@/api/auth";
 import TopBar from "@/components/TopBar";
 import { useChat } from "@/hooks/useChat";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -24,43 +25,64 @@ const Chat = () => {
   const scrollViewRef = useRef<ScrollView>(null);
   const tabBarHeight = useTabBarHeight();
 
-  const currentUserId = 19; // Example current user ID
+  const [currentUserId, setCurrentUserId] = useState<number>(19); // Will be loaded from API
   const currentUserName = 'Current User'; // Example current user name
   const [token, setToken] = useState<string | null>(null);
   const [isTokenLoaded, setIsTokenLoaded] = useState(false);
 
-  // Load token before rendering
+  // Load token and userId from profile API
   useEffect(() => {
     let isMounted = true;
     
-    const loadToken = async () => {
+    const loadAuthData = async () => {
       try {
         const storedToken = await AsyncStorage.getItem('token');
-        console.log('Token loaded from storage:', {
-          exists: !!storedToken,
-          length: storedToken?.length,
-          preview: storedToken?.substring(0, 20) + '...'
+        
+        console.log('Auth data loading:', {
+          tokenExists: !!storedToken,
         });
 
         if (isMounted) {
           if (!storedToken) {
             console.log('No token found, user not authenticated');
             setToken(null);
-          } else {
-            setToken(storedToken);
+            setIsTokenLoaded(true);
+            return;
           }
+          
+          setToken(storedToken);
+          
+          // Fetch user profile to get the actual userId
+          try {
+            const profile = await getProfile();
+            if (profile && profile.id) {
+              console.log('✅ Got user ID from profile:', profile.id);
+              setCurrentUserId(profile.id);
+              // Cache it for future use
+              await AsyncStorage.setItem('userId', String(profile.id));
+            }
+          } catch (profileError) {
+            console.error('Error fetching profile:', profileError);
+            // Try to get from cache as fallback
+            const cachedUserId = await AsyncStorage.getItem('userId');
+            if (cachedUserId) {
+              console.log('Using cached userId:', cachedUserId);
+              setCurrentUserId(Number(cachedUserId));
+            }
+          }
+          
           setIsTokenLoaded(true);
         }
       } catch (error) {
-        console.error('Error loading token:', error);
+        console.error('Error loading auth data:', error);
         if (isMounted) {
           setToken(null);
-          setIsTokenLoaded(true); // Mark as loaded even if failed
+          setIsTokenLoaded(true);
         }
       }
     };
 
-    loadToken();
+    loadAuthData();
 
     return () => {
       isMounted = false;
@@ -185,7 +207,7 @@ const Chat = () => {
     
     // Load older messages when scrolled to top
     if (contentOffset.y <= 100 && hasMoreMessages && !isLoadingMore) {
-      loadOlderMessages();
+      // loadOlderMessages();
     }
   };
 
@@ -306,26 +328,29 @@ const Chat = () => {
           )}
 
           {messages.map((message, index) => {
+            // Debug: Check if message has nested structure
+            const actualMessage = (message as any).message?.message ? (message as any).message : message;
+            
             const prevMessage = index > 0 ? messages[index - 1] : null;
-            const isSameUser = prevMessage && prevMessage.senderId === message.senderId;
-            const isCurrentUser = message.senderId === currentUserId; // Use dynamic current user
+            const isSameUser = prevMessage && prevMessage.senderId === parseInt(actualMessage.senderId);
+            const isCurrentUser = parseInt(actualMessage.senderId) === currentUserId; // Use dynamic current user
             const marginTop = isSameUser ? 4 : 16;
             
             // Check if this is an optimistic message (temporary ID)
             // Optimistic messages have timestamp-based IDs and are from current user
-            const isOptimistic = isCurrentUser && message.id > Date.now() - 60000 && message.id.toString().length >= 13;
+            const isOptimistic = isCurrentUser && actualMessage.id > Date.now() - 60000 && actualMessage.id.toString().length >= 13;
             
             return (
-              <View key={message.id} className={`${!isCurrentUser ? 'flex-row items-end' : 'items-end'}`}
+              <View key={`message-${actualMessage.id}-${index}`} className={`${!isCurrentUser ? 'flex-row items-end' : 'items-end'}`}
                     style={{ marginTop }}>
                 {/* Avatar for other users - only show for first message */}
                 {!isCurrentUser && !isSameUser && (
                   <View 
                     className="w-8 h-8 rounded-full items-center justify-center mr-2 mb-1"
-                    style={{ backgroundColor: message.avatarColor || '#6B7280' }}
+                    style={{ backgroundColor: actualMessage.avatarColor || '#6B7280' }}
                   >
                     <Text className="text-white font-bold text-xs">
-                      {message.avatar || message.userName?.charAt(0).toUpperCase() || 'U'}
+                      {actualMessage.avatar || actualMessage.userName?.charAt(0).toUpperCase() || 'U'}
                     </Text>
                   </View>
                 )}
@@ -348,19 +373,19 @@ const Chat = () => {
                   }}
                   >
                     {/* User name for first message */}
-                    {!isCurrentUser && !isSameUser && message.userName && (
+                    {!isCurrentUser && !isSameUser && actualMessage.userName && (
                       <Text className="text-emerald-600 font-semibold text-xs mb-1">
-                        {message.userName}
+                        {actualMessage.userName}
                       </Text>
                     )}
                     <Text className={!isCurrentUser ? 'text-gray-800' : 'text-white'}>
-                      {message.message}
+                      {typeof actualMessage.message === 'string' ? actualMessage.message : JSON.stringify(actualMessage.message)}
                     </Text>
                     <View className="flex-row items-center justify-between mt-1">
                       <Text className={`text-xs ${
                         !isCurrentUser ? 'text-gray-400' : 'text-purple-100'
                       }`}>
-                        {formatMessageTime(message.createdAt ?? '')}
+                        {formatMessageTime(actualMessage.createdAt ?? '')}
                       </Text>
                       {isOptimistic && isCurrentUser && (
                         <Text className="text-purple-200 text-xs ml-2">⏳</Text>

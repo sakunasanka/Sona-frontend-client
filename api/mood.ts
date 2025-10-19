@@ -1,5 +1,5 @@
 // api/mood.ts
-import { API_URL, PORT } from '@/config/env';
+import { API_URL, PORT, host, server_URL } from '@/config/env';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import { getProfile } from './auth';
@@ -18,18 +18,29 @@ const getCurrentLocalDate = (): string => {
 };
 
 // Always use configured host; avoid localhost fallbacks that break on web/device
-const API_BASE_URL = `${API_URL}:${PORT}/api`;
+let API_BASE_URL = '';
+
+if(host && server_URL){
+  API_BASE_URL = server_URL + '/api';
+  console.log("Using server_URL from config/env.ts as API_BASE_URL:", API_BASE_URL);
+}else {
+  API_BASE_URL = API_URL + ':' + PORT + '/api';
+}
 
 export interface DailyMood {
   id?: string;
   userId?: string;
-  date: string;
+  user_id?: string;
+  date?: string;
+  local_date?: string;
   mood: string;
   valence: number; // -1 to 1 (unpleasant to pleasant)
   arousal: number; // -1 to 1 (low energy to high energy)
   intensity: number; // 0 to 1 (strength of the emotion)
   createdAt?: Date;
+  created_at?: string;
   updatedAt?: Date;
+  updated_at?: string;
 }
 
 export interface MoodStats {
@@ -220,3 +231,167 @@ export const getMoodStats = async (): Promise<MoodStats> => {
     };
   }
 };
+
+export interface MoodAnalysisResponse {
+  totalEntries: number;
+  moodDistribution: Record<string, number>;
+  recentMoods: DailyMood[];
+  moodTrends: DailyMood[];
+  averageMoodScore: number;
+  averageValence: number;
+  averageArousal: number;
+  averageIntensity: number;
+  lastUpdated: string | null;
+}
+
+// Helper functions for mood analysis calculations
+const calculateAverageMoodScore = (moods: DailyMood[]): number => {
+  if (moods.length === 0) return 0;
+  const total = moods.reduce((sum, mood) => sum + (mood.valence || 0), 0);
+  return total / moods.length;
+};
+
+const calculateAverageValence = (moods: DailyMood[]): number => {
+  if (moods.length === 0) return 0;
+  const total = moods.reduce((sum, mood) => sum + (mood.valence || 0), 0);
+  return total / moods.length;
+};
+
+const calculateAverageArousal = (moods: DailyMood[]): number => {
+  if (moods.length === 0) return 0;
+  const total = moods.reduce((sum, mood) => sum + (mood.arousal || 0), 0);
+  return total / moods.length;
+};
+
+const calculateAverageIntensity = (moods: DailyMood[]): number => {
+  if (moods.length === 0) return 0;
+  const total = moods.reduce((sum, mood) => sum + (mood.intensity || 0), 0);
+  return total / moods.length;
+};
+
+export const getMoodAnalytics = async (clientId: number, month?: number, year?: number): Promise<MoodAnalysisResponse> => {
+  try {
+    const response = await axios.get(
+      `${API_BASE_URL}/users/${clientId}/moods`,
+      { headers: await authHeaders() }
+    );
+    
+    console.log('Get client mood analysis response:', response);
+    console.log('Response data type:', typeof response.data);
+    console.log('Response data structure:', JSON.stringify(response.data, null, 2));
+    
+    if (response.status === 200 && response.data) {
+      // Handle different response structures
+      let moods: DailyMood[] = [];
+      
+      // The API might return data directly as an array or wrapped in an object
+      if (Array.isArray(response.data)) {
+        moods = response.data;
+      } else if (response.data && typeof response.data === 'object') {
+        // Check common response patterns
+        if (Array.isArray(response.data.data)) {
+          moods = response.data.data;
+        } else if (Array.isArray(response.data.moods)) {
+          moods = response.data.moods;
+        } else if (Array.isArray(response.data.results)) {
+          moods = response.data.results;
+        } else {
+          // Try to find any array in the response
+          const keys = Object.keys(response.data);
+          for (const key of keys) {
+            if (Array.isArray(response.data[key])) {
+              moods = response.data[key];
+              break;
+            }
+          }
+        }
+      }
+      
+      console.log('Processed moods array:', moods);
+      console.log('Moods array length:', moods ? moods.length : 0);
+      console.log('Is array?', Array.isArray(moods));
+      
+      // If still no array found, create empty array to avoid errors
+      if (!Array.isArray(moods)) {
+        console.warn('Could not find mood array in response, using empty array');
+        moods = [];
+      }
+      
+      // Helper function to get date from mood entry
+      const getMoodDate = (mood: DailyMood): string => {
+        return mood.local_date || mood.date || '';
+      };
+
+      // Filter moods by month/year if specified
+      let filteredMoods = moods;
+      if (month !== undefined && year !== undefined) {
+        filteredMoods = moods.filter(mood => {
+          const dateStr = getMoodDate(mood);
+          if (!dateStr) return false;
+          
+          const moodDate = new Date(dateStr + (dateStr.includes('T') ? '' : 'T00:00:00'));
+          // Convert to Asia/Colombo timezone for comparison
+          const colomboDate = new Date(moodDate.toLocaleString('en-US', { timeZone: 'Asia/Colombo' }));
+          return colomboDate.getMonth() === month && colomboDate.getFullYear() === year;
+        });
+      }
+      
+      // Process mood data for analysis
+      const moodCounts = filteredMoods.length > 0 ? filteredMoods.reduce((acc, mood) => {
+        const moodType = mood.mood || 'neutral';
+        acc[moodType] = (acc[moodType] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>) : {};
+      
+      // Sort moods by date for trend analysis (only if we have moods)
+      const sortedMoods = filteredMoods.length > 0 ? [...filteredMoods].sort((a, b) => {
+        const dateA = getMoodDate(a);
+        const dateB = getMoodDate(b);
+        if (!dateA || !dateB) return 0;
+        
+        const timeA = new Date(dateA + (dateA.includes('T') ? '' : 'T00:00:00')).getTime();
+        const timeB = new Date(dateB + (dateB.includes('T') ? '' : 'T00:00:00')).getTime();
+        return timeA - timeB;
+      }) : [];
+      
+      // Get recent mood trends (last 30 days or all entries for the selected month)
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      
+      const recentMoods = sortedMoods.filter(mood => {
+        const dateStr = getMoodDate(mood);
+        if (!dateStr) return false;
+        
+        const moodDate = new Date(dateStr + (dateStr.includes('T') ? '' : 'T00:00:00'));
+        return moodDate >= thirtyDaysAgo;
+      });
+      
+      return {
+        totalEntries: filteredMoods.length,
+        moodDistribution: moodCounts,
+        recentMoods,
+        moodTrends: sortedMoods,
+        averageMoodScore: calculateAverageMoodScore(filteredMoods),
+        averageValence: calculateAverageValence(filteredMoods),
+        averageArousal: calculateAverageArousal(filteredMoods),
+        averageIntensity: calculateAverageIntensity(filteredMoods),
+        lastUpdated: sortedMoods.length > 0 ? getMoodDate(sortedMoods[sortedMoods.length - 1]) || null : null
+      };
+    }
+    
+    throw new Error('Failed to fetch mood analysis');
+  } catch (error) {
+    console.error('Error fetching mood analytics:', error);
+    return {
+      totalEntries: 0,
+      moodDistribution: {},
+      recentMoods: [],
+      moodTrends: [],
+      averageMoodScore: 0,
+      averageValence: 0,
+      averageArousal: 0,
+      averageIntensity: 0,
+      lastUpdated: null
+    };
+  }
+}

@@ -277,16 +277,6 @@ export default function Profile() {
             <Text className="text-base text-gray-900">View mood analytics</Text>
           </TouchableOpacity>
           
-          <TouchableOpacity 
-            className="flex-row items-center py-4 border-b border-gray-100"
-            onPress={() => router.push('/(hidden)/profile/test_feedback')}
-          >
-            <View className="w-9 h-9 rounded-full bg-blue-50 justify-center items-center mr-4">
-              <FileText size={20} color="#2563EB" />
-            </View>
-            <Text className="text-base text-gray-900">Test feedback</Text>
-          </TouchableOpacity>
-          
           {/* Only show "Apply for Free Student Package" if user is not already a student */}
           {!isStudent && (
             <TouchableOpacity 

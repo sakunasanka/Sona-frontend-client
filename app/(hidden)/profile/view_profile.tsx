@@ -4,7 +4,7 @@ import { usePlatformFee } from '@/contexts/PlatformFeeContext';
 import { getDisplayName } from '@/util/asyncName';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router, useFocusEffect } from 'expo-router';
-import { AlertCircle, AlertTriangle, ArrowLeft, BadgeCheck, Edit, GraduationCap, HelpCircle, History, LogOut, Shield } from 'lucide-react-native';
+import { AlertCircle, AlertTriangle, ArrowLeft, BadgeCheck, BarChart3, Edit, GraduationCap, HelpCircle, History, LogOut, Shield } from 'lucide-react-native';
 import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Image, SafeAreaView, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import PlatformFeePayment from '../../../components/PlatformFeePayment';
@@ -255,6 +255,16 @@ export default function Profile() {
               <HelpCircle size={20} color="#2563EB" />
             </View>
             <Text className="text-base text-gray-900">Help & Support</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            className="flex-row items-center py-4 border-b border-gray-100"
+            onPress={() => router.push('/profile/view_mood')}
+          >
+            <View className="w-9 h-9 rounded-full bg-blue-50 justify-center items-center mr-4">
+              <BarChart3 size={20} color="#2563EB" />
+            </View>
+            <Text className="text-base text-gray-900">View mood analytics</Text>
           </TouchableOpacity>
           
           {/* Only show "Apply for Free Student Package" if user is not already a student */}

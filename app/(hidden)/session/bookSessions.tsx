@@ -13,6 +13,7 @@ import {
   Alert,
   Image,
   Modal,
+  Platform,
   SafeAreaView,
   ScrollView,
   StatusBar,
@@ -24,6 +25,9 @@ import {
 import { WebView } from 'react-native-webview';
 import BookingCalendar from '../../../components/BookingCalendar';
 import { PrimaryButton } from '../../components/Buttons';
+
+// Note: per-day timeslot fetching has been removed; we now rely on the monthly availability API
+
 
 export const title = 'Book Session';
 
@@ -47,10 +51,6 @@ interface PaymentMethod {
   brand?: string;
   isDefault: boolean;
 }
-
-// Note: per-day timeslot fetching has been removed; we now rely on the monthly availability API
-
-import { Platform } from 'react-native';
 
 let API_BASE_URL = '';
 if (Platform.OS === 'android') {
@@ -120,7 +120,7 @@ const fetchMonthlyAvailability = async (
     if (!res.ok) throw new Error(`API error: ${res.status}`);
     const json = await res.json();
 
-    const availabilityArr: Array<{ date: string; slots: any[] }> = json?.data?.availability || [];
+    const availabilityArr: { date: string; slots: any[] }[] = json?.data?.availability || [];
 
     const availabilityMap: { [dateKey: string]: { isAvailable: boolean; hasImmediateSlot?: boolean } } = {};
     const slotsMap: { [dateKey: string]: TimeSlot[] } = {};
@@ -874,14 +874,14 @@ export default function BookSessionScreen() {
                         )}
                         <View className="bg-indigo-100/50 p-2 rounded-lg mt-2">
                           <Text className="text-indigo-700 text-xs text-center">
-                            You've used {totalSessionsThisPeriod} of 4 free sessions this period
+                            You&apos;ve used {totalSessionsThisPeriod} of 4 free sessions this period
                           </Text>
                         </View>
                       </View>
                     ) : (
                       <View>
                         <Text className="text-yellow-800">
-                          You've used all your free student sessions this period. You can still book a paid session for Rs.{counselor.sessionFee}.
+                          You&apos;ve used all your free student sessions this period. You can still book a paid session for Rs.{counselor.sessionFee}.
                         </Text>
                         {nextResetDate && (
                           <View className="flex-row items-center mt-2">
@@ -1026,7 +1026,7 @@ export default function BookSessionScreen() {
           {/* Show message if student has no free sessions left with volunteer counselors */}
           {isStudent && counselor.isVolunteer && counselor.sessionFee > 0 && freeSessionsRemaining === 0 && (
             <Text className="text-center text-yellow-500 mb-2 text-sm">
-              You've used all your free sessions this month
+              You&apos;ve used all your free sessions this month
             </Text>
           )}
           <PrimaryButton

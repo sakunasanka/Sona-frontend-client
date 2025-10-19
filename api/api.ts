@@ -1,10 +1,18 @@
-import { API_URL } from '@/config/env';
+import { API_URL, host, PORT, server_URL } from '@/config/env';
 import axios from 'axios';
 
-const BASE_URL = API_URL
+let BASE_URL = '';
+
+if(host && server_URL){
+  BASE_URL = server_URL + '/api';
+  console.log("Using server_URL from config/env.ts as BASE_URL:", BASE_URL);
+}else {
+  BASE_URL = API_URL + ':' + PORT + '/api';
+}
+
 
 const api = axios.create({
-  baseURL: BASE_URL + ':5001/api',
+  baseURL: BASE_URL,
   timeout: 6000,
   headers: {
     'Content-Type': 'application/json',

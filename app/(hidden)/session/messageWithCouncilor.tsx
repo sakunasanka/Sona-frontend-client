@@ -2,26 +2,29 @@ import { getProfile } from "@/api/auth";
 import TopBar from "@/components/TopBar";
 import { useChat } from "@/hooks/useChat";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import React, { useEffect, useRef, useState } from "react";
+import { LocalRouteParamsContext } from "expo-router/build/Route";
+import React, { useContext, useEffect, useRef, useState } from "react";
 import { Animated, Image, Keyboard, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const useTabBarHeight = () => {
   const insets = useSafeAreaInsets();
   // Standard tab bar height is usually 49 on iOS and 56 on Android, plus safe area
-  const tabBarHeight = Platform.OS === 'ios' ? 49 + insets.bottom : 56 + insets.bottom;
+  const tabBarHeight = Platform.OS === 'ios' ? 64 + insets.bottom : 56 + insets.bottom;
   return tabBarHeight;
 };
 
 const Chat = () => {
-  //const [messages, setMessages] = useState<Message[]>(SAMPLE_MESSAGES);
+  const params = useContext(LocalRouteParamsContext);
+  const chatId = Number(params?.chatId || params?.id || '1'); // Get chatId from route params and convert to number
+  
   const [inputText, setInputText] = useState('');
   const [keyboardHeight] = useState(new Animated.Value(0));
+  const [inputHeight] = useState(new Animated.Value(40)); // Add animated height for input
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
   const tabBarHeight = useTabBarHeight();
 
-  const chatId = 1; // Example chat ID
   const [currentUserId, setCurrentUserId] = useState<number>(19); // Will be loaded from API
   const currentUserName = 'Current User'; // Example current user name
   const [token, setToken] = useState<string | null>(null);
@@ -113,9 +116,18 @@ const Chat = () => {
       Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
       (event) => {
         setIsKeyboardVisible(true);
+        
+        // Animate keyboard height
         Animated.timing(keyboardHeight, {
           duration: Platform.OS === 'ios' ? event.duration || 250 : 250,
           toValue: event.endCoordinates.height - tabBarHeight,
+          useNativeDriver: false,
+        }).start();
+        
+        // Animate input height increase
+        Animated.timing(inputHeight, {
+          duration: Platform.OS === 'ios' ? event.duration || 250 : 250,
+          toValue: 120, // Increased height when keyboard is visible
           useNativeDriver: false,
         }).start();
         
@@ -131,9 +143,18 @@ const Chat = () => {
         setIsKeyboardVisible(false);
         // Stop typing when keyboard hides
         stopTyping();
+        
+        // Animate keyboard height
         Animated.timing(keyboardHeight, {
           duration: Platform.OS === 'ios' ? event.duration || 250 : 250,
           toValue: 0,
+          useNativeDriver: false,
+        }).start();
+        
+        // Animate input height decrease
+        Animated.timing(inputHeight, {
+          duration: Platform.OS === 'ios' ? event.duration || 250 : 250,
+          toValue: 50, // Back to normal height
           useNativeDriver: false,
         }).start();
       }
@@ -143,7 +164,7 @@ const Chat = () => {
       keyboardWillShowListener.remove();
       keyboardWillHideListener.remove();
     };
-  }, [keyboardHeight, tabBarHeight, stopTyping]);
+  }, [keyboardHeight, inputHeight, tabBarHeight, stopTyping]);
 
   // Scroll to bottom on initial load
   useEffect(() => {
@@ -212,7 +233,7 @@ const Chat = () => {
       minute: '2-digit' 
     });
   } catch (error) {
-    // console.error('Error formatting timestamp:', error, 'Timestamp:', timestamp);
+    console.error('Error formatting timestamp:', error, 'Timestamp:', timestamp);
     return ''; // Fallback for invalid timestamps
   }
 };
@@ -221,7 +242,7 @@ const Chat = () => {
   if (!isTokenLoaded) {
     return (
       <>
-        <TopBar title="Global Chat" />
+        <TopBar title="Councilor chat" />
         <View className="flex-1 justify-center items-center bg-gray-50">
           <Text className="text-gray-600">Loading authentication...</Text>
         </View>
@@ -310,22 +331,9 @@ const Chat = () => {
             // Debug: Check if message has nested structure
             const actualMessage = (message as any).message?.message ? (message as any).message : message;
             
-            // Debug logging
-            if (index === messages.length - 1) {
-              console.log('🔍 Last message comparison:', {
-                'actualMessage.senderId': actualMessage.senderId,
-                'actualMessage.senderId type': typeof actualMessage.senderId,
-                'currentUserId': currentUserId,
-                'currentUserId type': typeof currentUserId,
-                'are they equal?': actualMessage.senderId == currentUserId,
-                'loose equal?': actualMessage.senderId == currentUserId,
-                'full message': actualMessage
-              });
-            }
-            
             const prevMessage = index > 0 ? messages[index - 1] : null;
-            const isSameUser = prevMessage && prevMessage.senderId == actualMessage.senderId;
-            const isCurrentUser = actualMessage.senderId == currentUserId; // Use dynamic current user
+            const isSameUser = prevMessage && prevMessage.senderId === parseInt(actualMessage.senderId);
+            const isCurrentUser = parseInt(actualMessage.senderId) === currentUserId; // Use dynamic current user
             const marginTop = isSameUser ? 4 : 16;
             
             // Check if this is an optimistic message (temporary ID)
@@ -333,7 +341,7 @@ const Chat = () => {
             const isOptimistic = isCurrentUser && actualMessage.id > Date.now() - 60000 && actualMessage.id.toString().length >= 13;
             
             return (
-              <View key={actualMessage.id} className={`${!isCurrentUser ? 'flex-row items-end' : 'items-end'}`}
+              <View key={`message-${actualMessage.id}-${index}`} className={`${!isCurrentUser ? 'flex-row items-end' : 'items-end'}`}
                     style={{ marginTop }}>
                 {/* Avatar for other users - only show for first message */}
                 {!isCurrentUser && !isSameUser && (
@@ -423,6 +431,7 @@ const Chat = () => {
             <Animated.View
               className="flex-1 mr-3"
               style={{
+                height: inputHeight, // Apply animated height to the container
                 transform: [{
                   scale: keyboardHeight.interpolate({
                     inputRange: [0, 200, 300],
@@ -441,7 +450,8 @@ const Chat = () => {
                 multiline
                 maxLength={500}
                 style={{ 
-                  maxHeight: 100,
+                  flex: 1, // Take full height of the animated container
+                  maxHeight: 150, // Maximum height limit
                   shadowColor: '#000',
                   shadowOffset: { width: 0, height: 2 },
                   shadowOpacity: isKeyboardVisible ? 0.1 : 0.05,
@@ -453,6 +463,7 @@ const Chat = () => {
             
             <Animated.View
               style={{
+                height: inputHeight,
                 transform: [{
                   scale: keyboardHeight.interpolate({
                     inputRange: [0, 200, 300],
@@ -482,6 +493,7 @@ const Chat = () => {
             </Animated.View>
           </Animated.View>
         </Animated.View>
+        <View className="mb-5"/>
       </View>
     </>
   );

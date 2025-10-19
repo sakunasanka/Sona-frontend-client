@@ -71,10 +71,10 @@ export interface MonthlyAvailabilityResponse {
 // Get available psychiatrists
 export const getAvailablePsychiatrists = async (): Promise<PsychiatristResponse> => {
   try {
-    console.log('Making API request to /sessions/psychiatrists');
+    console.log('Making API request to /psychiatrists/available');
     const response = await apiRequest({
       method: 'get',
-      path: '/sessions/psychiatrists'
+      path: '/psychiatrists/available'
     });
     console.log('Raw API response for psychiatrists:', response);
     return response;

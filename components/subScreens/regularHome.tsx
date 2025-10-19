@@ -29,8 +29,8 @@ const baseHomescreenCards = [
     textColor: 'text-pink-500',
     icon: icons.meetup,
     focusIcon: icons.play,
-    focusText: "Start Session",
-    onPress: () => router.push('../(hidden)/session/VideoCallPage'),
+    focusText: "View My Sessions",
+    onPress: () => router.push('../(hidden)/session/upcomingSessions'),
   },
   {
     title: "Meditation",
@@ -201,7 +201,7 @@ export default function RegularHome() {
               <View className='px-4 pt-4'>
                 <TouchableOpacity
                   className="rounded-2xl shadow-lg overflow-hidden"
-                  onPress={() => router.push('/(hidden)/mood/' as any)}
+                  onPress={() => router.push('/(hidden)/mood/sampleMood' as any)}
                 >
                   <LinearGradient
                     colors={['#60A5FA', '#A78BFA']}
@@ -211,10 +211,10 @@ export default function RegularHome() {
                   >
                     <View className="flex-row items-center justify-between">
                       <View className="flex-1">
-                        <Text className="text-white text-xl font-bold mb-2">
+                        <Text className="text-white text-xl font-bold mb-2 font-alegreya">
                           Track Your Mood
                         </Text>
-                        <Text className="text-blue-100 text-sm">
+                        <Text className="text-blue-100 text-sm font-alegreya">
                           How are you feeling today? Express your emotions with our advanced mood tracker.
                         </Text>
                       </View>

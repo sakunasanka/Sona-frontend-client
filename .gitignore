@@ -44,4 +44,4 @@ ios/*
 android/*
 
 config/env.ts
-config/env.ts
+.npmrc

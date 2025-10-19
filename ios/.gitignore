@@ -28,7 +28,3 @@ project.xcworkspace
 
 # CocoaPods
 /Pods/
-
-/SonaClientFrontend
-/SonaClient.xcworkspace/xcshareddata
-/*

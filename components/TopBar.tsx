@@ -4,12 +4,24 @@ import { StatusBar } from 'expo-status-bar';
 import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Image, Text, TouchableOpacity, View } from 'react-native';
 import { getProfile, ProfileData } from '../api/auth';
+import { useNotifications } from '../hooks/useNotifications';
+import NotificationIcon from './NotificationIcon';
 
 const TopBar: React.FC<{ title?: string }> = ({title}) => {
   const navigation = useNavigation();
   const canGoBack = navigation.canGoBack?.();
   const [profileData, setProfileData] = useState<ProfileData | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+
+  // Use notifications hook
+  const {
+    notifications,
+    unreadCount,
+    loading: notificationsLoading,
+    markAsRead,
+    markAllAsRead,
+    deleteNotification,
+  } = useNotifications();
 
   const loadProfile = useCallback(async () => {
     try {
@@ -39,6 +51,17 @@ const TopBar: React.FC<{ title?: string }> = ({title}) => {
     <View className="flex-row justify-between items-center px-5 py-4 border-b border-gray-200">
         <Text className="font-bold text-gray-900 font-alegreyaBold text-3xl">{title}</Text>
         <View className="flex-row items-center">
+            {/* Notification Icon */}
+            <NotificationIcon
+              notifications={notifications}
+              unreadCount={unreadCount}
+              loading={notificationsLoading}
+              onMarkAsRead={markAsRead}
+              onMarkAllAsRead={markAllAsRead}
+              onDeleteNotification={deleteNotification}
+            />
+
+            {/* Profile Image */}
             <TouchableOpacity onPress={() => router.push('/(hidden)/profile/view_profile')} >
                 {isLoading ? (
                   <View className="w-8 h-8 rounded-full bg-gray-200 justify-center items-center">

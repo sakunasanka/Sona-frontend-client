@@ -86,6 +86,9 @@ const Chat = () => {
     };
   }, []);
 
+  // Only initialize chat hook after token is loaded and available
+  const shouldInitializeChat = isTokenLoaded && token;
+  
   const {
     messages,
     typingUsers,
@@ -103,7 +106,8 @@ const Chat = () => {
     chatId, 
     currentUserId, 
     currentUserName, 
-    isTokenLoaded && token ? token : ''
+    shouldInitializeChat ? token : '',
+    !!shouldInitializeChat // Pass this as a flag to control initialization
   );
 
   
@@ -186,7 +190,7 @@ const Chat = () => {
     
     // Load older messages when scrolled to top
     if (contentOffset.y <= 100 && hasMoreMessages && !isLoadingMore) {
-      loadOlderMessages();
+      // loadOlderMessages();
     }
   };
 
@@ -211,14 +215,15 @@ const Chat = () => {
       hour: '2-digit', 
       minute: '2-digit' 
     });
-  } catch (error) {
-    // console.error('Error formatting timestamp:', error, 'Timestamp:', timestamp);
+  } catch {
+    // console.error('Error formatting timestamp:', timestamp);
     return ''; // Fallback for invalid timestamps
   }
 };
 
   // Show loading state until token is loaded
   if (!isTokenLoaded) {
+    console.log('🔄 Chat: Waiting for token to load...');
     return (
       <>
         <TopBar title="Global Chat" />
@@ -231,6 +236,7 @@ const Chat = () => {
 
   // Show error if no token after loading
   if (!token) {
+    console.log('❌ Chat: No token found after loading');
     return (
       <>
         <TopBar title="Global Chat" />
@@ -243,12 +249,17 @@ const Chat = () => {
             }}
             className="bg-purple-500 px-4 py-2 rounded"
           >
-            <Text className="text-white">Login</Text>
-          </TouchableOpacity>
+            <Text className="text-white">Login</Text></TouchableOpacity>
         </View>
       </>
     );
   }
+
+  console.log('✅ Chat: Token loaded, initializing chat...', {
+    tokenExists: !!token,
+    currentUserId,
+    shouldInitializeChat
+  });
 
   return (
     <>

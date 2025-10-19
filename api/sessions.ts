@@ -1,13 +1,13 @@
-import { API_URL, PORT } from '@/config/env';
-import { Platform } from 'react-native';
+import { API_URL, PORT, host, server_URL } from '@/config/env';
 import { apiRequest } from "./api";
 
 let API_BASE_URL = '';
-if (Platform.OS === 'android' || Platform.OS === 'ios') {
-  API_BASE_URL = API_URL + '' + PORT + '/api';
-} else {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  API_BASE_URL = 'http://localhost:' + PORT + '/api';
+
+if(host && server_URL){
+  API_BASE_URL = server_URL + '/api';
+  console.log("Using server_URL from config/env.ts as API_BASE_URL:", API_BASE_URL);
+}else {
+  API_BASE_URL = API_URL + ':' + PORT + '/api';
 }
 
 export interface Session {
@@ -286,6 +286,29 @@ export const getUpcomingSessions = async (token: string) => {
     return response;
   }catch (error) {
     console.error('Error fetching upcoming sessions:', error);
+    throw error;
+  }
+}
+
+export const sendEmergencyAlert = async (token: string, {
+  contactNumber, description
+}: {
+  contactNumber: string;
+  description: string;
+}) => {
+  try {
+    const response = await apiRequest({
+      method: 'post',
+      path: 'users/client/urgent-help',
+      data: {
+        "contactNo" : contactNumber,
+        "message" : description
+      },
+      token
+    });
+    return response;
+  } catch (error) {
+    console.error('Error sending emergency alert:', error);
     throw error;
   }
 }

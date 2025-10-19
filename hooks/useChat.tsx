@@ -23,7 +23,8 @@ export const useChat = (
   chatId: number,
   currentUserId: number,
   currentUserName: string,
-  token?: string
+  token?: string,
+  shouldInitialize: boolean = true
 ) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [typingUsers, setTypingUsers] = useState<TypingUser[]>([]);
@@ -57,7 +58,14 @@ export const useChat = (
 
   // Initialize chat
   useEffect(() => {
+    // Only initialize if we should and have a valid token
+    if (!shouldInitialize || !token) {
+      console.log('🚫 Skipping chat initialization:', { shouldInitialize, hasToken: !!token });
+      return;
+    }
+
     const initializeChat = async () => {
+      console.log('🚀 Initializing chat with token...');
       setIsLoading(true);
       try {
         // Load initial messages
@@ -187,16 +195,28 @@ export const useChat = (
       
       chatWebSocketService.disconnect();
     };
-  }, [chatId, currentUserId, token]);
+  }, [chatId, currentUserId, token, shouldInitialize]);
 
   // Load older messages (pagination)
   const loadOlderMessages = useCallback(async () => {
-    if (!hasMoreMessages || isLoadingMore || messages.length === 0) return;
+    // Validate prerequisites
+    if (!hasMoreMessages || isLoadingMore || messages.length === 0) {
+      console.log('🚫 Skip loading older messages:', { hasMoreMessages, isLoadingMore, messageCount: messages.length });
+      return;
+    }
+
+    // Validate authentication
+    if (!shouldInitialize || !token) {
+      console.log('🚫 Cannot load older messages: authentication required', { shouldInitialize, hasToken: !!token });
+      return;
+    }
 
     setIsLoadingMore(true);
     try {
       const oldestMessageId = messages[0]?.id;
-      const response = await getOlderMessages(chatId, oldestMessageId);
+      console.log('📜 Loading older messages before:', oldestMessageId);
+      
+      const response = await getOlderMessages(chatId, oldestMessageId, 50, token);
       
       // Add older messages to the beginning of the array
       // Assuming older messages API returns them in ascending order (oldest first)
@@ -204,17 +224,25 @@ export const useChat = (
         ...response.data.map(transformMessage),
         ...prev
       ]);
-      setHasMoreMessages(response.pagination.hasMore);
+      setHasMoreMessages(response.pagination?.hasMore || false);
+      
+      console.log('✅ Loaded', response.data.length, 'older messages');
     } catch (error) {
       console.error('Error loading older messages:', error);
     } finally {
       setIsLoadingMore(false);
     }
-  }, [chatId, hasMoreMessages, isLoadingMore, messages]);
+  }, [chatId, hasMoreMessages, isLoadingMore, messages, shouldInitialize, token]);
 
   // Send message
   const sendMessage = useCallback(async (text: string) => {
     if (!text.trim() || isSending) return; // Don't send empty messages or while sending
+    
+    // Validate authentication
+    if (!shouldInitialize || !token) {
+      console.log('🚫 Cannot send message: authentication required', { shouldInitialize, hasToken: !!token });
+      return;
+    }
     
     setIsSending(true);
     
@@ -298,7 +326,7 @@ export const useChat = (
     
     // Stop typing when message is sent
     chatWebSocketService.sendTypingStatus(false, chatId, currentUserId, currentUserName);
-  }, [chatId, currentUserId, currentUserName, token, isSending]);
+  }, [chatId, currentUserId, currentUserName, token, isSending, shouldInitialize]);
 
   // Typing indicators
   const startTyping = useCallback(() => {

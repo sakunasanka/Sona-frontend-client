@@ -1,12 +1,14 @@
 import { getProfile } from "@/api/auth";
+import NotificationIcon from '@/components/NotificationIcon';
 import TopBar from "@/components/TopBar";
 import { useChat } from "@/hooks/useChat";
+import { useNotifications } from '@/hooks/useNotifications';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { Wifi, WifiOff } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from "react";
-import { Animated, Image, Keyboard, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Animated, Image, Keyboard, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const useTabBarHeight = () => {
@@ -30,6 +32,16 @@ const Chat = () => {
   const [token, setToken] = useState<string | null>(null);
   const [isTokenLoaded, setIsTokenLoaded] = useState(false);
   const [profileData, setProfileData] = useState<any>(null);
+
+  // Use notifications hook
+  const {
+    notifications,
+    unreadCount,
+    loading: notificationsLoading,
+    markAsRead,
+    markAllAsRead,
+    deleteNotification,
+  } = useNotifications();
 
   // Load token and userId from profile API
   useEffect(() => {
@@ -269,13 +281,30 @@ const Chat = () => {
             )}
           </View>
           <View className="flex-row items-center">
+            {/* Notification Icon */}
+            <NotificationIcon
+              notifications={notifications}
+              unreadCount={unreadCount}
+              loading={notificationsLoading}
+              onMarkAsRead={markAsRead}
+              onMarkAllAsRead={markAllAsRead}
+              onDeleteNotification={deleteNotification}
+            />
+
+            {/* Profile Image */}
             <TouchableOpacity onPress={() => router.push('/(hidden)/profile/view_profile')} >
-              <Image 
-                source={{ 
-                  uri: profileData?.avatar || 'https://images.icon-icons.com/1378/PNG/512/avatardefault_92824.png' 
-                }} 
-                style={{ width: 32, height: 32, borderRadius: 16 }}
-              />
+              {profileData ? (
+                <Image 
+                  source={{ 
+                    uri: profileData?.avatar || 'https://images.icon-icons.com/1378/PNG/512/avatardefault_92824.png' 
+                  }} 
+                  style={{ width: 32, height: 32, borderRadius: 16 }}
+                />
+              ) : (
+                <View className="w-8 h-8 rounded-full bg-gray-200 justify-center items-center">
+                  <ActivityIndicator size="small" color="#2563EB" />
+                </View>
+              )}
             </TouchableOpacity>
           </View>
         </View>

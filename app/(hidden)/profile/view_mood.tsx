@@ -1,15 +1,17 @@
 import { getProfile } from '@/api/auth';
 import { DailyMood, getMoodAnalytics, MoodAnalysisResponse } from '@/api/mood';
+import { router } from 'expo-router';
+import { Activity, ArrowLeft, BarChart3, Calendar, Heart, RefreshCw, TrendingDown, TrendingUp, Zap } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Dimensions,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Dimensions,
+  ScrollView,
+  StatusBar,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { LineChart } from 'react-native-chart-kit';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -28,13 +30,17 @@ const MoodChart: React.FC<{
   color: string;
   minValue: number;
   maxValue: number;
-}> = ({ data, title, color, minValue, maxValue }) => {
+  icon: React.ComponentType<any>;
+}> = ({ data, title, color, minValue, maxValue, icon: Icon }) => {
   if (data.length === 0) {
     return (
-      <View style={styles.chartContainer}>
-        <Text style={styles.chartTitle}>{title}</Text>
-        <View style={[styles.chartBox, { justifyContent: 'center', alignItems: 'center', height: 200 }]}>
-          <Text style={styles.noDataText}>No data available</Text>
+      <View className="bg-white mx-5 mt-4 p-6 rounded-2xl">
+        <View className="flex-row items-center mb-4">
+          <Icon size={20} color="#2563EB" />
+          <Text className="text-lg font-semibold text-gray-900 ml-2">{title}</Text>
+        </View>
+        <View className="justify-center items-center h-48">
+          <Text className="text-gray-500 text-sm italic">No data available</Text>
         </View>
       </View>
     );
@@ -50,7 +56,7 @@ const MoodChart: React.FC<{
       {
         data: data.map(item => item.value),
         color: () => color,
-        strokeWidth: 2,
+        strokeWidth: 3,
       }
     ],
   };
@@ -59,20 +65,21 @@ const MoodChart: React.FC<{
     backgroundColor: '#ffffff',
     backgroundGradientFrom: '#ffffff',
     backgroundGradientTo: '#ffffff',
-    decimalPlaces: 2,
-    color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-    labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+    decimalPlaces: 1,
+    color: (opacity = 1) => `${color}${Math.round(opacity * 255).toString(16).padStart(2, '0')}`,
+    labelColor: (opacity = 1) => `rgba(107, 114, 128, ${opacity})`,
     style: {
-      borderRadius: 12,
+      borderRadius: 16,
     },
     propsForDots: {
-      r: '4',
-      strokeWidth: '2',
+      r: '5',
+      strokeWidth: '3',
       stroke: color,
+      fill: color,
     },
     propsForBackgroundLines: {
-      strokeDasharray: '', // solid lines
-      stroke: '#e3e3e3',
+      strokeDasharray: '', 
+      stroke: '#F3F4F6',
       strokeWidth: 1,
     },
     yAxisInterval: 1,
@@ -83,28 +90,31 @@ const MoodChart: React.FC<{
   };
 
   return (
-    <View style={styles.chartContainer}>
-      <Text style={styles.chartTitle}>{title}</Text>
-      <View style={styles.chartBox}>
+    <View className="bg-white mx-5 mt-4 p-6 rounded-2xl shadow-sm">
+      <View className="flex-row items-center mb-4">
+        <Icon size={20} color="#2563EB" />
+        <Text className="text-lg font-semibold text-gray-900 ml-2">{title}</Text>
+      </View>
+      <View className="relative">
         <LineChart
           data={chartData}
-          width={screenWidth - 40}
+          width={screenWidth - 80}
           height={200}
           chartConfig={chartConfig}
-          bezier={false}
+          bezier={true}
           style={{
             marginVertical: 8,
-            borderRadius: 12,
+            borderRadius: 16,
           }}
           fromZero={minValue < 0}
           segments={4}
         />
         
         {/* Mood labels below chart */}
-        <View style={styles.moodLabelsContainer}>
+        <View className="flex-row justify-between mt-2 px-4">
           {data.map((point, index) => (
-            <View key={index} style={styles.moodLabelItem}>
-              <Text style={styles.moodLabelText}>{point.mood}</Text>
+            <View key={index} className="flex-1 items-center">
+              <Text className="text-xs text-gray-500 text-center font-medium">{point.mood}</Text>
             </View>
           ))}
         </View>
@@ -146,6 +156,9 @@ const ViewMoodAnalytics: React.FC = () => {
       setError(null);
       
       const data = await getMoodAnalytics(userId);
+      console.log('Mood analytics data:', data);
+      console.log('Average valence:', data.averageValence);
+      console.log('Average arousal:', data.averageArousal);
       setAnalytics(data);
     } catch (err) {
       console.error('Error loading mood analytics:', err);
@@ -208,10 +221,11 @@ const ViewMoodAnalytics: React.FC = () => {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#007AFF" />
-          <Text style={styles.loadingText}>Loading mood analytics...</Text>
+      <SafeAreaView className="flex-1 bg-gray-50">
+        <StatusBar barStyle="dark-content" backgroundColor="#F9FAFB" />
+        <View className="flex-1 justify-center items-center">
+          <ActivityIndicator size="large" color="#2563EB" />
+          <Text className="mt-4 text-gray-600 text-base">Loading mood analytics...</Text>
         </View>
       </SafeAreaView>
     );
@@ -219,12 +233,23 @@ const ViewMoodAnalytics: React.FC = () => {
 
   if (error) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={loadMoodAnalytics}>
-            <Text style={styles.retryButtonText}>Retry</Text>
-          </TouchableOpacity>
+      <SafeAreaView className="flex-1 bg-gray-50">
+        <StatusBar barStyle="dark-content" backgroundColor="#F9FAFB" />
+        <View className="flex-1 justify-center items-center p-5">
+          <View className="bg-white p-8 rounded-2xl items-center max-w-sm w-full">
+            <BarChart3 size={48} color="#EF4444" />
+            <Text className="text-lg font-semibold text-gray-900 mt-4 text-center">Unable to Load Analytics</Text>
+            <Text className="text-gray-600 text-center mt-2 mb-6">{error}</Text>
+            <TouchableOpacity
+              className="bg-primary px-6 py-3 rounded-xl"
+              onPress={loadMoodAnalytics}
+            >
+              <View className="flex-row items-center">
+                <RefreshCw size={16} color="white" />
+                <Text className="text-white font-semibold ml-2">Try Again</Text>
+              </View>
+            </TouchableOpacity>
+          </View>
         </View>
       </SafeAreaView>
     );
@@ -234,244 +259,167 @@ const ViewMoodAnalytics: React.FC = () => {
   const valenceData = prepareChartData('valence');
   const intensityData = prepareChartData('intensity');
 
+  // Calculate trend indicators
+  const getTrendDirection = (data: ChartData[]) => {
+    if (data.length < 2) return 'stable';
+    const firstValue = data[0].value;
+    const lastValue = data[data.length - 1].value;
+    const difference = lastValue - firstValue;
+    
+    if (difference > 0.1) return 'up';
+    if (difference < -0.1) return 'down';
+    return 'stable';
+  };
+
+  // Helper function to safely format numbers
+  const safeFormatNumber = (value: number | undefined | null, decimals: number = 1): string => {
+    if (value === undefined || value === null || isNaN(value)) {
+      return '0.0';
+    }
+    return value.toFixed(decimals);
+  };
+
+  const moodTrend = getTrendDirection(valenceData);
+  const energyTrend = getTrendDirection(arousalData);
+
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Mood Analytics</Text>
-          <Text style={styles.subtitle}>Last 7 Days</Text>
+    <SafeAreaView className="flex-1 bg-gray-50">
+      <StatusBar barStyle="dark-content" backgroundColor="#F9FAFB" />
+
+      {/* Header */}
+      <View className="flex-row items-center justify-between px-5 py-4 bg-white border-b border-gray-100">
+        <TouchableOpacity onPress={() => router.back()} className="p-1">
+          <ArrowLeft size={24} color="#374151" />
+        </TouchableOpacity>
+        <Text className="text-gray-900 text-lg font-semibold">Mood Analytics</Text>
+        <TouchableOpacity onPress={loadMoodAnalytics} className="p-1">
+          <RefreshCw size={20} color="#6B7280" />
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+        {/* Header Section */}
+        <View className="bg-primary mx-5 mt-5 p-6 rounded-2xl">
+          <View className="items-center">
+            <BarChart3 size={32} color="white" />
+            <Text className="text-white text-2xl font-bold mt-3">Your Mood Journey</Text>
+            <Text className="text-blue-100 text-base text-center mt-1">
+              Insights from your past 7 days
+            </Text>
+          </View>
         </View>
 
+        {/* Quick Stats */}
         {analytics && (
-          <View style={styles.statsContainer}>
-            <View style={styles.statBox}>
-              <Text style={styles.statNumber}>{analytics.totalEntries}</Text>
-              <Text style={styles.statLabel}>Total Entries</Text>
+          <View className="flex-row mx-5 mt-4 gap-3">
+            <View className="flex-1 bg-white p-4 rounded-2xl">
+              <View className="items-center">
+                <Calendar size={20} color="#2563EB" />
+                <Text className="text-2xl font-bold text-gray-900 mt-2">{analytics.totalEntries || 0}</Text>
+                <Text className="text-gray-500 text-xs text-center">Total Entries</Text>
+              </View>
             </View>
-            <View style={styles.statBox}>
-              <Text style={styles.statNumber}>{analytics.averageValence.toFixed(2)}</Text>
-              <Text style={styles.statLabel}>Avg Mood</Text>
+            
+            <View className="flex-1 bg-white p-4 rounded-2xl">
+              <View className="items-center">
+                <View className="flex-row items-center">
+                  <Heart size={20} color="#EF4444" />
+                  {moodTrend === 'up' && <TrendingUp size={16} color="#10B981" />}
+                  {moodTrend === 'down' && <TrendingDown size={16} color="#EF4444" />}
+                </View>
+                <Text className="text-2xl font-bold text-gray-900 mt-2">
+                  {safeFormatNumber(analytics.averageValence)}
+                </Text>
+                <Text className="text-gray-500 text-xs text-center">Avg Mood</Text>
+              </View>
             </View>
-            <View style={styles.statBox}>
-              <Text style={styles.statNumber}>{analytics.averageArousal.toFixed(2)}</Text>
-              <Text style={styles.statLabel}>Avg Excitement</Text>
-            </View>
-            <View style={styles.statBox}>
-              <Text style={styles.statNumber}>{analytics.averageIntensity.toFixed(2)}</Text>
-              <Text style={styles.statLabel}>Avg Intensity</Text>
+            
+            <View className="flex-1 bg-white p-4 rounded-2xl">
+              <View className="items-center">
+                <View className="flex-row items-center">
+                  <Zap size={20} color="#F59E0B" />
+                  {energyTrend === 'up' && <TrendingUp size={16} color="#10B981" />}
+                  {energyTrend === 'down' && <TrendingDown size={16} color="#EF4444" />}
+                </View>
+                <Text className="text-2xl font-bold text-gray-900 mt-2">
+                  {safeFormatNumber(analytics.averageArousal)}
+                </Text>
+                <Text className="text-gray-500 text-xs text-center">Avg Energy</Text>
+              </View>
             </View>
           </View>
         )}
 
+        {/* Charts */}
         <MoodChart
           data={valenceData}
-          title="Mood (Pleasant ↔ Unpleasant)"
-          color="#4CAF50"
+          title="Mood Balance"
+          color="#10B981"
           minValue={-1}
           maxValue={1}
+          icon={Heart}
         />
 
         <MoodChart
           data={arousalData}
-          title="Excitement (High Energy ↔ Low Energy)"
-          color="#FF9800"
+          title="Energy Levels"
+          color="#F59E0B"
           minValue={-1}
           maxValue={1}
+          icon={Zap}
         />
 
         <MoodChart
           data={intensityData}
-          title="Intensity (Strength of Emotion)"
-          color="#9C27B0"
+          title="Emotional Intensity"
+          color="#8B5CF6"
           minValue={0}
           maxValue={1}
+          icon={Activity}
         />
 
-        <View style={styles.legendContainer}>
-          <Text style={styles.legendTitle}>Legend</Text>
-          <View style={styles.legendItem}>
-            <View style={[styles.legendColor, { backgroundColor: '#4CAF50' }]} />
-            <Text style={styles.legendText}>Mood: How pleasant/unpleasant the emotion is</Text>
-          </View>
-          <View style={styles.legendItem}>
-            <View style={[styles.legendColor, { backgroundColor: '#FF9800' }]} />
-            <Text style={styles.legendText}>Excitement: Energy level of the emotion</Text>
-          </View>
-          <View style={styles.legendItem}>
-            <View style={[styles.legendColor, { backgroundColor: '#9C27B0' }]} />
-            <Text style={styles.legendText}>Intensity: Strength of the emotional experience</Text>
+        {/* Insights Section */}
+        <View className="bg-white mx-5 mt-4 p-6 rounded-2xl">
+          <Text className="text-lg font-semibold text-gray-900 mb-4">Understanding Your Metrics</Text>
+          
+          <View className="space-y-4">
+            <View className="flex-row items-start">
+              <View className="w-4 h-4 bg-green-500 rounded-full mt-1 mr-3" />
+              <View className="flex-1">
+                <Text className="font-medium text-gray-900">Mood Balance</Text>
+                <Text className="text-gray-600 text-sm leading-5">
+                  Measures how pleasant or unpleasant your emotions feel
+                </Text>
+              </View>
+            </View>
+            
+            <View className="flex-row items-start">
+              <View className="w-4 h-4 bg-amber-500 rounded-full mt-1 mr-3" />
+              <View className="flex-1">
+                <Text className="font-medium text-gray-900">Energy Levels</Text>
+                <Text className="text-gray-600 text-sm leading-5">
+                  Tracks your emotional energy from calm to excited states
+                </Text>
+              </View>
+            </View>
+            
+            <View className="flex-row items-start">
+              <View className="w-4 h-4 bg-purple-500 rounded-full mt-1 mr-3" />
+              <View className="flex-1">
+                <Text className="font-medium text-gray-900">Emotional Intensity</Text>
+                <Text className="text-gray-600 text-sm leading-5">
+                  Shows the strength and depth of your emotional experiences
+                </Text>
+              </View>
+            </View>
           </View>
         </View>
 
-        <View style={styles.bottomPadding} />
+        {/* Bottom spacing */}
+        <View className="h-8" />
       </ScrollView>
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f8f9fa',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#666',
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  errorText: {
-    fontSize: 16,
-    color: '#d32f2f',
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  retryButton: {
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  retryButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  header: {
-    padding: 20,
-    alignItems: 'center',
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 4,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#666',
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    marginBottom: 20,
-  },
-  statBox: {
-    backgroundColor: 'white',
-    padding: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    flex: 1,
-    marginHorizontal: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  statNumber: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  statLabel: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 4,
-    textAlign: 'center',
-  },
-  chartContainer: {
-    backgroundColor: 'white',
-    margin: 20,
-    borderRadius: 12,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  chartTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  chartBox: {
-    position: 'relative',
-  },
-  noDataText: {
-    fontSize: 14,
-    color: '#666',
-    fontStyle: 'italic',
-  },
-  moodLabelsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 8,
-    paddingHorizontal: 20,
-  },
-  moodLabelItem: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  moodLabelText: {
-    fontSize: 10,
-    color: '#666',
-    textAlign: 'center',
-    fontWeight: '500',
-  },
-  legendContainer: {
-    backgroundColor: 'white',
-    margin: 20,
-    padding: 16,
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  legendTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 12,
-  },
-  legendItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  legendColor: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    marginRight: 12,
-  },
-  legendText: {
-    fontSize: 14,
-    color: '#666',
-    flex: 1,
-  },
-  bottomPadding: {
-    height: 20,
-  },
-});
 
 export default ViewMoodAnalytics;

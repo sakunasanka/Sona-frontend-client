@@ -2,7 +2,7 @@ import { checkIsStudent } from '@/api/api';
 import { getCounselorById } from '@/api/counselor';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router, useLocalSearchParams } from 'expo-router';
-import { ArrowLeft, Award, Calendar, Clock, Globe, GraduationCap, MapPin, MessageSquare, Star } from 'lucide-react-native';
+import { ArrowLeft, Award, Calendar, Clock, Globe, GraduationCap, MapPin, Star } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -14,7 +14,7 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
-import { PrimaryButton, SecondaryButton } from '../../components/Buttons';
+import { PrimaryButton } from '../../components/Buttons';
 
 interface CounselorData {
   id: number;
@@ -109,13 +109,6 @@ export default function CounsellorProfile() {
   const handleBookSession = () => {
     router.push({
       pathname: '/(hidden)/session/bookSessions',
-      params: { counselorId: counselorData?.id }
-    });
-  };
-
-  const handleMessage = () => {
-    router.push({
-      pathname: '/(hidden)/profile/counsellor-chat',
       params: { counselorId: counselorData?.id }
     });
   };
@@ -304,23 +297,6 @@ export default function CounsellorProfile() {
           <Text className="text-gray-700 text-base leading-6 text-center">
             {counsellorDisplay.description || 'Professional counselor providing mental health support and guidance.'}
           </Text>
-        </View>
-
-        {/* Quick Actions */}
-        <View className="px-6 pb-6">
-          <View className="flex-row gap-3">
-            <SecondaryButton
-              title="Chat"
-              onPress={handleMessage}
-              icon={MessageSquare}
-            />
-            
-            <PrimaryButton
-              title="Book Session"
-              onPress={handleBookSession}
-              icon={Calendar}
-            />
-          </View>
         </View>
 
         {/* Details Section */}

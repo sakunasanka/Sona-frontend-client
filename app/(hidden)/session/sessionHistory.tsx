@@ -1,4 +1,5 @@
 import { checkIsStudent } from '@/api/api';
+import { getChatRoom } from '@/api/chat';
 import { fetchUserSessions, getRemainingFreeSessions } from '@/api/sessions';
 import { usePlatformFee } from '@/contexts/PlatformFeeContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -52,6 +53,15 @@ export default function SessionHistory() {
     const [nextResetDate, setNextResetDate] = useState<string>('');
     const [totalSessionsThisPeriod, setTotalSessionsThisPeriod] = useState<number>(0);
     const [loadingStudentData, setLoadingStudentData] = useState<boolean>(false);
+    const [token, setToken] = useState<string>('');
+
+    useEffect(() => {
+        const getToken = async () => {
+            const token = await AsyncStorage.getItem('token');
+            setToken(token || '');
+        };
+        getToken();
+    }, []);
 
     // Platform fee status comes directly from context - no need to check again!
     const hasPlatformFeeAccess = feeStatus?.hasPaid ?? false;
@@ -345,8 +355,9 @@ export default function SessionHistory() {
         router.push(`/(hidden)/profile/counsellor_profile?id=${counselorId}`);
     };
     
-    const handleChatWithCounselor = (counselorId: string): void => {
-        router.push(`/(hidden)/profile/counsellor-chat?counselorId=${counselorId}`);
+    const handleChatWithCounselor = async (counselorId: string): Promise<void> => {
+        const chatId = await getChatRoom(parseInt(counselorId), token);
+        router.push(`/(hidden)/session/messageWithCouncilor?id=${chatId}`);
     };
     
     const handleBookSession = (counselorId: string): void => {

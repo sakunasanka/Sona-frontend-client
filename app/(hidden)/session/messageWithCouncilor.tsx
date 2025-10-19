@@ -224,7 +224,7 @@ const Chat = () => {
     
     // Load older messages when scrolled to top
     if (contentOffset.y <= 100 && hasMoreMessages && !isLoadingMore) {
-      loadOlderMessages();
+      // loadOlderMessages();
     }
   };
 

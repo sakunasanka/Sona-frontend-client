@@ -2,6 +2,9 @@ import { getProfile } from "@/api/auth";
 import TopBar from "@/components/TopBar";
 import { useChat } from "@/hooks/useChat";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { router } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import { Wifi, WifiOff } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from "react";
 import { Animated, Image, Keyboard, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -26,6 +29,7 @@ const Chat = () => {
   const currentUserName = 'Current User'; // Example current user name
   const [token, setToken] = useState<string | null>(null);
   const [isTokenLoaded, setIsTokenLoaded] = useState(false);
+  const [profileData, setProfileData] = useState<any>(null);
 
   // Load token and userId from profile API
   useEffect(() => {
@@ -49,12 +53,13 @@ const Chat = () => {
           
           setToken(storedToken);
           
-          // Fetch user profile to get the actual userId
+          // Fetch user profile to get the actual userId and profile data
           try {
             const profile = await getProfile();
             if (profile && profile.id) {
               console.log('✅ Got user ID from profile:', profile.id);
               setCurrentUserId(profile.id);
+              setProfileData(profile);
               // Cache it for future use
               await AsyncStorage.setItem('userId', String(profile.id));
             }
@@ -252,7 +257,29 @@ const Chat = () => {
 
   return (
     <>
-      <TopBar title={`Global Chat ${isConnected ? '🟢' : '🔴'}`} />
+      <View className='mt-10'>
+        <StatusBar style="dark" />
+        <View className="flex-row justify-between items-center px-5 py-4 border-b border-gray-200">
+          <View className="flex-row items-center">
+            <Text className="font-bold text-gray-900 font-alegreyaBold text-3xl mr-3">Global Chat</Text>
+            {isConnected ? (
+              <Wifi size={24} color="#10B981" />
+            ) : (
+              <WifiOff size={24} color="#EF4444" />
+            )}
+          </View>
+          <View className="flex-row items-center">
+            <TouchableOpacity onPress={() => router.push('/(hidden)/profile/view_profile')} >
+              <Image 
+                source={{ 
+                  uri: profileData?.avatar || 'https://images.icon-icons.com/1378/PNG/512/avatardefault_92824.png' 
+                }} 
+                style={{ width: 32, height: 32, borderRadius: 16 }}
+              />
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
       <View className="flex-1 bg-gray-50">
         
         {/* Connection Status Banner */}
@@ -353,14 +380,14 @@ const Chat = () => {
                 )}
                 
                 {/* Message bubble */}
-                <View className={`max-w-xs ${!isCurrentUser ? 'flex-1' : 'self-end'}`}>
+                <View className={`max-w-xs ${!isCurrentUser ? 'self-start' : 'self-end'}`}>
                   <View className={`p-3 rounded-2xl ${
                     !isCurrentUser 
                       ? 'bg-white border border-gray-200 rounded-bl-sm' 
                       : 'bg-gradient-to-r from-purple-500 to-pink-500 rounded-br-sm'
                   }`}
                   style={{
-                    backgroundColor: isCurrentUser ? '#8B5CF6' : undefined,
+                    backgroundColor: isCurrentUser ? '#8B5CF6' : '#FFFFFF', // Explicitly set white background for receiving messages
                     opacity: isOptimistic ? 0.7 : 1 // Slightly transparent for optimistic messages
                   }}
                   >

@@ -13,7 +13,7 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
-import { PrimaryButton, SecondaryButton } from '../../components/Buttons';
+import { PrimaryButton } from '../../components/Buttons';
 
 export default function PsychiatristProfileScreen() {
   const params = useLocalSearchParams();
@@ -48,12 +48,6 @@ export default function PsychiatristProfileScreen() {
         pathname: '../session/bookPsychiatrist',
         params: { psychiatristId: psychiatrist.id }
       });
-    }
-  };
-
-  const handleContactChat = () => {
-    if (psychiatrist) {
-      console.log('Start chat with psychiatrist', psychiatrist.id);
     }
   };
 
@@ -222,10 +216,6 @@ export default function PsychiatristProfileScreen() {
         {/* Action Buttons */}
         <View className="p-5 pb-8">
           <View className="flex-row gap-3 mb-3">
-            <SecondaryButton 
-              title="Message" 
-              onPress={handleContactChat}
-            />
             <PrimaryButton 
               title="Book Consultation" 
               onPress={handleBookSession}

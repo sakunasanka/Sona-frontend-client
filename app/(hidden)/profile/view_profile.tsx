@@ -208,7 +208,7 @@ export default function Profile() {
           <Text className="text-lg font-semibold text-gray-900 mb-4">Account</Text>
           <TouchableOpacity 
             className="flex-row items-center py-4 border-b border-gray-100"
-            onPress={() => router.push('/session/sessionHistory')}
+            onPress={() => router.push('/(hidden)/session/sessionHistory')}
           >
             <View className="w-9 h-9 rounded-full bg-blue-50 justify-center items-center mr-4">
               <History size={20} color="#2563EB" />

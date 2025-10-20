@@ -47,8 +47,21 @@ export default function StudentPackageApply() {
     idCardFile: false
   });
 
+  // Helper function to check if email domain is valid (allows subdomains)
+  const isValidUniversityEmail = (email: string) => {
+    if (!email.includes('@')) return false;
+    
+    const domain = email.split('@')[1].toLowerCase();
+    
+    return UNIVERSITY_DOMAINS.some(uniDomain => {
+      const lowerUniDomain = uniDomain.toLowerCase();
+      // Allow exact match or subdomain match (e.g., subdomain.uni.ac.lk matches uni.ac.lk)
+      return domain === lowerUniDomain || domain.endsWith('.' + lowerUniDomain);
+    });
+  };
+
   const validateForm = () => {
-    const isValidEmail = email.includes('@') && UNIVERSITY_DOMAINS.some(domain => email.endsWith(`@${domain}`));
+    const isValidEmail = isValidUniversityEmail(email);
     const newErrors = {
       name: !name,
       email: !email || !isValidEmail,
@@ -65,7 +78,7 @@ export default function StudentPackageApply() {
       setIsUploading(true);
       
       const result = await DocumentPicker.getDocumentAsync({
-        type: 'application/pdf',
+        type: ['application/pdf', 'image/*'],
         copyToCacheDirectory: true,
       });
       
@@ -75,15 +88,15 @@ export default function StudentPackageApply() {
       }
       setIsUploading(false);
     } catch (error) {
-      console.log("Error uploading PDF:", error);
+      console.log("Error uploading file:", error);
       setIsUploading(false);
-      Alert.alert("Error", "Failed to upload PDF. Please try again.");
+      Alert.alert("Error", "Failed to upload file. Please try again.");
     }
   };
 
   const handleSubmit = async () => {
     if (!validateForm()) {
-      Alert.alert('Missing Information', 'Please fill in all required fields and upload your student ID PDF.');
+      Alert.alert('Missing Information', 'Please fill in all required fields and upload your student ID document.');
       return;
     }
     
@@ -93,8 +106,8 @@ export default function StudentPackageApply() {
       // Get authentication token
       const authToken = await AsyncStorage.getItem('token') || '';
       
-      // Upload PDF to Cloudinary
-      const cloudinaryResult = await uploadStudentIdToCloudinary(idCardFile!, 'student_id.pdf');
+      // Upload file to Cloudinary
+      const cloudinaryResult = await uploadStudentIdToCloudinary(idCardFile!, 'student_id_document');
       
       // Prepare request body
       const requestBody = {
@@ -266,7 +279,7 @@ export default function StudentPackageApply() {
                 value={email}
                 onChangeText={(text) => {
                   setEmail(text);
-                  const isValid = text.includes('@') && UNIVERSITY_DOMAINS.some(domain => text.endsWith(`@${domain}`));
+                  const isValid = isValidUniversityEmail(text);
                   if (isValid) setErrors(prev => ({ ...prev, email: false }));
                 }}
                 placeholder="Enter your university email"
@@ -301,14 +314,14 @@ export default function StudentPackageApply() {
 
           {/* ID Card Upload */}
           <View className="mb-5">
-            <Text className="text-gray-700 mb-1 font-medium">Upload Student ID PDF *</Text>
+            <Text className="text-gray-700 mb-1 font-medium">Upload Student ID (PDF or Image) *</Text>
             <View className={`border rounded-lg p-4 ${errors.idCardFile ? 'border-red-500' : 'border-gray-300'}`}>
               {idCardFile ? (
                 <View className="items-center">
                   <View className="bg-indigo-100 rounded-lg p-3 mb-2">
                     <CreditCard size={24} color="#6366F1" />
                   </View>
-                  <Text className="text-indigo-600 font-medium">PDF Uploaded</Text>
+                  <Text className="text-indigo-600 font-medium">ID Document Uploaded</Text>
                   <TouchableOpacity 
                     className="mt-2 px-3 py-1 bg-gray-100 rounded-lg" 
                     onPress={handleUploadIdCard}
@@ -329,16 +342,16 @@ export default function StudentPackageApply() {
                       <View className="bg-gray-100 rounded-lg p-3 mb-2">
                         <CreditCard size={24} color="#6B7280" />
                       </View>
-                      <Text className="text-indigo-600 font-medium">Upload PDF</Text>
+                      <Text className="text-indigo-600 font-medium">Upload ID Document</Text>
                       <Text className="text-gray-500 text-xs text-center mt-1">
-                        Please upload your student ID card as a PDF file
+                        Please upload your student ID card as a PDF or image file
                       </Text>
                     </>
                   )}
                 </TouchableOpacity>
               )}
             </View>
-            {errors.idCardFile && <Text className="text-red-500 text-xs mt-1">Student ID PDF upload is required</Text>}
+            {errors.idCardFile && <Text className="text-red-500 text-xs mt-1">Student ID document upload is required</Text>}
           </View>
           
           {/* Submit Button */}

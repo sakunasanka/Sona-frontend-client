@@ -296,6 +296,7 @@ export default function Profile() {
             title="Log Out" 
             onPress={async () => {
               await sessionManager.clearSession();
+              await AsyncStorage.removeItem('token');
               router.replace('/(auth)/signin');
             }} 
             icon={LogOut}

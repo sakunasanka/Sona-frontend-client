@@ -1,16 +1,15 @@
 // api/Posts.ts
-import { API_URL, PORT } from '@/config/env';
+import { API_URL, PORT, host, server_URL } from '@/config/env';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
-import { Platform } from 'react-native';
 
 let API_BASE_URL = '';
-if (Platform.OS === 'android') {
+
+if(host && server_URL){
+  API_BASE_URL = server_URL + '/api';
+  console.log("Using server_URL from config/env.ts as API_BASE_URL:", API_BASE_URL);
+}else {
   API_BASE_URL = API_URL + ':' + PORT + '/api';
-} else if (Platform.OS === 'ios') {
-  API_BASE_URL = API_URL + ':' + PORT + '/api';
-} else {
-  API_BASE_URL = 'http://localhost:' + PORT + '/api';
 }
 
 interface User {

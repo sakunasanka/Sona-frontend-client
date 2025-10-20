@@ -12,6 +12,24 @@ export const useNotifications = () => {
   const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   /**
+   * Fetch notifications from backend (for automatic polling - no loading state)
+   */
+  const fetchNotificationsSilent = useCallback(async () => {
+    try {
+      setError(null);
+      const response = await notificationAPI.getUserNotifications();
+      
+      if (response.success && response.data) {
+        setNotifications(response.data.notifications);
+        setUnreadCount(response.data.unreadCount);
+      }
+    } catch (err: any) {
+      // console.error('Error fetching notifications:', err);
+      setError(err?.message || 'Failed to fetch notifications');
+    }
+  }, []);
+
+  /**
    * Fetch notifications from backend
    */
   const fetchNotifications = useCallback(async () => {
@@ -25,7 +43,7 @@ export const useNotifications = () => {
         setUnreadCount(response.data.unreadCount);
       }
     } catch (err: any) {
-      console.error('Error fetching notifications:', err);
+      // console.error('Error fetching notifications:', err);
       setError(err?.message || 'Failed to fetch notifications');
     } finally {
       setLoading(false);
@@ -136,14 +154,14 @@ export const useNotifications = () => {
       clearInterval(pollingIntervalRef.current);
     }
 
-    // Initial fetch
+    // Initial fetch (with loading)
     fetchNotifications();
 
-    // Set up polling interval
+    // Set up polling interval (silent updates)
     pollingIntervalRef.current = setInterval(() => {
-      fetchNotifications();
+      fetchNotificationsSilent();
     }, POLLING_INTERVAL);
-  }, [fetchNotifications]);
+  }, [fetchNotifications, fetchNotificationsSilent]);
 
   /**
    * Stop polling

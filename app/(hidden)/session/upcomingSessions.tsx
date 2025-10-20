@@ -1,15 +1,15 @@
-import { checkIsStudent } from '@/api/api';
+import { checkIsStudent, checkSessionFeedback, getMostRecentSessionNeedingFeedback, submitReview } from '@/api/api';
 import { getChatRoom } from '@/api/chat';
-import { getUpcomingSessions } from '@/api/sessions';
+import { fetchUserSessions } from '@/api/sessions';
 import { usePlatformFee } from '@/contexts/PlatformFeeContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, Calendar, Clock, ExternalLink, Filter, GraduationCap, MessageCircle, Star, User } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Image, RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, RefreshControl, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 // Define types
-type SessionStatus = 'upcoming' | 'past' | 'all' | 'student' | 'free';
+type SessionStatus = 'upcoming' | 'past' | 'completed' | 'all' | 'student' | 'free';
 type FilterOption = {
     label: string;
     value: string;
@@ -40,7 +40,7 @@ export default function UpcomingSessions() {
     const [sessions, setSessions] = useState<UISession[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
-    const [activeFilter, setActiveFilter] = useState<SessionStatus>('all');
+    const [activeFilter, setActiveFilter] = useState<SessionStatus>('upcoming');
     const [selectedCounselor, setSelectedCounselor] = useState<string>('all');
     const [showFilters, setShowFilters] = useState<boolean>(false);
     const [showCounselorDropdown, setShowCounselorDropdown] = useState<boolean>(false);
@@ -49,6 +49,14 @@ export default function UpcomingSessions() {
     const [isStudent, setIsStudent] = useState<boolean>(false);
     const [refreshing, setRefreshing] = useState<boolean>(false);
     const [token, setToken] = useState<string>('');
+
+    // Feedback related state
+    const [feedbackStatus, setFeedbackStatus] = useState<{[sessionId: string]: {hasFeedback: boolean, loading: boolean}}>({});
+    const [showFeedbackModal, setShowFeedbackModal] = useState<boolean>(false);
+    const [selectedSessionForFeedback, setSelectedSessionForFeedback] = useState<UISession | null>(null);
+    const [feedbackRating, setFeedbackRating] = useState<number>(0);
+    const [feedbackComment, setFeedbackComment] = useState<string>('');
+    const [isSubmittingFeedback, setIsSubmittingFeedback] = useState<boolean>(false);
 
 
     
@@ -73,7 +81,7 @@ export default function UpcomingSessions() {
             }
             
             // Use the API function from our sessions.ts file
-            const response = await getUpcomingSessions(authToken);
+            const response = await fetchUserSessions(authToken);
             
             // Get data from the response
             let sessionsArray = Array.isArray(response.data) ? response.data : response.sessions || [];
@@ -98,9 +106,9 @@ export default function UpcomingSessions() {
                     counselorImage: counselor.avatar || '',
                     specialties: counselor.specialties || ['Counseling'],
                     rating: counselor.rating || 5,
-                    status: getSessionStatus(`${session.date}T${session.timeSlot || '00:00'}:00`),
+                    status: mapSessionStatus(session.status || 'upcoming'),
                     timeSlot: session.timeSlot || '',
-                    sessionStatus: session.status || 'scheduled',
+                    sessionStatus: session.status || 'upcoming',
                     isStudentSession,
                     isFreeForAll,
                     isVolunteerCounselor
@@ -108,6 +116,10 @@ export default function UpcomingSessions() {
             });
             
             setSessions(processedSessions);
+            console.log('Sessions loaded:', processedSessions.length);
+            console.log('Sample session:', processedSessions[0]);
+            
+            // Don't call checkAndShowFeedbackModal here - it will be called by useEffect
         } catch (err: any) {
             console.error('Failed to fetch sessions:', err);
             setError(err.message || 'Failed to load sessions. Please try again.');
@@ -128,6 +140,13 @@ export default function UpcomingSessions() {
     useEffect(() => {
         fetchSessions();
     }, []);
+
+    // Check for feedback modal when sessions are loaded
+    useEffect(() => {
+        if (sessions.length > 0) {
+            checkAndShowFeedbackModal();
+        }
+    }, [sessions]);
 
     const getTodayDate = (): Date => {
         const today = new Date();
@@ -282,6 +301,22 @@ export default function UpcomingSessions() {
         }
     };
     
+    const mapSessionStatus = (apiStatus: string): SessionStatus => {
+        // Map API status to UI status
+        switch (apiStatus.toLowerCase()) {
+            case 'completed':
+                return 'past';
+            case 'cancelled':
+                return 'past';
+            case 'upcoming':
+                return 'upcoming';
+            case 'ongoing':
+                return 'upcoming'; // Ongoing sessions are still active
+            default:
+                return 'upcoming';
+        }
+    };
+    
     const getSessionStatus = (dateString: string): SessionStatus => {
         try {
             const sessionDate = new Date(dateString);
@@ -305,6 +340,135 @@ export default function UpcomingSessions() {
     const handleChatWithCounselor = async (counselorId: string): Promise<void> => {
         const chatId = await getChatRoom(parseInt(counselorId), token);
         router.push(`/(hidden)/session/messageWithCouncilor?id=${chatId}`);
+    };
+
+    // Function to check feedback status for a session
+    const checkFeedbackStatus = async (sessionId: string) => {
+        if (feedbackStatus[sessionId]?.loading) return; // Already checking
+        
+        setFeedbackStatus(prev => ({
+            ...prev,
+            [sessionId]: { hasFeedback: false, loading: true }
+        }));
+        
+        try {
+            const token = await AsyncStorage.getItem('token');
+            if (!token) return;
+            
+            const response = await checkSessionFeedback(token, sessionId);
+            
+            if (response.success && response.data) {
+                setFeedbackStatus(prev => ({
+                    ...prev,
+                    [sessionId]: { 
+                        hasFeedback: response.data.hasFeedback || false, 
+                        loading: false 
+                    }
+                }));
+            }
+        } catch (error) {
+            console.error('Error checking feedback status:', error);
+            setFeedbackStatus(prev => ({
+                ...prev,
+                [sessionId]: { hasFeedback: false, loading: false }
+            }));
+        }
+    };
+
+    // Function to handle feedback button press
+    const handleFeedbackPress = (session: UISession) => {
+        setSelectedSessionForFeedback(session);
+        setFeedbackRating(0);
+        setFeedbackComment('');
+        setShowFeedbackModal(true);
+    };
+
+    // Function to check and show feedback modal for most recent completed session without feedback
+    const checkAndShowFeedbackModal = async () => {
+        try {
+            const token = await AsyncStorage.getItem('token');
+            if (!token) {
+                console.log('No token available for feedback check');
+                return;
+            }
+
+            console.log('Checking for most recent session needing feedback...');
+            const response = await getMostRecentSessionNeedingFeedback(token);
+            console.log('Most recent feedback check response:', response);
+
+            // Handle different response structures
+            let sessionData = null;
+            if (response && response.data) {
+                sessionData = response.data;
+            } else if (response && response.sessionId !== undefined) {
+                sessionData = response;
+            }
+
+            console.log('Session data extracted:', sessionData);
+
+            // If no session needs feedback (sessionId is null), don't show modal
+            if (!sessionData || sessionData.sessionId === null) {
+                console.log('No sessions need feedback');
+                return;
+            }
+
+            // Check if session exists in our sessions list
+            const sessionNeedingFeedback = sessions.find(session => 
+                session.id === sessionData.sessionId.toString()
+            );
+
+            console.log('Found matching session:', sessionNeedingFeedback);
+
+            if (sessionNeedingFeedback) {
+                console.log('Showing feedback modal for session:', sessionNeedingFeedback.id);
+                // Show feedback modal for this session
+                setSelectedSessionForFeedback(sessionNeedingFeedback);
+                setFeedbackRating(0);
+                setFeedbackComment('');
+                setShowFeedbackModal(true);
+            } else {
+                console.log('Session not found in local sessions array');
+            }
+        } catch (error) {
+            console.error('Error checking for most recent session needing feedback:', error);
+        }
+    };
+
+    // Function to submit feedback
+    const handleFeedbackSubmit = async () => {
+        if (!selectedSessionForFeedback || feedbackRating === 0) return;
+        
+        setIsSubmittingFeedback(true);
+        try {
+            const token = await AsyncStorage.getItem('token');
+            if (!token) return;
+            
+            // Submit the review to the API
+            const reviewData = {
+                session_id: parseInt(selectedSessionForFeedback.id),
+                rating: feedbackRating,
+                comment: feedbackComment.trim()
+            };
+            
+            console.log('Submitting review:', reviewData);
+            const response = await submitReview(token, reviewData);
+            console.log('Review submission response:', response);
+            
+            Alert.alert('Success', 'Thank you for your feedback!');
+            setShowFeedbackModal(false);
+            
+            // Update feedback status to reflect that feedback has been provided
+            setFeedbackStatus(prev => ({
+                ...prev,
+                [selectedSessionForFeedback.id]: { hasFeedback: true, loading: false }
+            }));
+            
+        } catch (error: any) {
+            console.error('Error submitting feedback:', error);
+            Alert.alert('Error', error.message || 'Failed to submit feedback. Please try again.');
+        } finally {
+            setIsSubmittingFeedback(false);
+        }
     };
 
     // Show loading while context is still loading fee status
@@ -422,7 +586,7 @@ export default function UpcomingSessions() {
                     </View>
                 ) : (
                     <View className="space-y-3">
-                        {sessions.map((session) => (
+                        {filteredSessions.map((session) => (
                             <View 
                                 key={session.id} 
                                 className="bg-white rounded-xl p-5 border border-gray-300 mb-5"
@@ -538,7 +702,86 @@ export default function UpcomingSessions() {
                         ))}
                     </View>
                 )}
-            </ScrollView>     
+            </ScrollView>
+
+            {/* Feedback Modal */}
+            {showFeedbackModal && selectedSessionForFeedback && (
+                <View className="absolute inset-0 bg-black/50 justify-center items-center z-50">
+                    <View className="bg-white w-11/12 max-w-md rounded-2xl p-6 m-4">
+                        <View className="flex-row items-start justify-between mb-4">
+                            <View className="flex-1">
+                                <Text className="text-lg font-bold text-gray-900">Rate Your Session</Text>
+                                <Text className="text-sm text-gray-600 mt-1">
+                                    with {selectedSessionForFeedback.counselorName}
+                                </Text>
+                            </View>
+                            <TouchableOpacity onPress={() => setShowFeedbackModal(false)}>
+                                <Text className="text-2xl text-gray-400">×</Text>
+                            </TouchableOpacity>
+                        </View>
+
+                        {/* Rating Section */}
+                        <View className="items-center mb-6">
+                            <Text className="text-gray-700 mb-3 font-medium">How was your experience?</Text>
+                            <View className="flex-row mb-2">
+                                {[1, 2, 3, 4, 5].map((star) => (
+                                    <TouchableOpacity
+                                        key={star}
+                                        onPress={() => setFeedbackRating(star)}
+                                        className="mx-1"
+                                    >
+                                        <Star
+                                            size={32}
+                                            color={star <= feedbackRating ? "#FBBF24" : "#D1D5DB"}
+                                            fill={star <= feedbackRating ? "#FBBF24" : "none"}
+                                        />
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+                            <Text className="text-sm text-gray-500">
+                                {feedbackRating > 0 ? `${feedbackRating} star${feedbackRating > 1 ? 's' : ''}` : 'Tap to rate'}
+                            </Text>
+                        </View>
+
+                        {/* Comment Section */}
+                        <View className="mb-6">
+                            <Text className="text-gray-700 mb-2 font-medium">Additional Comments (Optional)</Text>
+                            <TextInput
+                                value={feedbackComment}
+                                onChangeText={setFeedbackComment}
+                                placeholder="Share your thoughts about the session..."
+                                multiline
+                                numberOfLines={3}
+                                className="border border-gray-300 rounded-lg p-3 text-gray-900 min-h-[80px]"
+                                placeholderTextColor="#9CA3AF"
+                                maxLength={500}
+                            />
+                            <Text className="text-xs text-gray-400 mt-1 text-right">
+                                {feedbackComment.length}/500
+                            </Text>
+                        </View>
+
+                        {/* Submit Button */}
+                        <TouchableOpacity
+                            onPress={handleFeedbackSubmit}
+                            disabled={feedbackRating === 0 || isSubmittingFeedback}
+                            className={`py-3 rounded-lg items-center ${
+                                feedbackRating === 0 || isSubmittingFeedback ? 'bg-gray-300' : 'bg-primary'
+                            }`}
+                        >
+                            {isSubmittingFeedback ? (
+                                <ActivityIndicator size="small" color="#FFFFFF" />
+                            ) : (
+                                <Text className={`font-semibold ${
+                                    feedbackRating === 0 ? 'text-gray-500' : 'text-white'
+                                }`}>
+                                    Submit Feedback
+                                </Text>
+                            )}
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            )}
         </View>
     );
 }

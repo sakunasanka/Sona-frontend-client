@@ -26,8 +26,13 @@ export default function JitsiWebView({
       try {
         setIsLoading(true);
         setError(null);
-        console.log('Fetched session link:', url);
-        setMeetingUrl(url);
+        console.log('Original session link:', url);
+
+        // Add parameters to force web browser mode and disable app prompts
+        const forceWebUrl = addWebBrowserParams(url);
+        console.log('Modified session link:', forceWebUrl);
+
+        setMeetingUrl(forceWebUrl);
       } catch (error) {
         console.error('Error fetching session link:', error);
         setError('Failed to load meeting. Please try again.');
@@ -37,7 +42,30 @@ export default function JitsiWebView({
     };
 
     fetchUrl();
-  }, []);
+  }, [url]);
+
+  const addWebBrowserParams = (originalUrl: string): string => {
+    try {
+      const urlObj = new URL(originalUrl);
+
+      // Add parameters to force web browser mode
+      urlObj.searchParams.set('config.disableDeepLinking', 'true');
+      urlObj.searchParams.set('config.enableMobileBrowser', 'true');
+      urlObj.searchParams.set('interfaceConfig.MOBILE_APP_PROMO', 'false');
+      urlObj.searchParams.set('interfaceConfig.SHOW_JITSI_WATERMARK', 'false');
+      urlObj.searchParams.set('interfaceConfig.SHOW_WATERMARK_FOR_GUESTS', 'false');
+
+      // Force to use web browser instead of app
+      urlObj.searchParams.set('config.disableThirdPartyRequests', 'true');
+      urlObj.searchParams.set('config.enableNoAudioDetection', 'false');
+      urlObj.searchParams.set('config.enableNoisyMicDetection', 'false');
+
+      return urlObj.toString();
+    } catch (error) {
+      console.error('Error modifying URL:', error);
+      return originalUrl;
+    }
+  };
 
   const handleMessage = useCallback(
     (e: any) => {
@@ -170,6 +198,7 @@ export default function JitsiWebView({
       <WebView
         originWhitelist={['*']}
         source={{ uri: url }}
+        userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
         javaScriptEnabled={true}
         domStorageEnabled={true}
         allowsInlineMediaPlayback={true}

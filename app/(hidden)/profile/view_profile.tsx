@@ -4,7 +4,7 @@ import { usePlatformFee } from '@/contexts/PlatformFeeContext';
 import { getDisplayName } from '@/util/asyncName';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router, useFocusEffect } from 'expo-router';
-import { AlertCircle, AlertTriangle, ArrowLeft, BadgeCheck, Edit, GraduationCap, HelpCircle, History, LogOut, Shield } from 'lucide-react-native';
+import { AlertCircle, AlertTriangle, ArrowLeft, BadgeCheck, BarChart3, Edit, FileText, GraduationCap, HelpCircle, History, LogOut, Shield } from 'lucide-react-native';
 import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Image, SafeAreaView, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import PlatformFeePayment from '../../../components/PlatformFeePayment';
@@ -43,14 +43,14 @@ export default function Profile() {
         setIsStudent(studentStatus);
       }
 
-      // Platform fee status is already available from context - no need to refresh!
-      // Only call refreshFeeStatus manually after payment, not on every profile load
+      // Refresh platform fee status every time profile loads
+      refreshFeeStatus();
     } catch (error) {
       console.error('Error initializing profile:', error);
     } finally {
       setIsLoading(false);
     }
-  }, []); // No dependencies needed now since we removed refreshFeeStatus call
+  }, [refreshFeeStatus]); // Add refreshFeeStatus as dependency
 
   useEffect(() => {
     initializeProfile();
@@ -208,12 +208,22 @@ export default function Profile() {
           <Text className="text-lg font-semibold text-gray-900 mb-4">Account</Text>
           <TouchableOpacity 
             className="flex-row items-center py-4 border-b border-gray-100"
-            onPress={() => router.push('/session/sessionHistory')}
+            onPress={() => router.push('/(hidden)/session/sessionHistory')}
           >
             <View className="w-9 h-9 rounded-full bg-blue-50 justify-center items-center mr-4">
               <History size={20} color="#2563EB" />
             </View>
             <Text className="text-base text-gray-900">Counselling sessions</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            className="flex-row items-center py-4 border-b border-gray-100"
+            onPress={() => router.push('/(hidden)/profile/prescription_history')}
+          >
+            <View className="w-9 h-9 rounded-full bg-blue-50 justify-center items-center mr-4">
+              <FileText size={20} color="#2563EB" />
+            </View>
+            <Text className="text-base text-gray-900">Prescription history</Text>
           </TouchableOpacity>
           
           {/* <TouchableOpacity 
@@ -243,7 +253,7 @@ export default function Profile() {
             <Text className="text-base text-gray-900">Saved Resources</Text>
           </TouchableOpacity> */}
           
-          <TouchableOpacity className="flex-row items-center py-4 border-b border-gray-100">
+          {/* <TouchableOpacity className="flex-row items-center py-4 border-b border-gray-100">
             <View className="w-9 h-9 rounded-full bg-blue-50 justify-center items-center mr-4">
               <Shield size={20} color="#2563EB" />
             </View>
@@ -255,6 +265,16 @@ export default function Profile() {
               <HelpCircle size={20} color="#2563EB" />
             </View>
             <Text className="text-base text-gray-900">Help & Support</Text>
+          </TouchableOpacity> */}
+
+          <TouchableOpacity 
+            className="flex-row items-center py-4 border-b border-gray-100"
+            onPress={() => router.push('/profile/view_mood')}
+          >
+            <View className="w-9 h-9 rounded-full bg-blue-50 justify-center items-center mr-4">
+              <BarChart3 size={20} color="#2563EB" />
+            </View>
+            <Text className="text-base text-gray-900">View mood analytics</Text>
           </TouchableOpacity>
           
           {/* Only show "Apply for Free Student Package" if user is not already a student */}
@@ -276,6 +296,7 @@ export default function Profile() {
             title="Log Out" 
             onPress={async () => {
               await sessionManager.clearSession();
+              await AsyncStorage.removeItem('token');
               router.replace('/(auth)/signin');
             }} 
             icon={LogOut}

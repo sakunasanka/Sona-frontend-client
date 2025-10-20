@@ -1,6 +1,5 @@
 import { Tabs } from 'expo-router';
 import { Home, MessageCircle, Newspaper, PersonStanding, Stethoscope } from 'lucide-react-native';
-import MoodManager from '../../components/MoodManager';
 import QuestionnaireManager from '../../components/QuestionnaireManager';
 import { useSessionTimeout } from '../../hooks/useSessionTimeout';
 
@@ -19,7 +18,7 @@ export default function TabsLayout() {
         <Tabs.Screen
           name="index"
           options={{
-            title: 'home',
+            title: 'Home',
             tabBarIcon: ({ color }) => <Home color={color} />,
           }}
         />
@@ -52,7 +51,6 @@ export default function TabsLayout() {
           }}
         />
       </Tabs>
-      <MoodManager />
       <QuestionnaireManager />
     </>
   );

@@ -63,16 +63,19 @@ export const getChatMessages = async (
 export const getOlderMessages = async (
   chatId: number, 
   beforeMessageId: number, 
-  limit: number = 50
+  limit: number = 50,
+  token?: string
 ): Promise<PaginatedResponse<ChatMessage>> => {
   try {
+    console.log('Fetch older messages:', { chatId, beforeMessageId, limit, token });
     const response = await apiRequest({
       method: 'get',
-      path: `/chat/${chatId}/messages?before=${beforeMessageId}&limit=${limit}`
+      path: `/chat/${chatId}/messages?before=${beforeMessageId}&limit=${limit}`,
+      token
     });
     return response;
   } catch (error) {
-    // console.error('Error fetching older messages:', error);
+    console.error('Error fetching older messages:', error);
     throw error;
   }
 };

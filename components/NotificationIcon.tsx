@@ -112,10 +112,8 @@ const NotificationIcon: React.FC<NotificationIconProps> = ({
       if (notification.relatedURL) {
         setIsDropdownOpen(false);
         router.push(notification.relatedURL as any);
-      } else {
-        // Show notification details in modal
-        setSelectedNotification(notification);
       }
+      // If relatedURL is null, don't do anything (don't show modal)
     } catch (error) {
       console.error('Error handling notification click:', error);
     }

@@ -43,14 +43,14 @@ export default function Profile() {
         setIsStudent(studentStatus);
       }
 
-      // Platform fee status is already available from context - no need to refresh!
-      // Only call refreshFeeStatus manually after payment, not on every profile load
+      // Refresh platform fee status every time profile loads
+      refreshFeeStatus();
     } catch (error) {
       console.error('Error initializing profile:', error);
     } finally {
       setIsLoading(false);
     }
-  }, []); // No dependencies needed now since we removed refreshFeeStatus call
+  }, [refreshFeeStatus]); // Add refreshFeeStatus as dependency
 
   useEffect(() => {
     initializeProfile();

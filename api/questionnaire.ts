@@ -99,7 +99,7 @@ export const submitPHQ9 = async (submissionData: PHQ9Submission, token: string):
     });
     return response.data;
   } catch (error) {
-    console.error('Error submitting PHQ-9:', error);
+    console.log('Error submitting PHQ-9:', error);
     throw error;
   }
 };
@@ -117,7 +117,7 @@ export const getPHQ9History = async (token: string, limit?: number): Promise<PHQ
     });
     return response.data;
   } catch (error) {
-    console.error('Error fetching PHQ-9 history:', error);
+    console.log('Error fetching PHQ-9 history:', error);
     throw error;
   }
 };
@@ -134,7 +134,7 @@ export const getPHQ9Result = async (resultId: string, token: string): Promise<PH
     });
     return response.data;
   } catch (error) {
-    console.error('Error fetching PHQ-9 result:', error);
+    console.log('Error fetching PHQ-9 result:', error);
     throw error;
   }
 };
@@ -151,7 +151,7 @@ export const getLatestPHQ9Result = async (token: string): Promise<PHQ9Result | n
     });
     return response.data;
   } catch (error) {
-    console.error('Error fetching latest PHQ-9 result:', error);
+    console.log('Error fetching latest PHQ-9 result:', error);
     return null;
   }
 };
@@ -167,7 +167,7 @@ export const deletePHQ9Result = async (resultId: string, token: string): Promise
       token
     });
   } catch (error) {
-    console.error('Error deleting PHQ-9 result:', error);
+    console.log('Error deleting PHQ-9 result:', error);
     throw error;
   }
 };
@@ -189,7 +189,7 @@ export const getPHQ9Analytics = async (token: string, filters?: {
     });
     return response.data;
   } catch (error) {
-    console.error('Error fetching PHQ-9 analytics:', error);
+    console.log('Error fetching PHQ-9 analytics:', error);
     throw error;
   }
 };
@@ -223,7 +223,7 @@ export const hasCompletedPHQ9ThisPeriod = async (): Promise<boolean> => {
 
     return false;
   } catch (error) {
-    console.error('Error checking PHQ-9 completion this period:', error);
+    console.log('Error checking PHQ-9 completion this period:', error);
     return false; // Fail safely - show popup if there's an error
   }
 };// Helper functions for scoring and interpretation

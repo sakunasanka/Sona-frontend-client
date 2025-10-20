@@ -20,7 +20,7 @@ export default function QuestionnaireManager() {
           }, 3000); // 3 second delay (after mood popup)
         }
       } catch (error) {
-        console.error('Error checking questionnaire status:', error);
+        console.log('Error checking questionnaire status:', error);
         // On error, don't show popup to avoid annoying users
       }
     };

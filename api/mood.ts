@@ -131,7 +131,7 @@ export const saveDailyMood = async (moodData: {
 
     return response.data?.data || response.data;
   } catch (error) {
-    console.error('Error saving mood:', error);
+    console.log('Error saving mood:', error);
     throw error;
   }
 };
@@ -161,7 +161,7 @@ export const hasSubmittedTodaysMood = async (): Promise<boolean> => {
     console.warn('Unexpected status checking user moods:', response.status);
     return false;
   } catch (error: any) {
-    console.error('Error checking today\'s mood:', error);
+    console.log('Error checking today\'s mood:', error);
     // On errors, assume not submitted so popup can prompt user
     return false;
   }
@@ -189,7 +189,7 @@ export const getTodaysMood = async (): Promise<DailyMood | null> => {
 
     return null;
   } catch (error) {
-    console.error('Error fetching today\'s mood:', error);
+    console.log('Error fetching today\'s mood:', error);
     return null;
   }
 };
@@ -203,7 +203,7 @@ export const getMoodHistory = async (days: number = 30): Promise<DailyMood[]> =>
     
     return response.data?.data || [];
   } catch (error) {
-    console.error('Error fetching mood history:', error);
+    console.log('Error fetching mood history:', error);
     return [];
   }
 };
@@ -222,7 +222,7 @@ export const getMoodStats = async (): Promise<MoodStats> => {
       weeklyTrend: [],
     };
   } catch (error) {
-    console.error('Error fetching mood stats:', error);
+    console.log('Error fetching mood stats:', error);
     return {
       averageValence: 0,
       averageArousal: 0,
@@ -381,7 +381,7 @@ export const getMoodAnalytics = async (clientId: number, month?: number, year?: 
     
     throw new Error('Failed to fetch mood analysis');
   } catch (error) {
-    console.error('Error fetching mood analytics:', error);
+    console.log('Error fetching mood analytics:', error);
     return {
       totalEntries: 0,
       moodDistribution: {},

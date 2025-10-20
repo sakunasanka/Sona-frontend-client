@@ -4,14 +4,14 @@ import { router } from 'expo-router';
 import { Activity, ArrowLeft, BarChart3, Calendar, Heart, RefreshCw, TrendingDown, TrendingUp, Zap } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Dimensions,
-  ScrollView,
-  StatusBar,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Dimensions,
+    ScrollView,
+    StatusBar,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { LineChart } from 'react-native-chart-kit';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -142,7 +142,7 @@ const ViewMoodAnalytics: React.FC = () => {
         setError('Unable to load user profile');
       }
     } catch (err) {
-      console.error('Error loading profile:', err);
+      console.log('Error loading profile:', err);
       setError('Failed to load user profile');
       setLoading(false);
     }
@@ -161,7 +161,7 @@ const ViewMoodAnalytics: React.FC = () => {
       console.log('Average arousal:', data.averageArousal);
       setAnalytics(data);
     } catch (err) {
-      console.error('Error loading mood analytics:', err);
+      console.log('Error loading mood analytics:', err);
       setError('Failed to load mood analytics');
       Alert.alert('Error', 'Failed to load mood analytics');
     } finally {

@@ -42,7 +42,7 @@ export const fetchUserSessions = async (token: string) => {
     });
     return response;
   } catch (error) {
-    console.error('Error fetching sessions:', error);
+    console.log('Error fetching sessions:', error);
     throw error;
   }
 };
@@ -59,7 +59,7 @@ export const fetchTimeSlots = async (counselorId: string, date: string, token?: 
     });
     return response;
   } catch (error) {
-    console.error('Error fetching time slots:', error);
+    console.log('Error fetching time slots:', error);
     throw error;
   }
 };
@@ -83,7 +83,7 @@ export const bookSession = async (sessionData: {
     });
     return response;
   } catch (error) {
-    console.error('Error booking session:', error);
+    console.log('Error booking session:', error);
     throw error;
   }
 };
@@ -106,7 +106,7 @@ export const bookFreeStudentSession = async (sessionData: {
     });
     return response;
   } catch (error) {
-    console.error('Error booking free student session:', error);
+    console.log('Error booking free student session:', error);
     throw error;
   }
 };
@@ -123,7 +123,7 @@ export const cancelSession = async (sessionId: string, token: string) => {
     });
     return response;
   } catch (error) {
-    console.error('Error cancelling session:', error);
+    console.log('Error cancelling session:', error);
     throw error;
   }
 };
@@ -140,7 +140,7 @@ export const getRemainingFreeSessions = async (token: string) => {
     });
     return response;
   } catch (error) {
-    console.error('Error fetching remaining free sessions:', error);
+    console.log('Error fetching remaining free sessions:', error);
     throw error;
   }
 };
@@ -164,7 +164,7 @@ export const fetchPsychiatrists = async (token?: string) => {
     });
     return response;
   } catch (error) {
-    console.error('Error fetching psychiatrists:', error);
+    console.log('Error fetching psychiatrists:', error);
     throw error;
   }
 };
@@ -181,7 +181,7 @@ export const fetchPsychiatristById = async (psychiatristId: string, token?: stri
     });
     return response;
   } catch (error) {
-    console.error('Error fetching psychiatrist:', error);
+    console.log('Error fetching psychiatrist:', error);
     throw error;
   }
 };
@@ -198,7 +198,7 @@ export const fetchPsychiatristTimeSlots = async (psychiatristId: string, date: s
     });
     return response;
   } catch (error) {
-    console.error('Error fetching psychiatrist time slots:', error);
+    console.log('Error fetching psychiatrist time slots:', error);
     throw error;
   }
 };
@@ -227,7 +227,7 @@ export const bookPsychiatristSession = async (sessionData: {
     });
     return response;
   } catch (error) {
-    console.error('Error booking psychiatrist session:', error);
+    console.log('Error booking psychiatrist session:', error);
     throw error;
   }
 };
@@ -254,7 +254,7 @@ export const bookFreePsychiatristSession = async (sessionData: {
     });
     return response;
   } catch (error) {
-    console.error('Error booking free psychiatrist session:', error);
+    console.log('Error booking free psychiatrist session:', error);
     throw error;
   }
 }; 
@@ -270,7 +270,7 @@ export const getSessionLink = async (sessionId: string, token: string) => {
 
     return response;
   }catch (error) {
-    console.error('Error fetching session link:', error);
+    console.log('Error fetching session link:', error);
     throw error;
   }
 }
@@ -285,7 +285,7 @@ export const getUpcomingSessions = async (token: string) => {
 
     return response;
   }catch (error) {
-    console.error('Error fetching upcoming sessions:', error);
+    console.log('Error fetching upcoming sessions:', error);
     throw error;
   }
 }
@@ -308,7 +308,7 @@ export const sendEmergencyAlert = async (token: string, {
     });
     return response;
   } catch (error) {
-    console.error('Error sending emergency alert:', error);
+    console.log('Error sending emergency alert:', error);
     throw error;
   }
 }

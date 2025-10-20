@@ -81,7 +81,7 @@ export default function SessionHistory() {
                     }
                 }
             } catch (error) {
-                console.error('Error checking student status:', error);
+                console.log('Error checking student status:', error);
             }
         };
         
@@ -100,7 +100,7 @@ export default function SessionHistory() {
                 setTotalSessionsThisPeriod(sessionInfo.totalSessionsThisPeriod);
             }
         } catch (error) {
-            console.error('Failed to fetch remaining free sessions:', error);
+            console.log('Failed to fetch remaining free sessions:', error);
         } finally {
             setLoadingStudentData(false);
         }
@@ -158,7 +158,7 @@ export default function SessionHistory() {
                 await fetchStudentSessionsData(authToken);
             }
         } catch (err: any) {
-            console.error('Failed to fetch sessions:', err);
+            console.log('Failed to fetch sessions:', err);
             setError(err.message || 'Failed to load sessions. Please try again.');
             
             if (err.name === 'AbortError') {

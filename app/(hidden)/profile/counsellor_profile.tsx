@@ -5,14 +5,14 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { ArrowLeft, Award, Calendar, Clock, Globe, GraduationCap, MapPin, Star } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  SafeAreaView,
-  ScrollView,
-  Text,
-  TouchableOpacity,
-  View
+    ActivityIndicator,
+    Alert,
+    Image,
+    SafeAreaView,
+    ScrollView,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { PrimaryButton } from '../../components/Buttons';
 
@@ -72,12 +72,12 @@ export default function CounsellorProfile() {
             console.log('Counselor data received:', JSON.stringify(counselor));
             setCounselorData(counselor);
           } catch (apiError: any) {
-            console.error('API error details:', apiError);
+            console.log('API error details:', apiError);
             Alert.alert('API Error', `Failed to fetch counselor: ${apiError.message || apiError}`);
             setError(`API error: ${apiError.message || apiError}`);
           }
         } else {
-          console.error('No counselor ID provided');
+          console.log('No counselor ID provided');
           setError('No counselor ID provided');
         }
         
@@ -88,7 +88,7 @@ export default function CounsellorProfile() {
           setIsStudent(studentStatus);
         }
       } catch (error: any) {
-        console.error('Error fetching data:', error);
+        console.log('Error fetching data:', error);
         setError(`Failed to load counselor data: ${error.message || error}`);
       } finally {
         setLoadingCounselor(false);

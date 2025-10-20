@@ -75,7 +75,7 @@ const PlatformFeePayment: React.FC<PlatformFeePaymentProps> = ({
       setCurrentUserHash(hash);
 
     } catch (error: any) {
-      console.error('Platform fee payment initiation error:', error);
+      console.log('Platform fee payment initiation error:', error);
 
       if (error.message?.includes('Network')) {
         Alert.alert('Network Error', 'Please check your internet connection and try again.');
@@ -109,7 +109,7 @@ const PlatformFeePayment: React.FC<PlatformFeePaymentProps> = ({
 
       // Validate that we have the required data
       if (!currentUserHash) {
-        console.error('❌ Missing userhash for payment processing');
+        console.log('❌ Missing userhash for payment processing');
         throw new Error('Payment validation data is missing. Please try again.');
       }
 
@@ -155,7 +155,7 @@ const PlatformFeePayment: React.FC<PlatformFeePaymentProps> = ({
           }, 100); // Small delay to ensure modal closes first
         }, 5000);
       } catch (error: any) {
-        console.error('Error processing platform fee payment:', error);
+        console.log('Error processing platform fee payment:', error);
 
         Alert.alert(
           'Payment Processing Error',
@@ -207,7 +207,7 @@ const PlatformFeePayment: React.FC<PlatformFeePaymentProps> = ({
 
   const handleWebViewError = (syntheticEvent: any) => {
     const { nativeEvent } = syntheticEvent;
-    console.error('Platform Fee WebView error:', nativeEvent);
+    console.log('Platform Fee WebView error:', nativeEvent);
     Alert.alert(
       'Error',
       'There was a problem loading the payment page. Please try again.',

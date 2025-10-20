@@ -76,7 +76,7 @@ const Chat = () => {
               await AsyncStorage.setItem('userId', String(profile.id));
             }
           } catch (profileError) {
-            console.error('Error fetching profile:', profileError);
+            console.log('Error fetching profile:', profileError);
             // Try to get from cache as fallback
             const cachedUserId = await AsyncStorage.getItem('userId');
             if (cachedUserId) {
@@ -88,7 +88,7 @@ const Chat = () => {
           setIsTokenLoaded(true);
         }
       } catch (error) {
-        console.error('Error loading auth data:', error);
+        console.log('Error loading auth data:', error);
         if (isMounted) {
           setToken(null);
           setIsTokenLoaded(true);
@@ -196,7 +196,7 @@ const Chat = () => {
           scrollViewRef.current?.scrollToEnd({ animated: true });
         }, 100);
       } catch (error) {
-        console.error('Error sending message:', error);
+        console.log('Error sending message:', error);
         // You can add error handling here (show toast, etc.)
       }
     }
@@ -233,7 +233,7 @@ const Chat = () => {
       minute: '2-digit' 
     });
   } catch {
-    // console.error('Error formatting timestamp:', timestamp);
+    // console.log('Error formatting timestamp:', timestamp);
     return ''; // Fallback for invalid timestamps
   }
 };

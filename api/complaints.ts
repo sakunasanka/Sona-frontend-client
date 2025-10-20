@@ -62,7 +62,7 @@ export const fetchComplaints = async (): Promise<{ success: boolean; message: st
 
     return response.data;
   } catch (error) {
-    console.error('Error fetching complaints:', error);
+    console.log('Error fetching complaints:', error);
     throw error;
   }
 };
@@ -90,12 +90,12 @@ export const submitComplaint = async (complaintData: SubmitComplaintRequest): Pr
 
     return response.data;
   } catch (error) {
-    console.error('Error submitting complaint:', error);
+    console.log('Error submitting complaint:', error);
     if (error && typeof error === 'object' && 'response' in error) {
       const axiosError = error as any;
-      console.error('Server response status:', axiosError.response?.status);
-      console.error('Server response data:', JSON.stringify(axiosError.response?.data, null, 2));
-      console.error('Server response headers:', axiosError.response?.headers);
+      console.log('Server response status:', axiosError.response?.status);
+      console.log('Server response data:', JSON.stringify(axiosError.response?.data, null, 2));
+      console.log('Server response headers:', axiosError.response?.headers);
     }
     throw error;
   }

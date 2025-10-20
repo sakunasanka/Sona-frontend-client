@@ -76,7 +76,7 @@ export const PlatformFeeProvider: React.FC<PlatformFeeProviderProps> = ({ childr
       }
       return false;
     } catch (error) {
-      console.error('Error checking platform fee status:', error);
+      console.log('Error checking platform fee status:', error);
       return false;
     }
   }, []); // No dependencies needed

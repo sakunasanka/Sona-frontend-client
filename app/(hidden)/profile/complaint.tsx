@@ -5,18 +5,18 @@ import { router } from 'expo-router';
 import { AlertTriangle, ArrowLeft, ChevronDown, FileText, Send, Upload, X } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  FlatList,
-  Image,
-  Modal,
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View
+    ActivityIndicator,
+    Alert,
+    FlatList,
+    Image,
+    Modal,
+    SafeAreaView,
+    ScrollView,
+    StatusBar,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { fetchComplaints, submitComplaint } from '../../../api/complaints';
 import { Session, fetchUserSessions } from '../../../api/sessions';
@@ -152,7 +152,7 @@ export default function ComplaintScreen() {
           return;
         }
       } catch (error) {
-        console.error('Error checking authentication:', error);
+        console.log('Error checking authentication:', error);
       }
     };
 
@@ -184,7 +184,7 @@ export default function ComplaintScreen() {
           return;
         }
       } catch (error) {
-        console.error('Error fetching sessions:', error);
+        console.log('Error fetching sessions:', error);
         Alert.alert('Error', 'Failed to load your sessions. Please try again later.');
         // Fallback to mock data for development
         setSessions(mockSessions);
@@ -223,7 +223,7 @@ export default function ComplaintScreen() {
         setShowFileOptionsModal(false);
       }
     } catch (error) {
-      console.error('Error picking image:', error);
+      console.log('Error picking image:', error);
       Alert.alert('Error', 'Failed to pick image. Please try again.');
     }
   };
@@ -246,7 +246,7 @@ export default function ComplaintScreen() {
         setShowFileOptionsModal(false);
       }
     } catch (error) {
-      console.error('Error picking document:', error);
+      console.log('Error picking document:', error);
       Alert.alert('Error', 'Failed to pick document. Please try again.');
     }
   };
@@ -261,7 +261,7 @@ export default function ComplaintScreen() {
       );
       return result.secure_url;
     } catch (error) {
-      console.error('Error uploading file:', error);
+      console.log('Error uploading file:', error);
       throw new Error('Failed to upload file. Please try again.');
     } finally {
       setIsUploading(false);
@@ -334,7 +334,7 @@ export default function ComplaintScreen() {
 
       return { allowed: true, message: '' };
     } catch (error) {
-      console.error('Error checking complaint rate limit:', error);
+      console.log('Error checking complaint rate limit:', error);
       // If we can't check, allow the complaint to proceed (fail open)
       return { allowed: true, message: '' };
     }
@@ -411,7 +411,7 @@ export default function ComplaintScreen() {
         ]
       );
     } catch (error) {
-      console.error('Error submitting complaint:', error);
+      console.log('Error submitting complaint:', error);
       
       // Check if it's an authentication error
       if (error instanceof Error && error.message && error.message.includes('authentication token')) {

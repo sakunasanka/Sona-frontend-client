@@ -50,7 +50,7 @@ export const getAvailableCounselors = async (): Promise<CounselorResponse> => {
     });
     return response;
   } catch (error) {
-    // console.error('Error fetching available counselors:', error);
+    // console.log('Error fetching available counselors:', error);
     throw error;
   }
 };

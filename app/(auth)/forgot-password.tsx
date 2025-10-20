@@ -13,7 +13,7 @@ export default function ForgotPassword() {
   const handleResetPassword = async () => {
     setIsLoading(true);
     if (!email) {
-      console.error('Email is required');
+      console.log('Email is required');
       setIsLoading(false);
       return;
     }
@@ -29,7 +29,7 @@ export default function ForgotPassword() {
     console.log('Reset password for:', result);
     setSubmitted(true);
   } catch (error) {
-    console.error('Error sending reset link:', error);
+    console.log('Error sending reset link:', error);
     setIsLoading(false);
   }
   setIsLoading(false);

@@ -28,7 +28,7 @@ const TopBar: React.FC<{ title?: string }> = ({title}) => {
       const profile = await getProfile();
       setProfileData(profile);
     } catch (error) {
-      console.error('Error loading profile for topbar:', error);
+      console.log('Error loading profile for topbar:', error);
     } finally {
       setIsLoading(false);
     }

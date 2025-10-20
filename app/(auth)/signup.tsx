@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
-import { Text, View, TextInput, TouchableOpacity, Image, ScrollView, Modal, ActivityIndicator } from 'react-native';
-import { useRouter } from 'expo-router';
-import { User, Mail, Lock, Eye, EyeOff } from 'lucide-react-native';
-import { PrimaryButton } from '../components/Buttons';
 import { apiRequest } from '@/api/api';
+import { useRouter } from 'expo-router';
+import { Eye, EyeOff, Lock, Mail, User } from 'lucide-react-native';
+import React, { useState } from 'react';
+import { ActivityIndicator, Image, Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { PrimaryButton } from '../components/Buttons';
 
 export default function SignUp() {
   const [showPassword, setShowPassword] = useState(false);
@@ -45,7 +45,7 @@ export default function SignUp() {
      console.log('Sign up success:', result);
   } catch (error) {
     setIsLoading(false);
-    console.error('Sign up failed:', error);
+    console.log('Sign up failed:', error);
     // Handle error (e.g., show error message)
     return;
   }

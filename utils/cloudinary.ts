@@ -52,7 +52,7 @@ export const uploadImageToCloudinary = async (
     
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Cloudinary upload error:', errorText);
+      console.log('Cloudinary upload error:', errorText);
       throw new Error(`Upload failed: ${response.status} ${response.statusText}`);
     }
     
@@ -71,7 +71,7 @@ export const uploadImageToCloudinary = async (
     };
     
   } catch (error) {
-    console.error('Error uploading to Cloudinary:', error);
+    console.log('Error uploading to Cloudinary:', error);
     throw new Error('Failed to upload image. Please try again.');
   }
 };
@@ -121,7 +121,7 @@ export const uploadComplaintProofToCloudinary = async (
     
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Cloudinary upload error:', errorText);
+      console.log('Cloudinary upload error:', errorText);
       throw new Error(`Upload failed: ${response.status} ${response.statusText}`);
     }
     
@@ -140,7 +140,7 @@ export const uploadComplaintProofToCloudinary = async (
     };
     
   } catch (error) {
-    console.error('Error uploading complaint proof to Cloudinary:', error);
+    console.log('Error uploading complaint proof to Cloudinary:', error);
     throw new Error('Failed to upload file. Please try again.');
   }
 };
@@ -184,7 +184,7 @@ export const uploadStudentIdToCloudinary = async (
     
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Cloudinary upload error:', errorText);
+      console.log('Cloudinary upload error:', errorText);
       throw new Error(`Upload failed: ${response.status} ${response.statusText}`);
     }
     
@@ -203,7 +203,7 @@ export const uploadStudentIdToCloudinary = async (
     };
     
   } catch (error) {
-    console.error('Error uploading student ID to Cloudinary:', error);
+    console.log('Error uploading student ID to Cloudinary:', error);
     throw new Error('Failed to upload student ID. Please try again.');
   }
 };
@@ -236,7 +236,7 @@ export const deleteImageFromCloudinary = async (publicId: string): Promise<boole
     console.warn('Image deletion should be handled server-side for security');
     return false;
   } catch (error) {
-    console.error('Error deleting from Cloudinary:', error);
+    console.log('Error deleting from Cloudinary:', error);
     return false;
   }
 };

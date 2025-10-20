@@ -4,7 +4,7 @@ import { usePlatformFee } from '@/contexts/PlatformFeeContext';
 import { getDisplayName } from '@/util/asyncName';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router, useFocusEffect } from 'expo-router';
-import { AlertCircle, AlertTriangle, ArrowLeft, BadgeCheck, BarChart3, Edit, FileText, GraduationCap, HelpCircle, History, LogOut, Shield } from 'lucide-react-native';
+import { AlertCircle, AlertTriangle, ArrowLeft, BadgeCheck, BarChart3, Edit, FileText, GraduationCap, History, LogOut, Shield } from 'lucide-react-native';
 import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Image, SafeAreaView, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import PlatformFeePayment from '../../../components/PlatformFeePayment';
@@ -46,7 +46,7 @@ export default function Profile() {
       // Refresh platform fee status every time profile loads
       refreshFeeStatus();
     } catch (error) {
-      console.error('Error initializing profile:', error);
+      console.log('Error initializing profile:', error);
     } finally {
       setIsLoading(false);
     }

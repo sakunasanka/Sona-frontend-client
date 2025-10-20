@@ -79,7 +79,7 @@ export const getAvailablePsychiatrists = async (): Promise<PsychiatristResponse>
     console.log('Raw API response for psychiatrists:', response);
     return response;
   } catch (error) {
-    console.error('Error fetching available psychiatrists:', error);
+    console.log('Error fetching available psychiatrists:', error);
     throw error;
   }
 };
@@ -191,7 +191,7 @@ export const bookPsychiatristSession = async (sessionData: {
     
     return response;
   } catch (error) {
-    console.error('Error booking psychiatrist session:', error);
+    console.log('Error booking psychiatrist session:', error);
     throw error;
   }
 };
@@ -216,7 +216,7 @@ export const getPsychiatristTimeSlots = async (
     
     return response;
   } catch (error) {
-    console.error('Error fetching psychiatrist time slots:', error);
+    console.log('Error fetching psychiatrist time slots:', error);
     throw error;
   }
 };
@@ -231,7 +231,7 @@ export const fetchUserPsychiatristSessions = async (token: string) => {
     });
     return response;
   } catch (error) {
-    console.error('Error fetching psychiatrist sessions:', error);
+    console.log('Error fetching psychiatrist sessions:', error);
     throw error;
   }
 };
@@ -246,7 +246,7 @@ export const cancelPsychiatristSession = async (sessionId: string, token: string
     });
     return response;
   } catch (error) {
-    console.error('Error cancelling psychiatrist session:', error);
+    console.log('Error cancelling psychiatrist session:', error);
     throw error;
   }
 };
@@ -261,7 +261,7 @@ export const getRemainingPsychiatristSessions = async (token: string) => {
     });
     return response;
   } catch (error) {
-    console.error('Error fetching remaining psychiatrist sessions:', error);
+    console.log('Error fetching remaining psychiatrist sessions:', error);
     throw error;
   }
 };

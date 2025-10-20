@@ -121,7 +121,7 @@ export default function UpcomingSessions() {
             
             // Don't call checkAndShowFeedbackModal here - it will be called by useEffect
         } catch (err: any) {
-            console.error('Failed to fetch sessions:', err);
+            console.log('Failed to fetch sessions:', err);
             setError(err.message || 'Failed to load sessions. Please try again.');
             
             if (err.name === 'AbortError') {
@@ -367,7 +367,7 @@ export default function UpcomingSessions() {
                 }));
             }
         } catch (error) {
-            console.error('Error checking feedback status:', error);
+            console.log('Error checking feedback status:', error);
             setFeedbackStatus(prev => ({
                 ...prev,
                 [sessionId]: { hasFeedback: false, loading: false }
@@ -430,7 +430,7 @@ export default function UpcomingSessions() {
                 console.log('Session not found in local sessions array');
             }
         } catch (error) {
-            console.error('Error checking for most recent session needing feedback:', error);
+            console.log('Error checking for most recent session needing feedback:', error);
         }
     };
 
@@ -464,7 +464,7 @@ export default function UpcomingSessions() {
             }));
             
         } catch (error: any) {
-            console.error('Error submitting feedback:', error);
+            console.log('Error submitting feedback:', error);
             Alert.alert('Error', error.message || 'Failed to submit feedback. Please try again.');
         } finally {
             setIsSubmittingFeedback(false);

@@ -72,7 +72,7 @@ export default function PHQ9Result() {
         const result = await getPHQ9Result(resultId, token);
         setSavedResult(result);
       } catch (error) {
-        console.error('Error fetching saved result:', error);
+        console.log('Error fetching saved result:', error);
         // Continue with params data if fetch fails
       } finally {
         setLoading(false);

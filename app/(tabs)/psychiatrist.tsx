@@ -37,7 +37,7 @@ const Psychiatrist = () => {
                 await AsyncStorage.setItem('lastPsychiatristSessionsFetch', new Date().toISOString());
               }
             } catch (error) {
-              console.error('Error fetching psychiatrist sessions data:', error);
+              console.log('Error fetching psychiatrist sessions data:', error);
             }
           }
         }
@@ -45,7 +45,7 @@ const Psychiatrist = () => {
         // Redirect to the psychiatrists page
         router.replace("/(hidden)/profile/psychiatrists");
       } catch (error) {
-        console.error('Error during prefetch:', error);
+        console.log('Error during prefetch:', error);
         setIsRedirecting(false);
       } finally {
         setIsLoading(false);

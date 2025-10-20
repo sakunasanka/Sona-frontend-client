@@ -1,18 +1,18 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useState } from 'react';
 import {
-  Dimensions,
-  Modal,
-  Text,
-  TouchableOpacity,
-  View,
+    Dimensions,
+    Modal,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, {
-  runOnJS,
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
+    runOnJS,
+    useAnimatedStyle,
+    useSharedValue,
+    withSpring,
 } from 'react-native-reanimated';
 import { saveDailyMood } from '../api/mood';
 
@@ -208,7 +208,7 @@ export default function MoodPopup({ visible, onClose, onMoodSubmitted }: MoodPop
       onMoodSubmitted();
       onClose();
     } catch (error) {
-      console.error('Failed to save mood:', error);
+      console.log('Failed to save mood:', error);
     } finally {
       setIsLoading(false);
     }

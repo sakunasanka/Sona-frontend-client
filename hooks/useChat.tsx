@@ -228,7 +228,7 @@ export const useChat = (
       
       console.log('✅ Loaded', response.data.length, 'older messages');
     } catch (error) {
-      console.error('Error loading older messages:', error);
+      console.log('Error loading older messages:', error);
     } finally {
       setIsLoadingMore(false);
     }
@@ -312,7 +312,7 @@ export const useChat = (
       chatWebSocketService.sendMessage(wsMessage);
       
     } catch (error) {
-      console.error('❌ Error sending message:', error);
+      console.log('❌ Error sending message:', error);
       
       // Remove optimistic message on error
       setMessages(prev => prev.filter(msg => msg.id !== tempId));

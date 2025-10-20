@@ -14,7 +14,7 @@ export default function Index() {
         const sessionExpired = await sessionManager.isSessionExpired();
         setIsAuthenticated(!sessionExpired);
       } catch (error) {
-        console.error('Error checking session:', error);
+        console.log('Error checking session:', error);
         setIsAuthenticated(false);
       } finally {
         setReady(true);

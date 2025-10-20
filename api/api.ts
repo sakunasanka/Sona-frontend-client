@@ -39,7 +39,7 @@ export const apiRequest = async ({ method, path, data, token }: ApiRequest) => {
 
     return response.data;
   } catch (error: any) {
-    console.error('API error:', error.response?.data || error.message);
+    console.log('API error:', error.response?.data || error.message);
     throw error.response?.data || error;
   }
 };
@@ -53,7 +53,7 @@ export const checkIsStudent = async (token: string): Promise<boolean> => {
     });
     return response.data.data.isStudent || false;
   } catch (error: any) {
-    console.error('Error checking student status:', error.response?.data || error.message);
+    console.log('Error checking student status:', error.response?.data || error.message);
     return false;
   }
 };

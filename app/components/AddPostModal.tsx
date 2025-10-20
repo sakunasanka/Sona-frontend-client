@@ -3,17 +3,17 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  ScrollView,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View
+    ActivityIndicator,
+    Alert,
+    Image,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    ScrollView,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { createPost, Post } from '../../api/Posts';
 import { getProfile, ProfileData } from '../../api/auth';
@@ -49,7 +49,7 @@ const AddPostModal: React.FC<AddPostModalProps> = ({ visible, onClose, onSubmit 
           setUserProfile(profile);
           setDisplayName(name || profile.name);
         } catch (error) {
-          console.error('Error fetching user data:', error);
+          console.log('Error fetching user data:', error);
         }
       };
       fetchUserData();
@@ -94,7 +94,7 @@ const AddPostModal: React.FC<AddPostModalProps> = ({ visible, onClose, onSubmit 
           setCloudinaryImageUrl(uploadResult.secure_url);
           console.log('Image uploaded to Cloudinary:', uploadResult.secure_url);
         } catch (uploadError) {
-          console.error('Cloudinary upload failed:', uploadError);
+          console.log('Cloudinary upload failed:', uploadError);
           Alert.alert('Upload Error', 'Failed to upload image. You can still post but the image won\'t be saved.');
           setCloudinaryImageUrl(null);
         } finally {

@@ -80,7 +80,7 @@ export default function PrescriptionDetail() {
           setError(response.message || 'Failed to fetch prescription details');
         }
       } catch (error: any) {
-        console.error('Error fetching prescription details:', error);
+        console.log('Error fetching prescription details:', error);
         setError(error.message || 'Failed to fetch prescription details');
       } finally {
         setLoading(false);
@@ -174,7 +174,7 @@ export default function PrescriptionDetail() {
                   Alert.alert('Error', 'Cannot open the prescription file. Please check your internet connection.');
                 }
               } catch (error) {
-                console.error('Error opening prescription URL:', error);
+                console.log('Error opening prescription URL:', error);
                 Alert.alert('Error', 'Failed to open prescription file.');
               }
             }
@@ -182,7 +182,7 @@ export default function PrescriptionDetail() {
         ]
       );
     } catch (error) {
-      console.error('Error in download handler:', error);
+      console.log('Error in download handler:', error);
       Alert.alert('Error', 'An unexpected error occurred.');
     }
   };
@@ -205,7 +205,7 @@ export default function PrescriptionDetail() {
                   Alert.alert('Error', 'Cannot open the prescription link.');
                 }
               } catch (error) {
-                console.error('Error opening prescription URL:', error);
+                console.log('Error opening prescription URL:', error);
                 Alert.alert('Error', 'Failed to open prescription link.');
               }
             }
@@ -213,7 +213,7 @@ export default function PrescriptionDetail() {
         ]
       );
     } catch (error) {
-      console.error('Error in share handler:', error);
+      console.log('Error in share handler:', error);
       Alert.alert('Error', 'An unexpected error occurred.');
     }
   };

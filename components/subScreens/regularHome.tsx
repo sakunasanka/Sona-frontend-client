@@ -121,7 +121,7 @@ export default function RegularHome() {
         const hasSubmitted = await hasSubmittedTodaysMood();
         setHasSubmittedMoodToday(hasSubmitted);
       } catch (error) {
-        console.error('Error checking today\'s mood:', error);
+        console.log('Error checking today\'s mood:', error);
         setHasSubmittedMoodToday(false); // Default to showing mood tracker on error
       }
     };
@@ -137,7 +137,7 @@ export default function RegularHome() {
           const hasSubmitted = await hasSubmittedTodaysMood();
           setHasSubmittedMoodToday(hasSubmitted);
         } catch (error) {
-          console.error('Error refreshing mood status:', error);
+          console.log('Error refreshing mood status:', error);
         }
       };
 
@@ -160,7 +160,7 @@ export default function RegularHome() {
             setHomescreenCards(baseHomescreenCards);
           }
         } catch (error) {
-          console.error('Error refreshing questionnaire status:', error);
+          console.log('Error refreshing questionnaire status:', error);
           // On error, show the card (fail safe)
           setShowWellBeingCard(true);
           setHomescreenCards([...baseHomescreenCards, wellBeingCard]);

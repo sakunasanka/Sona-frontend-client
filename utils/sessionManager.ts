@@ -34,7 +34,7 @@ class SessionManager {
       await AsyncStorage.setItem(LAST_ACTIVITY_KEY, now);
       this.resetTimer();
     } catch (error) {
-      console.error('Error updating activity timestamp:', error);
+      console.log('Error updating activity timestamp:', error);
     }
   };
 
@@ -55,7 +55,7 @@ class SessionManager {
 
       return (now - lastActivityTime) > SESSION_TIMEOUT;
     } catch (error) {
-      console.error('Error checking session expiry:', error);
+      console.log('Error checking session expiry:', error);
       return true;
     }
   };
@@ -68,7 +68,7 @@ class SessionManager {
       await AsyncStorage.multiRemove([TOKEN_KEY, LAST_ACTIVITY_KEY]);
       this.clearTimer();
     } catch (error) {
-      console.error('Error clearing session:', error);
+      console.log('Error clearing session:', error);
     }
   };
 

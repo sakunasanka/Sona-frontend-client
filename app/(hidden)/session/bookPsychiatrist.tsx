@@ -1,7 +1,7 @@
 import { checkIsStudent } from "@/api/api";
 import { createPaymentLink } from "@/api/payment";
 import {
-  getPsychiatristById
+    getPsychiatristById
 } from "@/api/psychiatrist";
 import { API_URL, PORT } from "@/config/env";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -9,17 +9,17 @@ import { router, useLocalSearchParams } from "expo-router";
 import { ArrowLeft, Stethoscope } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  Modal,
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View
+    ActivityIndicator,
+    Alert,
+    Image,
+    Modal,
+    SafeAreaView,
+    ScrollView,
+    StatusBar,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { WebView } from 'react-native-webview';
 import BookingCalendar from '../../../components/BookingCalendar';
@@ -292,7 +292,7 @@ export default function BookPsychiatristScreen() {
         const psychiatristData = await getPsychiatristById(parseInt(psychiatristId));
         setPsychiatrist(psychiatristData);
       } catch (error) {
-        console.error('Error fetching psychiatrist data:', error);
+        console.log('Error fetching psychiatrist data:', error);
         Alert.alert('Error', 'Failed to load psychiatrist information. Please try again later.');
       } finally {
         setIsLoadingPsychiatrist(false);
@@ -354,7 +354,7 @@ export default function BookPsychiatristScreen() {
           setIsStudent(studentStatus);
         }
       } catch (error) {
-        console.error('Error checking student status:', error);
+        console.log('Error checking student status:', error);
       } finally {
         setIsCheckingStudentStatus(false);
       }
@@ -433,7 +433,7 @@ export default function BookPsychiatristScreen() {
                   Alert.alert('Error', 'Failed to create payment link. Please try again.');
                 }
               } catch (error) {
-                console.error('Error creating payment:', error);
+                console.log('Error creating payment:', error);
                 Alert.alert('Error', 'Failed to process payment. Please try again.');
               } finally {
                 setIsCreatingPayment(false);
@@ -443,7 +443,7 @@ export default function BookPsychiatristScreen() {
         ]
       );
     } catch (error) {
-      console.error('Error handling consultation booking:', error);
+      console.log('Error handling consultation booking:', error);
       Alert.alert('Error', 'Something went wrong. Please try again.');
       setIsCreatingPayment(false);
     }
@@ -511,7 +511,7 @@ export default function BookPsychiatristScreen() {
           if (!bookingResponse.ok) {
             // Get more details about the error
             const errorText = await bookingResponse.text();
-            // console.error('🚫 API Error Response:', errorText);
+            // console.log('🚫 API Error Response:', errorText);
             throw new Error(`API error: ${bookingResponse.status}, ${errorText}`);
           }
           
@@ -534,7 +534,7 @@ export default function BookPsychiatristScreen() {
             ]
           );
         } catch (error) {
-          console.error('❌ Error booking psychiatrist session:', error);
+          console.log('❌ Error booking psychiatrist session:', error);
           
           // Even if booking API call fails, the payment was successful
           Alert.alert(
@@ -564,7 +564,7 @@ export default function BookPsychiatristScreen() {
 
   const handleWebViewError = (syntheticEvent: any) => {
     const { nativeEvent } = syntheticEvent;
-    console.error('WebView error:', nativeEvent);
+    console.log('WebView error:', nativeEvent);
     setShowWebView(false);
     Alert.alert(
       'Connection Error',

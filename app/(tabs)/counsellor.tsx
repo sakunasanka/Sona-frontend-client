@@ -37,7 +37,7 @@ const Counsellor = () => {
                 await AsyncStorage.setItem('lastFreeSessionsFetch', new Date().toISOString());
               }
             } catch (error) {
-              console.error('Error fetching free sessions data:', error);
+              console.log('Error fetching free sessions data:', error);
             }
           }
         }
@@ -45,7 +45,7 @@ const Counsellor = () => {
         // Redirect to the counsellors page
         router.replace("/(hidden)/profile/counsellors");
       } catch (error) {
-        console.error('Error during prefetch:', error);
+        console.log('Error during prefetch:', error);
         setIsRedirecting(false);
       } finally {
         setIsLoading(false);

@@ -113,7 +113,7 @@ export default function MedicalNotesScreen() {
           setIsLoading(false);
         }, 800);
       } catch (error) {
-        console.error('Error fetching data:', error);
+        console.log('Error fetching data:', error);
         Alert.alert('Error', 'Failed to load session data. Please try again later.');
         setIsLoading(false);
       }
@@ -175,7 +175,7 @@ export default function MedicalNotesScreen() {
         ]
       );
     } catch (error) {
-      console.error('Error saving medical note:', error);
+      console.log('Error saving medical note:', error);
       Alert.alert('Error', 'Failed to save medical note. Please try again.');
     } finally {
       setIsSaving(false);

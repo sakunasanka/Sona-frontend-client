@@ -9,18 +9,18 @@ import { router, useLocalSearchParams } from "expo-router";
 import { ArrowLeft, Calendar, GraduationCap } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  Modal,
-  Platform,
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View
+    ActivityIndicator,
+    Alert,
+    Image,
+    Modal,
+    Platform,
+    SafeAreaView,
+    ScrollView,
+    StatusBar,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { WebView } from 'react-native-webview';
 import BookingCalendar from '../../../components/BookingCalendar';
@@ -215,7 +215,7 @@ export default function BookSessionScreen() {
           throw new Error('Invalid counselor data');
         }
       } catch (error) {
-        console.error('Error fetching counselor data:', error);
+        console.log('Error fetching counselor data:', error);
         Alert.alert('Error', 'Failed to load counselor information. Please try again later.');
       } finally {
         setIsLoadingCounselor(false);
@@ -240,7 +240,7 @@ export default function BookSessionScreen() {
           }
         }
       } catch (error) {
-        console.error('Error checking student status:', error);
+        console.log('Error checking student status:', error);
       } finally {
         setIsCheckingStudentStatus(false);
       }
@@ -261,7 +261,7 @@ export default function BookSessionScreen() {
         setTotalSessionsThisPeriod(sessionInfo.totalSessionsThisPeriod);
       }
     } catch (error) {
-      console.error('Error fetching remaining free sessions:', error);
+      console.log('Error fetching remaining free sessions:', error);
     } finally {
       setLoadingStudentData(false);
     }
@@ -348,7 +348,7 @@ export default function BookSessionScreen() {
 
                   if (!bookingResponse.ok) {
                     const errorText = await bookingResponse.text();
-                    console.error('🚫 Free session booking failed:', errorText);
+                    console.log('🚫 Free session booking failed:', errorText);
                     throw new Error(`Booking failed: ${bookingResponse.status}`);
                   }
 
@@ -376,7 +376,7 @@ export default function BookSessionScreen() {
                     ]
                   );
                 } catch (error) {
-                  console.error('Error booking free session:', error);
+                  console.log('Error booking free session:', error);
                   Alert.alert('Error', 'Failed to book your free session. Please try again.');
                 } finally {
                   setIsCreatingPayment(false);
@@ -387,7 +387,7 @@ export default function BookSessionScreen() {
         );
         return;
       } catch (error) {
-        console.error('Error handling free session booking:', error);
+        console.log('Error handling free session booking:', error);
         Alert.alert('Error', 'Something went wrong. Please try again.');
         return;
       }
@@ -426,7 +426,7 @@ export default function BookSessionScreen() {
       setCurrentOrderId(orderId);
 
     } catch (error: any) {
-      // console.error('Payment initiation error:', error);
+      // console.log('Payment initiation error:', error);
       
       if (error.message?.includes('Network')) {
         Alert.alert('Network Error', 'Please check your internet connection and try again.');
@@ -487,7 +487,7 @@ export default function BookSessionScreen() {
       
       setMonthlyAvailability(availabilityMap);
     } catch (error) {
-      // console.error('Failed to load monthly availability:', error);
+      // console.log('Failed to load monthly availability:', error);
       // Alert.alert(
       //   'Error Loading Availability',
       //   'Could not load counselor availability. Please check your connection and try again.',
@@ -645,7 +645,7 @@ export default function BookSessionScreen() {
           if (!bookingResponse.ok) {
             // Get more details about the error
             const errorText = await bookingResponse.text();
-            // console.error('🚫 API Error Response:', errorText);
+            // console.log('🚫 API Error Response:', errorText);
             throw new Error(`API error: ${bookingResponse.status}, ${errorText}`);
           }
           
@@ -659,7 +659,7 @@ export default function BookSessionScreen() {
             [{ text: 'OK', onPress: () => router.back() }]
           );
         } catch (error) {
-          // console.error('❌ Error booking session:', error);
+          // console.log('❌ Error booking session:', error);
           
           // Even if booking API call fails, the payment was successful
           Alert.alert(
@@ -712,7 +712,7 @@ export default function BookSessionScreen() {
 
   const handleWebViewError = (syntheticEvent: any) => {
     const { nativeEvent } = syntheticEvent;
-    console.error('WebView error:', nativeEvent);
+    console.log('WebView error:', nativeEvent);
     Alert.alert(
       'Error',
       'There was a problem loading the payment page. Please try again.',

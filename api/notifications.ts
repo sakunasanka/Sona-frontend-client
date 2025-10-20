@@ -77,7 +77,7 @@ class NotificationAPI {
       );
       return response.data;
     } catch (error) {
-      console.error('Error fetching notifications:', error);
+      console.log('Error fetching notifications:', error);
       throw error;
     }
   }
@@ -93,7 +93,7 @@ class NotificationAPI {
       );
       return response.data;
     } catch (error) {
-      console.error('Error fetching unread count:', error);
+      console.log('Error fetching unread count:', error);
       throw error;
     }
   }
@@ -110,7 +110,7 @@ class NotificationAPI {
       );
       return response.data;
     } catch (error) {
-      console.error('Error marking notification as read:', error);
+      console.log('Error marking notification as read:', error);
       throw error;
     }
   }
@@ -127,7 +127,7 @@ class NotificationAPI {
       );
       return response.data;
     } catch (error) {
-      console.error('Error marking all notifications as read:', error);
+      console.log('Error marking all notifications as read:', error);
       throw error;
     }
   }
@@ -143,7 +143,7 @@ class NotificationAPI {
       );
       return response.data;
     } catch (error) {
-      console.error('Error deleting notification:', error);
+      console.log('Error deleting notification:', error);
       throw error;
     }
   }
@@ -166,7 +166,7 @@ class NotificationAPI {
       );
       return response.data;
     } catch (error) {
-      console.error('Error sending notification:', error);
+      console.log('Error sending notification:', error);
       throw error;
     }
   }

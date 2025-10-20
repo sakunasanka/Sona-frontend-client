@@ -47,7 +47,7 @@ export const getProfile = async (): Promise<ProfileData> => {
     });
     return response.data.data;
   } catch (error) {
-    console.error('Error fetching profile:', error);
+    console.log('Error fetching profile:', error);
     throw error;
   }
 };
@@ -59,7 +59,7 @@ export const updateProfile = async (profileData: UpdateProfileData): Promise<Pro
     });
     return response.data.data;
   } catch (error) {
-    console.error('Error updating profile:', error);
+    console.log('Error updating profile:', error);
     throw error;
   }
 };
@@ -71,7 +71,7 @@ export const getLoginStats = async (): Promise<LoginStatsData> => {
     });
     return response.data.data;
   } catch (error) {
-    console.error('Error fetching login stats:', error);
+    console.log('Error fetching login stats:', error);
     throw error;
   }
 };

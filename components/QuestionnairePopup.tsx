@@ -106,7 +106,7 @@ export default function QuestionnairePopup({ visible, onClose, onQuestionnaireSu
       setImpact('');
       setCurrentQuestion(0);
     } catch (error) {
-      console.error('Failed to submit questionnaire:', error);
+      console.log('Failed to submit questionnaire:', error);
       alert('Failed to submit questionnaire. Please try again.');
     } finally {
       setIsLoading(false);

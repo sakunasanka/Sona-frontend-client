@@ -45,7 +45,7 @@ export const getUserPrescriptions = async (token: string): Promise<Prescriptions
     
     return response;
   } catch (error) {
-    console.error('Error fetching user prescriptions:', error);
+    console.log('Error fetching user prescriptions:', error);
     throw error;
   }
 };
@@ -62,7 +62,7 @@ export const downloadPrescription = async (prescriptionUrl: string, token: strin
       downloadUrl: prescriptionUrl
     };
   } catch (error) {
-    console.error('Error downloading prescription:', error);
+    console.log('Error downloading prescription:', error);
     throw error;
   }
 };

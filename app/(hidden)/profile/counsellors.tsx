@@ -6,15 +6,15 @@ import { router } from 'expo-router';
 import { ArrowLeft, Clock, GraduationCap, Star, Video } from 'lucide-react-native';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  Dimensions,
-  FlatList,
-  Image,
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  Text,
-  TouchableOpacity,
-  View
+    Dimensions,
+    FlatList,
+    Image,
+    SafeAreaView,
+    ScrollView,
+    StatusBar,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { PrimaryButton } from '../../components/Buttons';
 import SpecialtyTabs from '../../components/SpecialtyTabs';
@@ -294,7 +294,7 @@ export default function CounselorsScreen() {
                   await AsyncStorage.setItem('lastFreeSessionsFetch', new Date().toISOString());
                 }
               } catch (error) {
-                console.error('Error fetching free sessions data:', error);
+                console.log('Error fetching free sessions data:', error);
                 // Fallback to stored data if available
                 if (storedFreeSessionsRemaining) {
                   setFreeSessionsRemaining(parseInt(storedFreeSessionsRemaining));
@@ -304,7 +304,7 @@ export default function CounselorsScreen() {
           }
         }
       } catch (error) {
-        console.error('Error fetching data:', error);
+        console.log('Error fetching data:', error);
         setError('Failed to load counselors. Please try again later.');
       } finally {
         setIsLoading(false);

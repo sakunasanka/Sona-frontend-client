@@ -34,7 +34,7 @@ export default function JitsiWebView({
 
         setMeetingUrl(forceWebUrl);
       } catch (error) {
-        console.error('Error fetching session link:', error);
+        console.log('Error fetching session link:', error);
         setError('Failed to load meeting. Please try again.');
       } finally {
         setIsLoading(false);
@@ -62,7 +62,7 @@ export default function JitsiWebView({
 
       return urlObj.toString();
     } catch (error) {
-      console.error('Error modifying URL:', error);
+      console.log('Error modifying URL:', error);
       return originalUrl;
     }
   };
@@ -82,13 +82,13 @@ export default function JitsiWebView({
   );
 
   const handleError = useCallback((evt: any) => {
-    console.error('WebView onError', evt.nativeEvent);
+    console.log('WebView onError', evt.nativeEvent);
     setError('Failed to load meeting. Please check your connection.');
     onEvent?.({ event: 'webviewError', data: evt.nativeEvent });
   }, [onEvent]);
 
   const handleHttpError = useCallback((evt: any) => {
-    console.error('WebView httpError', evt.nativeEvent);
+    console.log('WebView httpError', evt.nativeEvent);
     setError('Network error. Please try again.');
     onEvent?.({ event: 'webviewHttpError', data: evt.nativeEvent });
   }, [onEvent]);
@@ -148,7 +148,7 @@ export default function JitsiWebView({
         console.log('Fetched session link:', url);
         setMeetingUrl(url);
       } catch (error) {
-        console.error('Error fetching session link:', error);
+        console.log('Error fetching session link:', error);
         setError('Failed to load meeting. Please try again.');
       } finally {
         setIsLoading(false);

@@ -3,15 +3,15 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { ArrowLeft, Award, Clock, Languages, MapPin, Star, Stethoscope } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  Text,
-  TouchableOpacity,
-  View
+    ActivityIndicator,
+    Alert,
+    Image,
+    SafeAreaView,
+    ScrollView,
+    StatusBar,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { PrimaryButton } from '../../components/Buttons';
 
@@ -30,7 +30,7 @@ export default function PsychiatristProfileScreen() {
         const psychiatristData = await getPsychiatristById(parseInt(psychiatristId));
         setPsychiatrist(psychiatristData);
       } catch (error) {
-        console.error('Error fetching psychiatrist:', error);
+        console.log('Error fetching psychiatrist:', error);
         Alert.alert('Error', 'Failed to load psychiatrist information. Please try again later.');
       } finally {
         setIsLoading(false);

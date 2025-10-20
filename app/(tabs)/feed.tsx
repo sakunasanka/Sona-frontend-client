@@ -2,15 +2,15 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  FlatList,
-  Image,
-  RefreshControl,
-  StatusBar,
-  Text,
-  TouchableOpacity,
-  View
+    ActivityIndicator,
+    Alert,
+    FlatList,
+    Image,
+    RefreshControl,
+    StatusBar,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { getProfile, ProfileData } from '../../api/auth';
 import { fetchPosts, getPostLikeStatus, incrementPostView, Post, toggleLikePost } from '../../api/Posts';
@@ -55,7 +55,7 @@ export default function Feed() {
       
     } catch (err) {
       setError('Failed to load posts. Please try again.');
-      console.error('Fetch error:', err);
+      console.log('Fetch error:', err);
       setPosts([]); // Set empty array on error
     } finally {
       setLoading(false);
@@ -74,7 +74,7 @@ export default function Feed() {
           setCurrentUserId(Number(userIdStr));
         }
       } catch (error) {
-        console.error('Error getting current user ID:', error);
+        console.log('Error getting current user ID:', error);
       }
     };
 
@@ -83,7 +83,7 @@ export default function Feed() {
         const profile = await getProfile();
         setUserProfile(profile);
       } catch (error) {
-        console.error('Error getting user profile:', error);
+        console.log('Error getting user profile:', error);
       }
     };
 

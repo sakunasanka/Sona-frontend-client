@@ -71,7 +71,7 @@ export const createPaymentLink = async (data: paymentRequestData, token?: string
     });
     return response;
   } catch (error) {
-    console.error('Error creating payment session:', error);
+    console.log('Error creating payment session:', error);
     throw error;
   }
 };
@@ -85,7 +85,7 @@ export const checkPlatformFeeStatus = async (token: string): Promise<PlatformFee
     });
     return response;
   } catch (error) {
-    console.error('Error checking platform fee status:', error);
+    console.log('Error checking platform fee status:', error);
     throw error;
   }
 };
@@ -100,7 +100,7 @@ export const createPlatformFeePaymentLink = async (data: PlatformFeePaymentData,
     });
     return response;
   } catch (error) {
-    console.error('Error creating platform fee payment:', error);
+    console.log('Error creating platform fee payment:', error);
     throw error;
   }
 };
@@ -115,7 +115,7 @@ export const processPlatformFeePayment = async (data: PlatformFeePaymentData, to
     });
     return response;
   } catch (error) {
-    console.error('Error processing platform fee payment:', error);
+    console.log('Error processing platform fee payment:', error);
     throw error;
   }
 };
@@ -130,7 +130,7 @@ export const confirmPlatformFeePayment = async (data: PaymentConfirmationData, t
     });
     return response;
   } catch (error) {
-    console.error('Error confirming platform fee payment:', error);
+    console.log('Error confirming platform fee payment:', error);
     throw error;
   }
 };

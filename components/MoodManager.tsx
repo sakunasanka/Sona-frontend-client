@@ -28,7 +28,7 @@ export default function MoodManager() {
         }
       }
     } catch (error) {
-      console.error('Error checking mood status:', error);
+      console.log('Error checking mood status:', error);
       // On error, don't show popup to avoid annoying users
     }
   };

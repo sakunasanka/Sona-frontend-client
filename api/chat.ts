@@ -54,7 +54,7 @@ export const getChatMessages = async (
     });
     return response;
   } catch (error) {
-    console.error('Error fetching chat messages:', error);
+    console.log('Error fetching chat messages:', error);
     throw error;
   }
 };
@@ -75,7 +75,7 @@ export const getOlderMessages = async (
     });
     return response;
   } catch (error) {
-    console.error('Error fetching older messages:', error);
+    console.log('Error fetching older messages:', error);
     throw error;
   }
 };
@@ -101,7 +101,7 @@ export const sendChatMessage = async (
     console.log('Message sent successfully:', response);
     return response;
   } catch (error) {
-    // console.error('Error sending message via HTTP:', error);
+    // console.log('Error sending message via HTTP:', error);
     throw error;
   }
 };
@@ -119,7 +119,7 @@ export const sendMessage = async (
     });
     return response;
   } catch (error) {
-    // console.error('Error sending message:', error);
+    // console.log('Error sending message:', error);
     throw error;
   }
 };
@@ -135,7 +135,7 @@ export const getChatRoom = async (counselorId: number, token: string) => {
     console.log("data ", response.data)
     if(response.data.room) return response.data.room.id;
   }catch (error) {
-    console.error('Error fetching chat room:', error);
+    console.log('Error fetching chat room:', error);
     throw error;
   }
 }

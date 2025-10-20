@@ -85,7 +85,7 @@ export const fetchPosts = async (): Promise<Post[]> => {
       isAnonymous: post.isAnonymous || false
     }));
   } catch (error) {
-    console.error('Error fetching posts:', error);
+    console.log('Error fetching posts:', error);
     return []; // Return empty array on error
   }
 };
@@ -94,7 +94,7 @@ export const likePost = async (postId: string): Promise<void> => {
   try {
     await axios.post(`${API_BASE_URL}/posts/${postId}/like`, {}, { headers: await authHeaders() });
   } catch (error) {
-    console.error('Error liking post:', error);
+    console.log('Error liking post:', error);
     throw error;
   }
 };
@@ -103,7 +103,7 @@ export const unlikePost = async (postId: string): Promise<void> => {
   try {
     await axios.delete(`${API_BASE_URL}/posts/${postId}/like`, { headers: await authHeaders() });
   } catch (error) {
-    console.error('Error unliking post:', error);
+    console.log('Error unliking post:', error);
     throw error;
   }
 };
@@ -118,7 +118,7 @@ export const getPostLikeStatus = async (
     const data = res.data?.data || {};
     return { liked: !!data.liked, likes: Number(data.likes ?? 0), views: Number(data.views ?? 0) };
   } catch (error) {
-    console.error('Error fetching like status:', error);
+    console.log('Error fetching like status:', error);
     throw error;
   }
 };
@@ -144,7 +144,7 @@ export const toggleLikePost = async (
     const status = await getPostLikeStatus(postId);
     return { liked: status.liked, likes: status.likes, views: status.views };
   } catch (error) {
-    console.error('Error toggling like:', error);
+    console.log('Error toggling like:', error);
     throw error;
   }
 };
@@ -194,7 +194,7 @@ export const createPost = async (postData: CreatePostData): Promise<Post> => {
       isAnonymous: createdPost?.isAnonymous || false
     };
   } catch (error) {
-    console.error('Error creating post:', error);
+    console.log('Error creating post:', error);
     throw error;
   }
 };
@@ -203,7 +203,7 @@ export const deletePost = async (postId: string): Promise<void> => {
   try {
     await axios.delete(`${API_BASE_URL}/posts/${postId}`, { headers: await authHeaders() });
   } catch (error) {
-    console.error('Error deleting post:', error);
+    console.log('Error deleting post:', error);
     throw error;
   }
 };
@@ -244,7 +244,7 @@ export const updatePost = async (postId: string, updates: Partial<CreatePostData
       isAnonymous: updatedPost?.isAnonymous || false
     };
   } catch (error) {
-    console.error('Error updating post:', error);
+    console.log('Error updating post:', error);
     throw error;
   }
 };
@@ -261,7 +261,7 @@ export const incrementPostView = async (
     const data = res.data?.data || {};
     return typeof data.views !== 'undefined' ? Number(data.views) : undefined;
   } catch (error) {
-    console.error('Error incrementing post view:', error);
+    console.log('Error incrementing post view:', error);
     // Swallow error to avoid disrupting feed scrolling; caller can ignore
     return undefined;
   }

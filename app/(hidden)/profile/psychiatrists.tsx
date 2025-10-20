@@ -6,15 +6,15 @@ import { router } from 'expo-router';
 import { ArrowLeft, Clock, GraduationCap, Star, Stethoscope } from 'lucide-react-native';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  Dimensions,
-  FlatList,
-  Image,
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  Text,
-  TouchableOpacity,
-  View
+    Dimensions,
+    FlatList,
+    Image,
+    SafeAreaView,
+    ScrollView,
+    StatusBar,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { PrimaryButton } from '../../components/Buttons';
 import SpecialtyTabs from '../../components/SpecialtyTabs';
@@ -234,7 +234,7 @@ export default function PsychiatristsScreen() {
                   await AsyncStorage.setItem('lastPsychiatristSessionsFetch', new Date().toISOString());
                 }
               } catch (error) {
-                console.error('Error fetching psychiatrist sessions data:', error);
+                console.log('Error fetching psychiatrist sessions data:', error);
                 // Fallback to stored data if available
                 if (storedPsychiatristSessionsRemaining) {
                   setPsychiatristSessionsRemaining(parseInt(storedPsychiatristSessionsRemaining));
@@ -244,7 +244,7 @@ export default function PsychiatristsScreen() {
           }
         }
       } catch (error) {
-        console.error('Error fetching data:', error);
+        console.log('Error fetching data:', error);
         setError('Failed to load psychiatrists. Please try again later.');
       } finally {
         setIsLoading(false);

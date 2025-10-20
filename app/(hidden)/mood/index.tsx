@@ -2,15 +2,15 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
-  Dimensions,
-  Text,
-  TouchableOpacity,
-  View,
+    Dimensions,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
+    useAnimatedStyle,
+    useSharedValue,
 } from 'react-native-reanimated';
 import { saveDailyMood } from '../../../api/mood';
 import TopBar from '../../../components/TopBar';
@@ -131,7 +131,7 @@ export default function MoodTracker() {
       // Navigate back to home and trigger a refresh
       router.replace('/');
     } catch (error) {
-      console.error('Failed to save mood:', error);
+      console.log('Failed to save mood:', error);
     } finally {
       setIsLoading(false);
     }

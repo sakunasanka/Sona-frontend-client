@@ -24,7 +24,7 @@ export const useNotifications = () => {
         setUnreadCount(response.data.unreadCount);
       }
     } catch (err: any) {
-      // console.error('Error fetching notifications:', err);
+      // console.log('Error fetching notifications:', err);
       setError(err?.message || 'Failed to fetch notifications');
     }
   }, []);
@@ -43,7 +43,7 @@ export const useNotifications = () => {
         setUnreadCount(response.data.unreadCount);
       }
     } catch (err: any) {
-      // console.error('Error fetching notifications:', err);
+      // console.log('Error fetching notifications:', err);
       setError(err?.message || 'Failed to fetch notifications');
     } finally {
       setLoading(false);
@@ -61,7 +61,7 @@ export const useNotifications = () => {
         setUnreadCount(response.data.unreadCount);
       }
     } catch (err: any) {
-      console.error('Error fetching unread count:', err);
+      console.log('Error fetching unread count:', err);
     }
   }, []);
 
@@ -80,7 +80,7 @@ export const useNotifications = () => {
       // Update unread count
       setUnreadCount(prev => Math.max(0, prev - 1));
     } catch (err: any) {
-      console.error('Error marking notification as read:', err);
+      console.log('Error marking notification as read:', err);
       throw err;
     }
   }, []);
@@ -98,7 +98,7 @@ export const useNotifications = () => {
       );
       setUnreadCount(0);
     } catch (err: any) {
-      console.error('Error marking all notifications as read:', err);
+      console.log('Error marking all notifications as read:', err);
       throw err;
     }
   }, []);
@@ -119,7 +119,7 @@ export const useNotifications = () => {
         setUnreadCount(prev => Math.max(0, prev - 1));
       }
     } catch (err: any) {
-      console.error('Error deleting notification:', err);
+      console.log('Error deleting notification:', err);
       throw err;
     }
   }, [notifications]);
@@ -140,7 +140,7 @@ export const useNotifications = () => {
       setNotifications([]);
       setUnreadCount(0);
     } catch (err: any) {
-      console.error('Error clearing all notifications:', err);
+      console.log('Error clearing all notifications:', err);
       throw err;
     }
   }, [notifications]);

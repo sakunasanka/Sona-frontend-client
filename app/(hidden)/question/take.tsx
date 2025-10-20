@@ -157,7 +157,7 @@ export default function TakePHQ9() {
         params: navigationParams,
       });
     } catch (error) {
-      console.error('Error submitting PHQ-9:', error);
+      console.log('Error submitting PHQ-9:', error);
       Alert.alert(
         'Submission Error', 
         'There was an error saving your results. Your answers will still be shown, but may not be saved to your history.',

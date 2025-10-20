@@ -56,7 +56,7 @@ export default function PrescriptionHistory() {
         setError(response.message || 'Failed to fetch prescriptions');
       }
     } catch (error: any) {
-      console.error('Error fetching prescriptions:', error);
+      console.log('Error fetching prescriptions:', error);
       setError(error.message || 'Failed to fetch prescriptions');
     }
   }, []);
@@ -124,7 +124,7 @@ export default function PrescriptionHistory() {
                   Alert.alert('Error', 'Cannot open the prescription file. Please check your internet connection.');
                 }
               } catch (error) {
-                console.error('Error opening prescription URL:', error);
+                console.log('Error opening prescription URL:', error);
                 Alert.alert('Error', 'Failed to open prescription file.');
               }
             }
@@ -132,7 +132,7 @@ export default function PrescriptionHistory() {
         ]
       );
     } catch (error) {
-      console.error('Error downloading prescription:', error);
+      console.log('Error downloading prescription:', error);
       Alert.alert('Error', 'Failed to download prescription. Please try again.');
     }
   };

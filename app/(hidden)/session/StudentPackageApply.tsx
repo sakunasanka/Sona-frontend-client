@@ -129,7 +129,7 @@ export default function StudentPackageApply() {
         [{ text: 'OK', onPress: () => router.back() }]
       );
     } catch (error: any) {
-      console.error('Error submitting student package application:', error);
+      console.log('Error submitting student package application:', error);
       
       // Handle specific error for already applied
       if (error?.error === 'ValidationError' && error?.message === 'Client already has a student application') {

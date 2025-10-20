@@ -111,7 +111,7 @@ const EmergencyPopup: React.FC<EmergencyPopupProps> = ({
       onClose();
 
     } catch (error) {
-      console.error('Error sending emergency alert:', error);
+      console.log('Error sending emergency alert:', error);
       setError('Failed to send emergency alert. Please try again.');
       
       // Still call the parent callback so the user isn't stuck

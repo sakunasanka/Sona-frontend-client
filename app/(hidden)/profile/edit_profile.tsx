@@ -5,14 +5,14 @@ import { router } from 'expo-router';
 import { ArrowLeft, Camera, Check, Trash2 } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
-  Alert,
-  Image,
-  SafeAreaView,
-  ScrollView,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View
+    Alert,
+    Image,
+    SafeAreaView,
+    ScrollView,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
 } from 'react-native';
 
 interface UserData {
@@ -37,7 +37,7 @@ export default function EditProfile() {
         setProfileData(profile);
         setCloudinaryImageUrl(profile.avatar);
       } catch (error) {
-        console.error('Error loading profile:', error);
+        console.log('Error loading profile:', error);
         Alert.alert('Error', 'Failed to load profile data');
       } finally {
         setLoading(false);
@@ -74,7 +74,7 @@ export default function EditProfile() {
           setCloudinaryImageUrl(uploadResult.secure_url);
           console.log('Profile image uploaded to Cloudinary:', uploadResult.secure_url);
         } catch (uploadError) {
-          console.error('Cloudinary upload failed:', uploadError);
+          console.log('Cloudinary upload failed:', uploadError);
           Alert.alert('Upload Error', 'Failed to upload image. Please try again.');
           setCloudinaryImageUrl(profileData?.avatar || null);
         } finally {
@@ -129,7 +129,7 @@ export default function EditProfile() {
         { text: 'OK', onPress: () => router.back() }
       ]);
     } catch (error) {
-      console.error('Error updating profile:', error);
+      console.log('Error updating profile:', error);
       Alert.alert('Error', 'Failed to update profile');
     } finally {
       setSaving(false);

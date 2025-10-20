@@ -115,7 +115,7 @@ const NotificationIcon: React.FC<NotificationIconProps> = ({
       }
       // If relatedURL is null, don't do anything (don't show modal)
     } catch (error) {
-      console.error('Error handling notification click:', error);
+      console.log('Error handling notification click:', error);
     }
   };
 
@@ -125,7 +125,7 @@ const NotificationIcon: React.FC<NotificationIconProps> = ({
     try {
       await onMarkAsRead(notificationId);
     } catch (error) {
-      console.error('Error marking notification as read:', error);
+      console.log('Error marking notification as read:', error);
     }
   };
 
@@ -135,7 +135,7 @@ const NotificationIcon: React.FC<NotificationIconProps> = ({
   //   try {
   //     await onDeleteNotification(notificationId);
   //   } catch (error) {
-  //     console.error('Error deleting notification:', error);
+  //     console.log('Error deleting notification:', error);
   //   }
   // };
 

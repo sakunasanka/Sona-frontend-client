@@ -23,7 +23,7 @@ export default function VideoCallPage() {
   useEffect(() => {
     if(!params.sessionId) {
     setNullId(true);
-    console.error('❌ Missing sessionId parameter in route');
+    console.log('❌ Missing sessionId parameter in route');
     router.replace('/(hidden)/session/sessionHistory');
     return;
   }
@@ -72,7 +72,7 @@ export default function VideoCallPage() {
           setPermissionStatus(`missing-permissions - Camera: ${camStatus.status}, Mic: ${micStatus.status}`);
         }
       } catch (err) {
-        console.error('❌ Permission check error', err);
+        console.log('❌ Permission check error', err);
         setPermissionStatus(`error: ${err}`);
       }
     })();
@@ -121,7 +121,7 @@ export default function VideoCallPage() {
         );
       }
     } catch (err) {
-      console.error('❌ Manual permission error:', err);
+      console.log('❌ Manual permission error:', err);
       setPermissionStatus(`manual-error: ${err}`);
       Alert.alert('Error', `Permission check failed: ${err}`);
     }

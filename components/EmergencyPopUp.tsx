@@ -1,15 +1,15 @@
 import { BlurView } from 'expo-blur';
 import React, { useEffect, useState } from 'react';
 import {
-    Dimensions,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    TouchableWithoutFeedback,
-    View,
+  Dimensions,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View,
 } from 'react-native';
 import { sendEmergencyAlert } from '../api/sessions';
 
@@ -137,7 +137,7 @@ const EmergencyPopup: React.FC<EmergencyPopupProps> = ({
           className="bg-red-500 rounded-xl py-4 px-6"
         >
           <Text className="text-white text-lg font-semibold text-center">
-            🚑 Contact Emergency Services
+            Contact Emergency Services
           </Text>
         </TouchableOpacity>
         <View className="h-4" />
@@ -146,7 +146,7 @@ const EmergencyPopup: React.FC<EmergencyPopupProps> = ({
           className="bg-green-500 rounded-xl py-4 px-6"
         >
           <Text className="text-white text-lg font-semibold text-center">
-            ✅ No, I&apos;m Fine
+            No, I&apos;m Fine
           </Text>
         </TouchableOpacity>
       </View>

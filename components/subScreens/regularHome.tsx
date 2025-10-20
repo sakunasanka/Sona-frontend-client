@@ -9,10 +9,9 @@ import { icons } from '@/constants/icons';
 import { useShake } from '@/hooks/useShake';
 import { getDisplayName } from '@/util/asyncName';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
-import { Alert, FlatList, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, FlatList, Image, Text, TouchableOpacity, View } from 'react-native';
 import { hasSubmittedTodaysMood } from '../../api/mood';
 import EmergencyPopup, { EmergencyContactData } from '../EmergencyPopUp';
 import TopBar from '../TopBar';
@@ -229,28 +228,27 @@ export default function RegularHome() {
                   className="rounded-2xl shadow-lg overflow-hidden"
                   onPress={() => router.push('/(hidden)/mood/sampleMood' as any)}
                 >
-                  <LinearGradient
-                    colors={['#60A5FA', '#A78BFA']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={{ padding: 24 }}
-                  >
+                  <View className='bg-[#bfecb5] p-4 rounded-2xl'>
                     <View className="flex-row items-center justify-between">
                       <View className="flex-1">
-                        <Text className="text-white text-xl font-bold mb-2 font-alegreya">
+                        <Text className="text-black text-2xl font-bold mb-2 font-alegreya">
                           Track Your Mood
                         </Text>
-                        <Text className="text-blue-100 text-sm font-alegreya">
-                          How are you feeling today? Express your emotions with our advanced mood tracker.
+                        <Text className="text-gray-500 text-lg font-alegreya">
+                          Check in with your feelings: Use our mood tracker to express yourself.
+                        </Text>
+                        <View className='mt-4'/>
+                        <Text className="text-[##057022] text-2xl font-bold mb-2 font-alegreya">
+                          View My Mood
                         </Text>
                       </View>
                       <View className="ml-4">
                         <View className="w-16 h-16 bg-white/20 rounded-full items-center justify-center">
-                          <Text className="text-2xl">😊</Text>
+                          <Image source={icons.mood} style={{ width: 40, height: 40 }} />
                         </View>
                       </View>
                     </View>
-                  </LinearGradient>
+                    </View>
                 </TouchableOpacity>
               </View>
             )}

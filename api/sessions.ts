@@ -57,6 +57,7 @@ export const fetchTimeSlots = async (counselorId: string, date: string, token?: 
       path: `sessions/timeslots/${counselorId}/${date}`,
       token
     });
+    console.log('Fetched time slots:', response);
     return response;
   } catch (error) {
     console.log('Error fetching time slots:', error);

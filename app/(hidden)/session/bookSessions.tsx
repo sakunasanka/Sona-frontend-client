@@ -3,24 +3,23 @@ import { checkIsStudent } from "@/api/api";
 import { Counselor } from "@/api/counselor";
 import { createPaymentLink } from "@/api/payment";
 import { getRemainingFreeSessions } from "@/api/sessions";
-import { API_URL, PORT } from "@/config/env";
+import { API_URL, PORT, host, server_URL } from "@/config/env";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router, useLocalSearchParams } from "expo-router";
 import { ArrowLeft, Calendar, GraduationCap } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
-    Modal,
-    Platform,
-    SafeAreaView,
-    ScrollView,
-    StatusBar,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  Alert,
+  Image,
+  Modal,
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { WebView } from 'react-native-webview';
 import BookingCalendar from '../../../components/BookingCalendar';
@@ -53,9 +52,10 @@ interface PaymentMethod {
 }
 
 let API_BASE_URL = '';
-if (Platform.OS === 'android') {
-  API_BASE_URL = API_URL + ':' + PORT + '/api';
-} else {
+if(host && server_URL){
+  API_BASE_URL = server_URL + '/api';
+  console.log("Using server_URL from config/env.ts as API_BASE_URL:", API_BASE_URL);
+}else {
   API_BASE_URL = API_URL + ':' + PORT + '/api';
 }
 

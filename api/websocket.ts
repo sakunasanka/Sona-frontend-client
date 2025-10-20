@@ -1,4 +1,4 @@
-import { API_URL, PORT } from '@/config/env';
+import { API_URL, host, PORT, server_URL } from '@/config/env';
 import { AppState } from 'react-native';
 import { io, Socket } from 'socket.io-client';
 
@@ -44,29 +44,41 @@ class ChatWebSocketService {
   }
 
   connect(chatId: number, userId: number, token?: string) {
+    console.log('🔄 Connecting to new room, disconnecting existing connection...');
+    
+    // Always disconnect existing connection when explicitly connecting
+    if (this.socket) {
+      this.socket.disconnect();
+      this.socket = null;
+    }
+
     this.currentChatId = chatId;
     this.currentUserId = userId;
 
     try {
-      if (this.socket) {
-        this.socket.disconnect();
+      // Determine WebSocket URL based on host configuration
+      let socketUrl: string;
+      
+      if (host && server_URL) {
+        // Use server_URL when host is configured
+        socketUrl = server_URL;
+        console.log('🌐 Using configured server URL:', socketUrl);
+      } else {
+        // Use default format: socketUrl:port
+        const port = PORT ? PORT : '5001';
+        socketUrl = `${API_URL}:${port}`;
+        console.log('🏠 Using default socket URL format:', socketUrl);
       }
 
-      const socketUrl = API_URL
-      const port = PORT ? PORT : '5001'
-
-      console.log('Connecting to Socket.IO server...');
-      
-      // For Expo Go development, use your local IP
-      console.log('🔗 Connecting to Socket.IO server:', {
+      console.log('🔗 Creating new Socket.IO connection:', {
         url: socketUrl,
         chatId,
         userId,
         hasToken: !!token,
-        platform: 'react-native'
+        usingHostConfig: !!(host && server_URL)
       });
 
-      this.socket = io(`${socketUrl}:${port}`, {
+      this.socket = io(socketUrl, {
         auth: {
           token: token  
         },
@@ -77,13 +89,12 @@ class ChatWebSocketService {
         timeout: 10000,  
         forceNew: true, 
         upgrade: false,  
-      rememberUpgrade: false 
+        rememberUpgrade: false
       });
-
 
       this.setupEventListeners();
     } catch (error) {
-      // console.error('Error connecting to Socket.IO:', error);
+      // console.log('Error connecting to Socket.IO:', error);
     }
   }
 
@@ -124,39 +135,39 @@ class ChatWebSocketService {
 
   // ✅ Enhanced error event logging
   this.socket.on('error', (error) => {
-    // console.error('❌ SOCKET ERROR EVENT:');
-    // console.error('Error:', error);
-    // console.error('Error type:', typeof error);
-    // console.error('Error constructor:', error?.constructor?.name);
+    // console.log('❌ SOCKET ERROR EVENT:');
+    // console.log('Error:', error);
+    // console.log('Error type:', typeof error);
+    // console.log('Error constructor:', error?.constructor?.name);
     
     if (error instanceof Error) {
-      // console.error('Error name:', error.name);
-      // console.error('Error message:', error.message);
-      // console.error('Error stack:', error.stack);
+      // console.log('Error name:', error.name);
+      // console.log('Error message:', error.message);
+      // console.log('Error stack:', error.stack);
     }
     
-    // console.error('Full error JSON:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
+    // console.log('Full error JSON:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
   });
 
   // ✅ Add engine error listeners
   this.socket.on('connect_timeout', () => {
-    // console.error('❌ Connection timeout after', this.socket?.io?.opts?.timeout, 'ms');
+    // console.log('❌ Connection timeout after', this.socket?.io?.opts?.timeout, 'ms');
   });
 
   this.socket.on('reconnect_error', (error) => {
-    // console.error('❌ Reconnection error:', error);
+    // console.log('❌ Reconnection error:', error);
   });
 
   this.socket.on('reconnect_failed', () => {
-    // console.error('❌ Reconnection failed after maximum attempts');
+    // console.log('❌ Reconnection failed after maximum attempts');
   });
 
   // ✅ Transport-level error logging
   if (this.socket.io?.engine) {
     this.socket.io.engine.on('error', (error) => {
-      // console.error('❌ ENGINE ERROR:');
-      // console.error('Engine error:', error);
-      // console.error('Transport name:', this.socket?.io?.engine?.transport?.name);
+      // console.log('❌ ENGINE ERROR:');
+      // console.log('Engine error:', error);
+      // console.log('Transport name:', this.socket?.io?.engine?.transport?.name);
     });
 
     this.socket.io.engine.on('close', (reason, description) => {
@@ -168,6 +179,8 @@ class ChatWebSocketService {
     this.socket.on('new_message', (data) => {
       console.log('💬 New message received:', data);
       if (data.message) {
+        const messageRoomId = data.message.roomId || this.currentChatId || 0;
+        
         // Convert backend format to frontend format
         const message: ChatMessage = {
           id: data.message.id,
@@ -175,10 +188,12 @@ class ChatWebSocketService {
           senderId: data.message.senderId,
           userName: data.message.senderName,
           createdAt: data.message.createdAt,
-          roomId: data.message.roomId || this.currentChatId || 0,
+          roomId: messageRoomId,
           avatar: data.message.avatar,
           avatarColor: data.message.avatarColor
         };
+        
+        // Notify all listeners - let them filter by room if needed
         this.notifyMessageListeners(message);
       }
     });
@@ -186,21 +201,25 @@ class ChatWebSocketService {
     // Typing events (matching your backend)
     this.socket.on('user_typing', (data) => {
       console.log('✏️ User typing:', data);
+      const typingRoomId = data.roomId || this.currentChatId || 0;
+      
       this.notifyTypingListeners({
         userId: data.userId,
         userName: data.userName,
         isTyping: true,
-        roomId: data.roomId || this.currentChatId || 0
+        roomId: typingRoomId
       });
     });
 
     this.socket.on('user_stopped_typing', (data) => {
       console.log('✋ User stopped typing:', data);
+      const typingRoomId = data.roomId || this.currentChatId || 0;
+      
       this.notifyTypingListeners({
         userId: data.userId,
         userName: data.userName,
         isTyping: false,
-        roomId: data.roomId || this.currentChatId || 0
+        roomId: typingRoomId
       });
     });
 
@@ -219,7 +238,7 @@ class ChatWebSocketService {
 
     // Error handling
     this.socket.on('error', (error) => {
-      // console.error('❌ Socket.IO error:', error);
+      // console.log('❌ Socket.IO error:', error);
     });
 
     // Test events

@@ -1,7 +1,26 @@
-import { Stack, SplashScreen } from "expo-router";
+import PlatformFeePayment from "@/components/PlatformFeePayment";
 import { useFonts } from "expo-font";
+import { SplashScreen, Stack } from "expo-router";
 import { useEffect } from "react";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import 'react-native-reanimated';
+import { PlatformFeeProvider, usePlatformFee } from "../contexts/PlatformFeeContext";
+import { useSessionTimeout } from "../hooks/useSessionTimeout";
+
+function GlobalPaymentModal() {
+  const { isPaymentModalVisible, hidePaymentModal } = usePlatformFee();
+
+  return (
+    <PlatformFeePayment
+      visible={isPaymentModalVisible}
+      onClose={hidePaymentModal}
+      onPaymentSuccess={async () => {
+        await new Promise((resolve) => setTimeout(resolve, 500)); // slight delay to ensure backend processes payment
+        hidePaymentModal();
+      }}
+    />
+  )
+}
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
@@ -10,6 +29,9 @@ export default function RootLayout() {
     'AlegreyaSCB' : require('../assets/fonts/AlegreyaSC-Black.otf'),
     'AlegreyaSC' : require('../assets/fonts/AlegreyaSC-Regular.otf'),
   });
+
+  // Initialize session timeout tracking for the entire app
+  const { updateActivity } = useSessionTimeout();
 
   useEffect(() => {
     if (fontsLoaded) {
@@ -21,5 +43,12 @@ export default function RootLayout() {
     return null;
   }
 
-  return <Stack screenOptions={{ headerShown: false }} />;
+  return (
+    <GestureHandlerRootView>
+      <PlatformFeeProvider>
+          <Stack screenOptions={{ headerShown: false }} />
+          <GlobalPaymentModal /> 
+      </PlatformFeeProvider>
+    </GestureHandlerRootView>
+  );
 }

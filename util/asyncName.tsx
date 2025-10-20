@@ -8,7 +8,7 @@ export const getDisplayName = async () => {
       return name;
     }
   } catch (error) {
-    console.error('Failed to fetch display name:', error);
+    console.log('Failed to fetch display name:', error);
   }
 };
 

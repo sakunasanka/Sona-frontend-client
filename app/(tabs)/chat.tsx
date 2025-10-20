@@ -1,8 +1,14 @@
+import { getProfile } from "@/api/auth";
+import NotificationIcon from '@/components/NotificationIcon';
 import TopBar from "@/components/TopBar";
 import { useChat } from "@/hooks/useChat";
+import { useNotifications } from '@/hooks/useNotifications';
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { router } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import { Wifi, WifiOff } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from "react";
-import { Animated, Image, Keyboard, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Animated, Image, Keyboard, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const useTabBarHeight = () => {
@@ -20,50 +26,86 @@ const Chat = () => {
   const scrollViewRef = useRef<ScrollView>(null);
   const tabBarHeight = useTabBarHeight();
 
-  const chatId = 2; // Example chat ID
-  const currentUserId = 19; // Example current user ID
+  const chatId = 1; // Example chat ID
+  const [currentUserId, setCurrentUserId] = useState<number>(19); // Will be loaded from API
   const currentUserName = 'Current User'; // Example current user name
   const [token, setToken] = useState<string | null>(null);
   const [isTokenLoaded, setIsTokenLoaded] = useState(false);
+  const [profileData, setProfileData] = useState<any>(null);
 
-  // Load token before rendering
+  // Use notifications hook
+  const {
+    notifications,
+    unreadCount,
+    loading: notificationsLoading,
+    markAsRead,
+    markAllAsRead,
+    deleteNotification,
+  } = useNotifications();
+
+  // Load token and userId from profile API
   useEffect(() => {
     let isMounted = true;
     
-    const loadToken = async () => {
+    const loadAuthData = async () => {
       try {
         const storedToken = await AsyncStorage.getItem('token');
-        console.log('Token loaded from storage:', {
-          exists: !!storedToken,
-          length: storedToken?.length,
-          preview: storedToken?.substring(0, 20) + '...'
+        
+        console.log('Auth data loading:', {
+          tokenExists: !!storedToken,
         });
 
         if (isMounted) {
           if (!storedToken) {
             console.log('No token found, user not authenticated');
             setToken(null);
-          } else {
-            setToken(storedToken);
+            setIsTokenLoaded(true);
+            return;
           }
+          
+          setToken(storedToken);
+          
+          // Fetch user profile to get the actual userId and profile data
+          try {
+            const profile = await getProfile();
+            if (profile && profile.id) {
+              console.log('✅ Got user ID from profile:', profile.id);
+              setCurrentUserId(profile.id);
+              setProfileData(profile);
+              // Cache it for future use
+              await AsyncStorage.setItem('userId', String(profile.id));
+            }
+          } catch (profileError) {
+            console.log('Error fetching profile:', profileError);
+            // Try to get from cache as fallback
+            const cachedUserId = await AsyncStorage.getItem('userId');
+            if (cachedUserId) {
+              console.log('Using cached userId:', cachedUserId);
+              setCurrentUserId(Number(cachedUserId));
+            }
+          }
+          
           setIsTokenLoaded(true);
         }
       } catch (error) {
-        console.error('Error loading token:', error);
+        console.log('Error loading auth data:', error);
         if (isMounted) {
           setToken(null);
-          setIsTokenLoaded(true); // Mark as loaded even if failed
+          setIsTokenLoaded(true);
         }
       }
     };
 
-    loadToken();
+    loadAuthData();
 
     return () => {
       isMounted = false;
     };
   }, []);
 
+  // Only initialize chat hook after token is loaded and available
+  const shouldInitializeChat = isTokenLoaded && token;
+  
   const {
     messages,
     typingUsers,
@@ -81,7 +123,8 @@ const Chat = () => {
     chatId, 
     currentUserId, 
     currentUserName, 
-    isTokenLoaded && token ? token : ''
+    shouldInitializeChat ? token : '',
+    !!shouldInitializeChat // Pass this as a flag to control initialization
   );
 
   
@@ -153,7 +196,7 @@ const Chat = () => {
           scrollViewRef.current?.scrollToEnd({ animated: true });
         }, 100);
       } catch (error) {
-        console.error('Error sending message:', error);
+        console.log('Error sending message:', error);
         // You can add error handling here (show toast, etc.)
       }
     }
@@ -164,7 +207,7 @@ const Chat = () => {
     
     // Load older messages when scrolled to top
     if (contentOffset.y <= 100 && hasMoreMessages && !isLoadingMore) {
-      loadOlderMessages();
+      // loadOlderMessages();
     }
   };
 
@@ -189,14 +232,15 @@ const Chat = () => {
       hour: '2-digit', 
       minute: '2-digit' 
     });
-  } catch (error) {
-    // console.error('Error formatting timestamp:', error, 'Timestamp:', timestamp);
+  } catch {
+    // console.log('Error formatting timestamp:', timestamp);
     return ''; // Fallback for invalid timestamps
   }
 };
 
   // Show loading state until token is loaded
   if (!isTokenLoaded) {
+    console.log('🔄 Chat: Waiting for token to load...');
     return (
       <>
         <TopBar title="Global Chat" />
@@ -209,6 +253,7 @@ const Chat = () => {
 
   // Show error if no token after loading
   if (!token) {
+    console.log('❌ Chat: No token found after loading');
     return (
       <>
         <TopBar title="Global Chat" />
@@ -221,16 +266,60 @@ const Chat = () => {
             }}
             className="bg-purple-500 px-4 py-2 rounded"
           >
-            <Text className="text-white">Login</Text>
-          </TouchableOpacity>
+            <Text className="text-white">Login</Text></TouchableOpacity>
         </View>
       </>
     );
   }
 
+  console.log('✅ Chat: Token loaded, initializing chat...', {
+    tokenExists: !!token,
+    currentUserId,
+    shouldInitializeChat
+  });
+
   return (
     <>
-      <TopBar title={`Global Chat ${isConnected ? '🟢' : '🔴'}`} />
+      <View className='mt-10'>
+        <StatusBar style="dark" />
+        <View className="flex-row justify-between items-center px-5 py-4 border-b border-gray-200">
+          <View className="flex-row items-center">
+            <Text className="font-bold text-gray-900 font-alegreyaBold text-3xl mr-3">Global Chat</Text>
+            {isConnected ? (
+              <Wifi size={24} color="#10B981" />
+            ) : (
+              <WifiOff size={24} color="#EF4444" />
+            )}
+          </View>
+          <View className="flex-row items-center">
+            {/* Notification Icon */}
+            <NotificationIcon
+              notifications={notifications}
+              unreadCount={unreadCount}
+              loading={notificationsLoading}
+              onMarkAsRead={markAsRead}
+              onMarkAllAsRead={markAllAsRead}
+              onDeleteNotification={deleteNotification}
+            />
+
+            {/* Profile Image */}
+            <TouchableOpacity onPress={() => router.push('/(hidden)/profile/view_profile')} >
+              {profileData ? (
+                <Image 
+                  source={{ 
+                    uri: profileData?.avatar || 'https://images.icon-icons.com/1378/PNG/512/avatardefault_92824.png' 
+                  }} 
+                  style={{ width: 32, height: 32, borderRadius: 16 }}
+                />
+              ) : (
+                <View className="w-8 h-8 rounded-full bg-gray-200 justify-center items-center">
+                  <ActivityIndicator size="small" color="#2563EB" />
+                </View>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
       <View className="flex-1 bg-gray-50">
         
         {/* Connection Status Banner */}
@@ -285,26 +374,42 @@ const Chat = () => {
           )}
 
           {messages.map((message, index) => {
+            // Debug: Check if message has nested structure
+            const actualMessage = (message as any).message?.message ? (message as any).message : message;
+            
+            // Debug logging
+            if (index === messages.length - 1) {
+              console.log('🔍 Last message comparison:', {
+                'actualMessage.senderId': actualMessage.senderId,
+                'actualMessage.senderId type': typeof actualMessage.senderId,
+                'currentUserId': currentUserId,
+                'currentUserId type': typeof currentUserId,
+                'are they equal?': actualMessage.senderId == currentUserId,
+                'loose equal?': actualMessage.senderId == currentUserId,
+                'full message': actualMessage
+              });
+            }
+            
             const prevMessage = index > 0 ? messages[index - 1] : null;
-            const isSameUser = prevMessage && prevMessage.senderId === message.senderId;
-            const isCurrentUser = message.senderId === currentUserId; // Use dynamic current user
+            const isSameUser = prevMessage && prevMessage.senderId == actualMessage.senderId;
+            const isCurrentUser = actualMessage.senderId == currentUserId; // Use dynamic current user
             const marginTop = isSameUser ? 4 : 16;
             
             // Check if this is an optimistic message (temporary ID)
             // Optimistic messages have timestamp-based IDs and are from current user
-            const isOptimistic = isCurrentUser && message.id > Date.now() - 60000 && message.id.toString().length >= 13;
+            const isOptimistic = isCurrentUser && actualMessage.id > Date.now() - 60000 && actualMessage.id.toString().length >= 13;
             
             return (
-              <View key={message.id} className={`${!isCurrentUser ? 'flex-row items-end' : 'items-end'}`}
+              <View key={actualMessage.id} className={`${!isCurrentUser ? 'flex-row items-end' : 'items-end'}`}
                     style={{ marginTop }}>
                 {/* Avatar for other users - only show for first message */}
                 {!isCurrentUser && !isSameUser && (
                   <View 
                     className="w-8 h-8 rounded-full items-center justify-center mr-2 mb-1"
-                    style={{ backgroundColor: message.avatarColor || '#6B7280' }}
+                    style={{ backgroundColor: actualMessage.avatarColor || '#6B7280' }}
                   >
                     <Text className="text-white font-bold text-xs">
-                      {message.avatar || message.userName?.charAt(0).toUpperCase() || 'U'}
+                      {actualMessage.avatar || actualMessage.userName?.charAt(0).toUpperCase() || 'U'}
                     </Text>
                   </View>
                 )}
@@ -315,31 +420,31 @@ const Chat = () => {
                 )}
                 
                 {/* Message bubble */}
-                <View className={`max-w-xs ${!isCurrentUser ? 'flex-1' : 'self-end'}`}>
+                <View className={`max-w-xs ${!isCurrentUser ? 'self-start' : 'self-end'}`}>
                   <View className={`p-3 rounded-2xl ${
                     !isCurrentUser 
                       ? 'bg-white border border-gray-200 rounded-bl-sm' 
                       : 'bg-gradient-to-r from-purple-500 to-pink-500 rounded-br-sm'
                   }`}
                   style={{
-                    backgroundColor: isCurrentUser ? '#8B5CF6' : undefined,
+                    backgroundColor: isCurrentUser ? '#8B5CF6' : '#FFFFFF', // Explicitly set white background for receiving messages
                     opacity: isOptimistic ? 0.7 : 1 // Slightly transparent for optimistic messages
                   }}
                   >
                     {/* User name for first message */}
-                    {!isCurrentUser && !isSameUser && message.userName && (
+                    {!isCurrentUser && !isSameUser && actualMessage.userName && (
                       <Text className="text-emerald-600 font-semibold text-xs mb-1">
-                        {message.userName}
+                        {actualMessage.userName}
                       </Text>
                     )}
                     <Text className={!isCurrentUser ? 'text-gray-800' : 'text-white'}>
-                      {message.message}
+                      {typeof actualMessage.message === 'string' ? actualMessage.message : JSON.stringify(actualMessage.message)}
                     </Text>
                     <View className="flex-row items-center justify-between mt-1">
                       <Text className={`text-xs ${
                         !isCurrentUser ? 'text-gray-400' : 'text-purple-100'
                       }`}>
-                        {formatMessageTime(message.createdAt ?? '')}
+                        {formatMessageTime(actualMessage.createdAt ?? '')}
                       </Text>
                       {isOptimistic && isCurrentUser && (
                         <Text className="text-purple-200 text-xs ml-2">⏳</Text>

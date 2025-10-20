@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { Eye, EyeOff, Lock, Mail } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { ActivityIndicator, Image, Keyboard, Modal, ScrollView, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
+import { sessionManager } from '../../utils/sessionManager';
 import { PrimaryButton } from '../components/Buttons';
 
 const saveDisplayName = async (name: string) => {
@@ -11,7 +12,7 @@ const saveDisplayName = async (name: string) => {
     await AsyncStorage.setItem('displayName', name);
     console.log('Display name saved successfully');
   } catch (error) {
-    console.error('Failed to save display name:', error);
+    console.log('Failed to save display name:', error);
   }
 };
 
@@ -50,6 +51,10 @@ export default function SignIn() {
       
       
     }
+    
+    // Initialize session tracking after successful login
+    await sessionManager.initializeSession();
+    
     console.log('Token from the local storage', await AsyncStorage.getItem('token'));
 
     console.log('Login success:', result);
@@ -57,7 +62,7 @@ export default function SignIn() {
 
     router.replace('/(tabs)');
   } catch (err) {
-    console.error('Login failed:', err);
+    console.log('Login failed:', err);
     setIsLoading(false);
   }
   };

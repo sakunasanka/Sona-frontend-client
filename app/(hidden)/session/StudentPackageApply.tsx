@@ -1,9 +1,11 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
 import { router } from 'expo-router';
 import { ArrowLeft, CreditCard, Info, Mail, School, User } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Image, Keyboard, KeyboardAvoidingView, Platform, SafeAreaView, ScrollView, StatusBar, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Keyboard, KeyboardAvoidingView, Platform, SafeAreaView, ScrollView, StatusBar, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { applyStudentPackage } from '../../../api/api';
+import { uploadStudentIdToCloudinary } from '../../../utils/cloudinary';
 import { PrimaryButton } from '../../components/Buttons';
 
 // Student Package details
@@ -18,11 +20,19 @@ const STUDENT_PACKAGE = {
   ]
 };
 
+// University email domains
+const UNIVERSITY_DOMAINS = [
+  "accimt.ac.lk", "bbu.ac.lk", "bpu.ac.lk", "cmb.ac.lk", "esn.ac.lk", "jfn.ac.lk",
+  "kdu.ac.lk", "kln.ac.lk", "mrt.ac.lk", "ou.ac.lk", "pdn.ac.lk", "pgia.ac.lk",
+  "rjt.ac.lk", "ruh.ac.lk", "sab.ac.lk", "saitm.edu.lk", "seu.ac.lk", "sjp.ac.lk",
+  "sliate.net", "sliit.lk", "uwu.ac.lk", "vpa.ac.lk", "wyb.ac.lk", "nsbm.lk",
+  "nibm.lk", "iit.ac.lk"
+];
+
 export default function StudentPackageApply() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [university, setUniversity] = useState('');
-  const [studentId, setStudentId] = useState('');
   const [message, setMessage] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -34,16 +44,28 @@ export default function StudentPackageApply() {
     name: false,
     email: false,
     university: false,
-    studentId: false,
     idCardFile: false
   });
 
+  // Helper function to check if email domain is valid (allows subdomains)
+  const isValidUniversityEmail = (email: string) => {
+    if (!email.includes('@')) return false;
+    
+    const domain = email.split('@')[1].toLowerCase();
+    
+    return UNIVERSITY_DOMAINS.some(uniDomain => {
+      const lowerUniDomain = uniDomain.toLowerCase();
+      // Allow exact match or subdomain match (e.g., subdomain.uni.ac.lk matches uni.ac.lk)
+      return domain === lowerUniDomain || domain.endsWith('.' + lowerUniDomain);
+    });
+  };
+
   const validateForm = () => {
+    const isValidEmail = isValidUniversityEmail(email);
     const newErrors = {
       name: !name,
-      email: !email || !email.includes('@'),
+      email: !email || !isValidEmail,
       university: !university,
-      studentId: !studentId,
       idCardFile: !idCardFile
     };
     
@@ -51,81 +73,30 @@ export default function StudentPackageApply() {
     return !Object.values(newErrors).some(error => error);
   };
 
-  // Request permission for camera and image library
-  useEffect(() => {
-    (async () => {
-      const { status: cameraStatus } = await ImagePicker.requestCameraPermissionsAsync();
-      const { status: libraryStatus } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      
-      if (cameraStatus !== 'granted' || libraryStatus !== 'granted') {
-        Alert.alert(
-          "Permissions Required", 
-          "Please allow camera and photo library access to upload your student ID."
-        );
-      }
-    })();
-  }, []);
-
   const handleUploadIdCard = async () => {
     try {
       setIsUploading(true);
       
-      // Show options to user
-      Alert.alert(
-        "Upload ID Card",
-        "Choose an option",
-        [
-          {
-            text: "Take Photo",
-            onPress: async () => {
-              const result = await ImagePicker.launchCameraAsync({
-                mediaTypes: ImagePicker.MediaTypeOptions.Images,
-                allowsEditing: true,
-                aspect: [4, 3],
-                quality: 0.8,
-              });
-              
-              if (!result.canceled && result.assets && result.assets.length > 0) {
-                setIdCardFile(result.assets[0].uri);
-                setErrors(prev => ({ ...prev, idCardFile: false }));
-              }
-              setIsUploading(false);
-            }
-          },
-          {
-            text: "Choose from Library",
-            onPress: async () => {
-              const result = await ImagePicker.launchImageLibraryAsync({
-                mediaTypes: ImagePicker.MediaTypeOptions.Images,
-                allowsEditing: true,
-                aspect: [4, 3],
-                quality: 0.8,
-              });
-              
-              if (!result.canceled && result.assets && result.assets.length > 0) {
-                setIdCardFile(result.assets[0].uri);
-                setErrors(prev => ({ ...prev, idCardFile: false }));
-              }
-              setIsUploading(false);
-            }
-          },
-          {
-            text: "Cancel",
-            style: "cancel",
-            onPress: () => setIsUploading(false)
-          }
-        ]
-      );
-    } catch (error) {
-      console.log("Error uploading image:", error);
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['application/pdf', 'image/*'],
+        copyToCacheDirectory: true,
+      });
+      
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        setIdCardFile(result.assets[0].uri);
+        setErrors(prev => ({ ...prev, idCardFile: false }));
+      }
       setIsUploading(false);
-      Alert.alert("Error", "Failed to upload image. Please try again.");
+    } catch (error) {
+      console.log("Error uploading file:", error);
+      setIsUploading(false);
+      Alert.alert("Error", "Failed to upload file. Please try again.");
     }
   };
 
   const handleSubmit = async () => {
     if (!validateForm()) {
-      Alert.alert('Missing Information', 'Please fill in all required fields and upload your student ID card.');
+      Alert.alert('Missing Information', 'Please fill in all required fields and upload your student ID document.');
       return;
     }
     
@@ -135,25 +106,21 @@ export default function StudentPackageApply() {
       // Get authentication token
       const authToken = await AsyncStorage.getItem('token') || '';
       
-      // Package details
-      const packageDetails = STUDENT_PACKAGE;
+      // Upload file to Cloudinary
+      const cloudinaryResult = await uploadStudentIdToCloudinary(idCardFile!, 'student_id_document');
       
       // Prepare request body
       const requestBody = {
-        name,
-        email,
+        fullName: name,
         university,
-        studentId,
-        message,
-        packageId: packageDetails.id,
-        packageName: packageDetails.name,
-        packagePrice: packageDetails.price
+        studentIDCopy: cloudinaryResult.secure_url,
+        uniEmail: email
       };
       
       console.log('Submitting application:', requestBody);
       
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Call API
+      await applyStudentPackage(authToken, requestBody);
       
       // Show success message
       Alert.alert(
@@ -161,12 +128,21 @@ export default function StudentPackageApply() {
         'We will verify your university credentials and activate your free student package within 24 hours. You will receive an email confirmation once verified.',
         [{ text: 'OK', onPress: () => router.back() }]
       );
-    } catch (error) {
-      console.error('Error submitting student package application:', error);
-      Alert.alert(
-        'Submission Failed',
-        'There was an error submitting your application. Please try again later.'
-      );
+    } catch (error: any) {
+      console.log('Error submitting student package application:', error);
+      
+      // Handle specific error for already applied
+      if (error?.error === 'ValidationError' && error?.message === 'Client already has a student application') {
+        Alert.alert(
+          'Application Already Exists',
+          'You have already submitted a student package application. Please wait for verification or contact support if you have questions.'
+        );
+      } else {
+        Alert.alert(
+          'Submission Failed',
+          error?.message || 'There was an error submitting your application. Please try again later.'
+        );
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -296,23 +272,24 @@ export default function StudentPackageApply() {
           
           {/* Email Input */}
           <View className="mb-4">
-            <Text className="text-gray-700 mb-1 font-medium">Email Address *</Text>
+            <Text className="text-gray-700 mb-1 font-medium">University Email Address *</Text>
             <View className={`flex-row items-center border rounded-lg px-3 py-2 ${errors.email ? 'border-red-500' : 'border-gray-300'}`}>
               <Mail size={20} color="#6B7280" />
               <TextInput
                 value={email}
                 onChangeText={(text) => {
                   setEmail(text);
-                  if (text && text.includes('@')) setErrors(prev => ({ ...prev, email: false }));
+                  const isValid = isValidUniversityEmail(text);
+                  if (isValid) setErrors(prev => ({ ...prev, email: false }));
                 }}
-                placeholder="Enter your email address"
+                placeholder="Enter your university email"
                 keyboardType="email-address"
                 autoCapitalize="none"
                 className="flex-1 ml-2 text-gray-800"
                 placeholderTextColor="#9CA3AF"
               />
             </View>
-            {errors.email && <Text className="text-red-500 text-xs mt-1">Valid email is required</Text>}
+            {errors.email && <Text className="text-red-500 text-xs mt-1">Valid university email is required</Text>}
           </View>
           
           {/* University Input */}
@@ -334,39 +311,17 @@ export default function StudentPackageApply() {
             {errors.university && <Text className="text-red-500 text-xs mt-1">University/Institution is required</Text>}
           </View>
           
-          {/* Student ID Input */}
-          <View className="mb-4">
-            <Text className="text-gray-700 mb-1 font-medium">Student ID Number *</Text>
-            <View className={`flex-row items-center border rounded-lg px-3 py-2 ${errors.studentId ? 'border-red-500' : 'border-gray-300'}`}>
-              <CreditCard size={20} color="#6B7280" />
-              <TextInput
-                value={studentId}
-                onChangeText={(text) => {
-                  setStudentId(text);
-                  if (text) setErrors(prev => ({ ...prev, studentId: false }));
-                }}
-                placeholder="Enter your student ID number"
-                className="flex-1 ml-2 text-gray-800"
-                placeholderTextColor="#9CA3AF"
-              />
-            </View>
-            {errors.studentId && <Text className="text-red-500 text-xs mt-1">Student ID is required</Text>}
-          </View>
-          
+
           {/* ID Card Upload */}
           <View className="mb-5">
-            <Text className="text-gray-700 mb-1 font-medium">Upload Student ID Card *</Text>
+            <Text className="text-gray-700 mb-1 font-medium">Upload Student ID (PDF or Image) *</Text>
             <View className={`border rounded-lg p-4 ${errors.idCardFile ? 'border-red-500' : 'border-gray-300'}`}>
               {idCardFile ? (
                 <View className="items-center">
                   <View className="bg-indigo-100 rounded-lg p-3 mb-2">
-                    <Image
-                      source={idCardFile ? { uri: idCardFile } : require('../../../assets/icons/Meetup.png')}
-                      className="w-32 h-24"
-                      resizeMode="contain"
-                    />
+                    <CreditCard size={24} color="#6366F1" />
                   </View>
-                  <Text className="text-indigo-600 font-medium">ID Card Uploaded</Text>
+                  <Text className="text-indigo-600 font-medium">ID Document Uploaded</Text>
                   <TouchableOpacity 
                     className="mt-2 px-3 py-1 bg-gray-100 rounded-lg" 
                     onPress={handleUploadIdCard}
@@ -387,43 +342,16 @@ export default function StudentPackageApply() {
                       <View className="bg-gray-100 rounded-lg p-3 mb-2">
                         <CreditCard size={24} color="#6B7280" />
                       </View>
-                      <Text className="text-indigo-600 font-medium">Upload ID Card</Text>
+                      <Text className="text-indigo-600 font-medium">Upload ID Document</Text>
                       <Text className="text-gray-500 text-xs text-center mt-1">
-                        Please upload a clear image of your student ID card
+                        Please upload your student ID card as a PDF or image file
                       </Text>
                     </>
                   )}
                 </TouchableOpacity>
               )}
             </View>
-            {errors.idCardFile && <Text className="text-red-500 text-xs mt-1">Student ID card upload is required</Text>}
-          </View>
-          
-          {/* Additional Notes */}
-          <View className="mb-6">
-            <Text className="text-gray-700 mb-1 font-medium">Additional Notes (Optional)</Text>
-            <View className="border border-gray-300 rounded-lg px-3 py-2">
-              <TextInput
-                value={message}
-                onChangeText={setMessage}
-                placeholder="Any additional information you'd like to share"
-                multiline
-                numberOfLines={4}
-                className="text-gray-800 min-h-[80px]"
-                placeholderTextColor="#9CA3AF"
-                textAlignVertical="top"
-                onFocus={() => {
-                  setAdditionalNotesInputFocused(true);
-                  // When the field is focused, scroll to ensure it's visible
-                  setTimeout(() => {
-                    if (scrollViewRef.current) {
-                      scrollViewRef.current.scrollToEnd({ animated: true });
-                    }
-                  }, 300);
-                }}
-                onBlur={() => setAdditionalNotesInputFocused(false)}
-              />
-            </View>
+            {errors.idCardFile && <Text className="text-red-500 text-xs mt-1">Student ID document upload is required</Text>}
           </View>
           
           {/* Submit Button */}
@@ -436,7 +364,7 @@ export default function StudentPackageApply() {
           <View className="flex-row items-start mt-4">
             <Info size={16} color="#6B7280" />
             <Text className="text-gray-500 text-xs ml-2 flex-1">
-              We&apos;ll verify your university credentials within 24 hours. This verification process is necessary to ensure only eligible students receive the free package. Once verified, you&apos;ll receive an email with instructions on how to access your free student counseling sessions.
+              We&apos;ll verify your university credentials within 24 hours. This verification process is necessary to ensure only eligible students receive the free package.
             </Text>
           </View>
         </View>

@@ -9,28 +9,39 @@ import { router, useLocalSearchParams } from "expo-router";
 import { ArrowLeft, Calendar, GraduationCap } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  Modal,
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View
+    ActivityIndicator,
+    Alert,
+    Image,
+    Modal,
+    Platform,
+    SafeAreaView,
+    ScrollView,
+    StatusBar,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { WebView } from 'react-native-webview';
 import BookingCalendar from '../../../components/BookingCalendar';
 import { PrimaryButton } from '../../components/Buttons';
+
+// Note: per-day timeslot fetching has been removed; we now rely on the monthly availability API
+
+
+export const title = 'Book Session';
+
+export const options = {
+  title: 'Book Session',
+  headerShown: false,
+};
 
 interface TimeSlot {
   id: string;
   time: string;
   available: boolean;
   isBooked?: boolean;
-  isAvailable?: boolean; 
+  isAvailable?: boolean;
 }
 
 interface PaymentMethod {
@@ -40,73 +51,6 @@ interface PaymentMethod {
   brand?: string;
   isDefault: boolean;
 }
-
-const fetchTimeSlots = async (counsellorId: string, date: Date): Promise<TimeSlot[]> => {
-  const year = date.getFullYear();
-  const month = date.getMonth() + 1; // getMonth() is 0-indexed
-  const day = date.getDate();
-  const formattedDate = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-  
-  try {
-    const isCalendarCheck = !!(new Error()).stack?.includes('fetchMonthlyAvailability');
-    const timeoutMs = isCalendarCheck ? 3000 : 10000; // 3s for calendar checks, 10s for direct user selection
-    
-    const apiUrl = `${API_BASE_URL}/sessions/timeslots/${counsellorId}/${formattedDate}`;
-    // console.log(`[API] Fetching timeslots for ${formattedDate}${isCalendarCheck ? ' (calendar check)' : ''}`);
-    
-    const timeoutPromise = new Promise<Response>((_, reject) => {
-      setTimeout(() => reject(new Error(`Timeout after ${timeoutMs}ms`)), timeoutMs);
-    });
-    
-    const response = await Promise.race([
-      fetch(apiUrl),
-    ]) as Response;
-    
-    if (!response.ok) {
-      throw new Error(`API error: ${response.status}`);
-    }
-    
-    const data = await response.json();
-    
-    let slotsArray = data;
-    
-    if (data && typeof data === 'object' && !Array.isArray(data)) {
-      slotsArray = data.slots || data.timeSlots || data.data || data.timeslots || [];
-    }
-    
-    if (!Array.isArray(slotsArray)) {
-      // console.warn(`API response for ${formattedDate} is not an array:`, slotsArray);
-      return [];
-    }
-    
-    const formattedSlots = slotsArray.map((slot: any) => ({
-      id: slot.id || `time-${slot.time}`,
-      time: slot.time,
-      available: slot.isAvailable || slot.available || false,
-      isBooked: slot.isBooked || false
-    }));
-    
-    // if (isCalendarCheck) {
-    //   console.log(`[API] Found ${formattedSlots.length} slots for ${formattedDate}, ${formattedSlots.filter(s => s.available).length} available`);
-    // } else {
-    //   console.log(`[API] Timeslots for ${formattedDate}:`, formattedSlots);
-    // }
-    
-    return formattedSlots;
-  } catch (error) {
-    const isCalendarCheck = !!(new Error()).stack?.includes('fetchMonthlyAvailability');
-    
-    if (isCalendarCheck) {
-      // console.warn(`[API] Error fetching time slots for ${formattedDate} (availability check):`, error);
-      return []; 
-    } else {
-      // console.error(`[API] Error fetching time slots for ${formattedDate}:`, error);
-      throw error;
-    }
-  }
-};
-
-import { Platform } from 'react-native';
 
 let API_BASE_URL = '';
 if (Platform.OS === 'android') {
@@ -160,76 +104,62 @@ const formatResetDate = (dateString: string): string => {
   }
 };
 
-// Fetch monthly availability from backend API
-// This function now checks each day of the month by fetching timeslots
-// and only marks a day as unavailable if it has no available timeslots
-const fetchMonthlyAvailability = async (counsellorId: string, year: number, month: number): Promise<{ [dateKey: string]: { isAvailable: boolean, hasImmediateSlot?: boolean } }> => {
-  // Month is 0-indexed in JS Date, but we want 1-indexed for API
-  const monthForApi = month + 1;
-  const monthString = String(monthForApi).padStart(2, '0');
-  
-  // console.log(`[API] Fetching counselor availability for ${year}-${monthString}`);
-  
+// Fetch monthly availability + slots from the backend API in one call
+const fetchMonthlyAvailability = async (
+  counsellorId: string,
+  year: number,
+  month: number // 0-indexed (JS)
+): Promise<{
+  availabilityMap: { [dateKey: string]: { isAvailable: boolean; hasImmediateSlot?: boolean } };
+  slotsMap: { [dateKey: string]: TimeSlot[] };
+}> => {
   try {
-    // Get the number of days in the month
-    const daysInMonth = new Date(year, monthForApi, 0).getDate();
-    const formattedData: { [dateKey: string]: { isAvailable: boolean, hasImmediateSlot?: boolean } } = {};
-    
-    // console.log(`[API] Checking availability for ${daysInMonth} days in ${year}-${monthString}`);
-    
-    // Create an array of promises for fetching timeslots for each day
-    const dayPromises = Array.from({ length: daysInMonth }, (_, i) => {
-      const day = i + 1;
-      const date = new Date(year, month, day);
-      
-      // Format the date key (YYYY-MM-DD)
-      const dateKey = formatDateKey(year, month, day);
-      
-      // Return a promise for fetching timeslots for this day
-      return fetchTimeSlots(counsellorId, date)
-        .then(slots => {
-          // Check if any timeslot is available for this day
-          const hasAvailableSlot = slots.some(slot => slot.available === true);
-          
-          // If there are any available slots, mark the day as available
-          formattedData[dateKey] = {
-            isAvailable: hasAvailableSlot,
-            // Check if there's an immediate slot (within next few hours)
-            hasImmediateSlot: slots.some(slot => {
-              if (!slot.available) return false;
-              // Extract hours from time string (assuming format like "09:00" or "9:00 AM")
-              const timeStr = slot.time;
-              const hour = parseInt(timeStr.split(':')[0], 10);
-              const now = new Date();
-              // Consider slots in the next 4 hours as immediate if today
-              return date.setHours(0,0,0,0) === now.setHours(0,0,0,0) && 
-                     hour >= now.getHours() && 
-                     hour <= now.getHours() + 4;
-            })
-          };
-          
-          // console.log(`[API] Day ${dateKey}: ${hasAvailableSlot ? 'Available' : 'Not Available'} (${slots.length} slots, ${slots.filter(s => s.available).length} available)`);
-          
-          return formattedData[dateKey];
-        })
-        .catch(error => {
-          // console.warn(`[API] Failed to fetch timeslots for ${dateKey}:`, error);
-          // If we fail to fetch for a specific day, mark it as unavailable
-          formattedData[dateKey] = { isAvailable: false };
-          return formattedData[dateKey];
+    const monthForApi = month + 1; // convert to 1-indexed
+    const url = `${API_BASE_URL}/sessions/counselors/${counsellorId}/availability/${year}/${monthForApi}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`API error: ${res.status}`);
+    const json = await res.json();
+
+    const availabilityArr: { date: string; slots: any[] }[] = json?.data?.availability || [];
+
+    const availabilityMap: { [dateKey: string]: { isAvailable: boolean; hasImmediateSlot?: boolean } } = {};
+    const slotsMap: { [dateKey: string]: TimeSlot[] } = {};
+
+    const today = new Date();
+    const todayKey = formatDateKey(today.getFullYear(), today.getMonth(), today.getDate());
+
+    for (const item of availabilityArr) {
+      const dateKey = item.date; // already in YYYY-MM-DD
+      const slots: TimeSlot[] = (item.slots || []).map((slot: any) => ({
+        id: String(slot.id ?? `time-${slot.time}`),
+        time: slot.time,
+        available: !!(slot.isAvailable ?? slot.available),
+        isBooked: !!slot.isBooked,
+        isAvailable: !!(slot.isAvailable ?? slot.available),
+      }));
+
+      const hasAvailable = slots.some((s) => s.available && !s.isBooked);
+
+      // Optional: simple immediate slot check for today only
+      let hasImmediateSlot = false;
+      if (dateKey === todayKey) {
+        const now = new Date();
+        hasImmediateSlot = slots.some((s) => {
+          if (!s.available || s.isBooked) return false;
+          const [h, m] = s.time.split(":").map((v: string) => parseInt(v, 10));
+          const minutes = h * 60 + (isNaN(m) ? 0 : m);
+          const nowMinutes = now.getHours() * 60 + now.getMinutes();
+          return minutes >= nowMinutes && minutes <= nowMinutes + 240; // next 4 hours
         });
-    });
-    
-    // Wait for all day checks to complete
-    await Promise.all(dayPromises);
-    
-    console.log(`[API] Successfully processed availability for ${Object.keys(formattedData).length} days in ${year}-${monthString}`);
-    console.log(`[API] Available days: ${Object.keys(formattedData).filter(key => formattedData[key].isAvailable).join(', ') || 'None'}`);
-    
-    return formattedData;
-  } catch (error) {
-    // console.error('Error fetching monthly availability:', error);
-    throw error;
+      }
+
+      availabilityMap[dateKey] = { isAvailable: hasAvailable, hasImmediateSlot };
+      slotsMap[dateKey] = slots;
+    }
+
+    return { availabilityMap, slotsMap };
+  } catch (err) {
+    throw err;
   }
 };
 
@@ -247,6 +177,7 @@ export default function BookSessionScreen() {
   const [monthlyAvailability, setMonthlyAvailability] = useState<{[dateKey: string]: {isAvailable: boolean, hasImmediateSlot?: boolean}}>({});
   const [isLoadingAvailability, setIsLoadingAvailability] = useState<boolean>(false);
   const [monthCache, setMonthCache] = useState<{[key: string]: {[dateKey: string]: {isAvailable: boolean, hasImmediateSlot?: boolean}}}>({});
+  const [monthSlotsCache, setMonthSlotsCache] = useState<{[key: string]: {[dateKey: string]: TimeSlot[]}}>({});
   
   // Counselor data state
   const [counselor, setCounselor] = useState<Counselor | null>(null);
@@ -284,7 +215,7 @@ export default function BookSessionScreen() {
           throw new Error('Invalid counselor data');
         }
       } catch (error) {
-        console.error('Error fetching counselor data:', error);
+        console.log('Error fetching counselor data:', error);
         Alert.alert('Error', 'Failed to load counselor information. Please try again later.');
       } finally {
         setIsLoadingCounselor(false);
@@ -309,7 +240,7 @@ export default function BookSessionScreen() {
           }
         }
       } catch (error) {
-        console.error('Error checking student status:', error);
+        console.log('Error checking student status:', error);
       } finally {
         setIsCheckingStudentStatus(false);
       }
@@ -330,7 +261,7 @@ export default function BookSessionScreen() {
         setTotalSessionsThisPeriod(sessionInfo.totalSessionsThisPeriod);
       }
     } catch (error) {
-      console.error('Error fetching remaining free sessions:', error);
+      console.log('Error fetching remaining free sessions:', error);
     } finally {
       setLoadingStudentData(false);
     }
@@ -340,15 +271,17 @@ export default function BookSessionScreen() {
   const isSessionFree = () => {
     if (!counselor) return false;
     
-    // Free for everyone if counselor is a volunteer
-    if (counselor.isVolunteer) {
+    // Free for everyone if counselor is volunteer with sessionFee = 0
+    if (counselor.isVolunteer && counselor.sessionFee === 0) {
       return true;
     }
     
-    // Student benefits only apply for free counselors (volunteers)
-    // In the future, paid counselors might opt to provide student benefits
-    // but that's not implemented yet
+    // Free for students if counselor is volunteer with sessionFee > 0
+    if (counselor.isVolunteer && counselor.sessionFee > 0 && isStudent) {
+      return true;
+    }
     
+    // Paid for everyone else
     return false;
   };
 
@@ -371,10 +304,18 @@ export default function BookSessionScreen() {
       try {
         const authToken = await AsyncStorage.getItem('token') || '';
         
+        // Determine the type of free session
+        let sessionType = '';
+        if (counselor.isVolunteer && counselor.sessionFee === 0) {
+          sessionType = 'free for everyone';
+        } else if (counselor.isVolunteer && counselor.sessionFee > 0 && isStudent) {
+          sessionType = 'free student';
+        }
+        
         // Book free session directly without payment
         Alert.alert(
-          counselor.isVolunteer ? 'Free Session' : 'Free Student Session',
-          `You are about to book a free ${counselor.isVolunteer ? '' : 'student '}session with ${counselor.name} on ${selectedDate.toLocaleDateString()} at ${selectedTime}.`,
+          'Free Session',
+          `You are about to book a ${sessionType} session with ${counselor.name} on ${selectedDate.toLocaleDateString()} at ${selectedTime}.`,
           [
             {
               text: 'Cancel',
@@ -384,22 +325,45 @@ export default function BookSessionScreen() {
               text: 'Confirm',
               onPress: async () => {
                 try {
-                  // Here you would make an API call to book the free session
-                  // For now, we'll simulate a successful booking
-                  
-                  // Simulate API call delay
-                  setIsCreatingPayment(true);
-                  await new Promise(resolve => setTimeout(resolve, 1500));
-                  
-                  // Update remaining free sessions if it's a student session
-                  if (isStudent && !counselor.isVolunteer) {
+                  // Make API call to book the free session
+                  const bookingRequestBody = {
+                    counselorId: counselor.id,
+                    date: `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`,
+                    timeSlot: selectedTime,
+                    duration: 50,
+                    price: 0 // Free session
+                  };
+
+                  console.log('📤 Booking free session with payload:', bookingRequestBody);
+
+                  const bookingResponse = await fetch(`${API_BASE_URL}/sessions/book`, {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                      'Authorization': `Bearer ${authToken}`,
+                      'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(bookingRequestBody)
+                  });
+
+                  if (!bookingResponse.ok) {
+                    const errorText = await bookingResponse.text();
+                    console.log('🚫 Free session booking failed:', errorText);
+                    throw new Error(`Booking failed: ${bookingResponse.status}`);
+                  }
+
+                  const bookingData = await bookingResponse.json();
+                  console.log('✅ Free session booked successfully:', bookingData);
+
+                  // Update remaining free sessions if it's a student session with volunteer counselor
+                  if (isStudent && counselor.isVolunteer && counselor.sessionFee > 0) {
                     setFreeSessionsRemaining(prev => Math.max(0, prev - 1));
                   }
                   
                   // Show success message
                   Alert.alert(
                     'Free Session Booked Successfully! 🎉',
-                    `Your free${!counselor.isVolunteer ? ' student' : ''} session with ${counselor.name} has been booked for ${selectedDate.toLocaleDateString()} at ${selectedTime}.`,
+                    `Your ${sessionType} session with ${counselor.name} has been booked for ${selectedDate.toLocaleDateString()} at ${selectedTime}.`,
                     [
                       {
                         text: 'View My Sessions',
@@ -412,7 +376,7 @@ export default function BookSessionScreen() {
                     ]
                   );
                 } catch (error) {
-                  console.error('Error booking free session:', error);
+                  console.log('Error booking free session:', error);
                   Alert.alert('Error', 'Failed to book your free session. Please try again.');
                 } finally {
                   setIsCreatingPayment(false);
@@ -423,7 +387,7 @@ export default function BookSessionScreen() {
         );
         return;
       } catch (error) {
-        console.error('Error handling free session booking:', error);
+        console.log('Error handling free session booking:', error);
         Alert.alert('Error', 'Something went wrong. Please try again.');
         return;
       }
@@ -462,7 +426,7 @@ export default function BookSessionScreen() {
       setCurrentOrderId(orderId);
 
     } catch (error: any) {
-      // console.error('Payment initiation error:', error);
+      // console.log('Payment initiation error:', error);
       
       if (error.message?.includes('Network')) {
         Alert.alert('Network Error', 'Please check your internet connection and try again.');
@@ -499,30 +463,31 @@ export default function BookSessionScreen() {
     }
     
     try {
-      const availability = await fetchMonthlyAvailability(counselor.id.toString(), year, month);
-      console.log(`[Calendar] Loaded availability for ${Object.keys(availability).length} days in ${year}-${month+1}`);
+      const { availabilityMap, slotsMap } = await fetchMonthlyAvailability(counselor.id.toString(), year, month);
+      console.log(`[Calendar] Loaded availability for ${Object.keys(availabilityMap).length} days in ${year}-${month+1}`);
       
-      const availableDays = Object.values(availability).filter(day => day.isAvailable).length;
+      const availableDays = Object.values(availabilityMap).filter(day => day.isAvailable).length;
       console.log(`[Calendar] Found ${availableDays} available days in ${year}-${month+1}`);
       
       if (availableDays === 0) {
         console.log(`[Calendar] No availability found for ${year}-${month+1}`);
       }
       
-      console.log(`[Calendar] Caching data for ${cacheKey} with ${Object.keys(availability).length} days and ${Object.values(availability).filter(day => day.isAvailable).length} available days`);
+      console.log(`[Calendar] Caching data for ${cacheKey} with ${Object.keys(availabilityMap).length} days and ${Object.values(availabilityMap).filter(day => day.isAvailable).length} available days`);
       
       setMonthCache(prevCache => {
         const newCache = {
           ...prevCache,
-          [cacheKey]: availability
+          [cacheKey]: availabilityMap
         };
         console.log(`[Calendar] Updated cache now has keys:`, Object.keys(newCache));
         return newCache;
       });
+      setMonthSlotsCache(prev => ({ ...prev, [cacheKey]: slotsMap }));
       
-      setMonthlyAvailability(availability);
+      setMonthlyAvailability(availabilityMap);
     } catch (error) {
-      // console.error('Failed to load monthly availability:', error);
+      // console.log('Failed to load monthly availability:', error);
       // Alert.alert(
       //   'Error Loading Availability',
       //   'Could not load counselor availability. Please check your connection and try again.',
@@ -548,6 +513,14 @@ export default function BookSessionScreen() {
     setSelectedDate(date);
     
     const isAvailable = monthlyAvailability[dateKey]?.isAvailable === true;
+    // Load time slots from cache immediately when available
+    const cacheKey = formatMonthKey(year, date.getMonth());
+    const monthSlots = monthSlotsCache[cacheKey];
+    if (monthSlots && monthSlots[dateKey]) {
+      setTimeSlots(monthSlots[dateKey]);
+    } else {
+      setTimeSlots([]);
+    }
   };
 
   useEffect(() => {
@@ -562,41 +535,29 @@ export default function BookSessionScreen() {
   }, [counselor]);
   
   useEffect(() => {
-    const loadTimeSlots = async () => {
-      if (!counselor) return;
-      
-      console.log(`[Calendar] Loading time slots for date: ${selectedDate.toLocaleDateString()}`);
-      console.log(`[Calendar] Current availability data has ${Object.keys(monthlyAvailability).length} days with ${Object.values(monthlyAvailability).filter(day => day.isAvailable).length} available`);
-      
-      const year = selectedDate.getFullYear();
-      const month = selectedDate.getMonth();
-      const day = selectedDate.getDate();
-      const dateKey = formatDateKey(year, month, day);
-      
-      console.log(`[Calendar] Selected date key: ${dateKey}, isAvailable according to data: ${monthlyAvailability[dateKey]?.isAvailable}`);
-      
-      setIsLoadingSlots(true);
-      setSelectedTime('');
-      
-      try {
-        const slots = await fetchTimeSlots(counselor.id.toString(), selectedDate);
-        console.log(`[Calendar] Loaded ${slots.length} time slots for ${selectedDate.toDateString()}, ${slots.filter(s => s.available).length} available`);
-        setTimeSlots(slots);
-      } catch (error) {
-        // console.error('Failed to load time slots:', error);
-        // Alert.alert(
-        //   'Error Loading Time Slots', 
-        //   'Could not load available times for this date. Please try again.',
-        //   [{ text: 'OK' }]
-        // );
-        setTimeSlots([]);
-      } finally {
-        setIsLoadingSlots(false);
-      }
-    };
+    if (!counselor) return;
+    const year = selectedDate.getFullYear();
+    const month = selectedDate.getMonth();
+    const day = selectedDate.getDate();
+    const dateKey = formatDateKey(year, month, day);
+    const cacheKey = formatMonthKey(year, month);
 
-    loadTimeSlots();
-  }, [selectedDate, counselor]);
+    console.log(`[Calendar] Selected date key: ${dateKey}`);
+    setIsLoadingSlots(true);
+    setSelectedTime('');
+
+    const monthSlots = monthSlotsCache[cacheKey];
+    if (monthSlots && monthSlots[dateKey]) {
+      const slots = monthSlots[dateKey];
+      console.log(`[Calendar] Loaded ${slots.length} time slots from monthly cache for ${selectedDate.toDateString()}`);
+      setTimeSlots(slots);
+      setIsLoadingSlots(false);
+    } else {
+      // If the month isn't cached yet (e.g., direct navigation), fetch monthly and then update
+      handleMonthChange(year, month)
+        .finally(() => setIsLoadingSlots(false));
+    }
+  }, [selectedDate, counselor, monthSlotsCache]);
 
   const TimeSlot = ({ slot }: { slot: TimeSlot }) => {
     const isSelected = selectedTime === slot.time;
@@ -684,7 +645,7 @@ export default function BookSessionScreen() {
           if (!bookingResponse.ok) {
             // Get more details about the error
             const errorText = await bookingResponse.text();
-            // console.error('🚫 API Error Response:', errorText);
+            // console.log('🚫 API Error Response:', errorText);
             throw new Error(`API error: ${bookingResponse.status}, ${errorText}`);
           }
           
@@ -698,7 +659,7 @@ export default function BookSessionScreen() {
             [{ text: 'OK', onPress: () => router.back() }]
           );
         } catch (error) {
-          // console.error('❌ Error booking session:', error);
+          // console.log('❌ Error booking session:', error);
           
           // Even if booking API call fails, the payment was successful
           Alert.alert(
@@ -730,28 +691,18 @@ export default function BookSessionScreen() {
   const getSessionFeeDisplay = () => {
     if (!counselor) return null;
     
-    if (counselor.isVolunteer) {
-      // Free counselors are free for everyone, including students
+    // Free for everyone if counselor is volunteer with sessionFee = 0
+    if (counselor.isVolunteer && counselor.sessionFee === 0) {
       return <Text className="text-lg font-semibold text-green-600">FREE</Text>;
-    } else {
-      // Paid counselors are paid for everyone, including students
-      return <Text className="text-lg font-semibold text-primary">Rs.{counselor.sessionFee}</Text>;
-      
-      /* 
-      // Future implementation for counselors who opt to provide student benefits
-      // Currently not implemented
-      if (isStudent && counselor.providesStudentBenefits && freeSessionsRemaining > 0) {
-        return (
-          <View className="items-end">
-            <Text className="text-gray-500 line-through">Rs.{counselor.sessionFee}</Text>
-            <Text className="text-lg font-semibold text-green-600">FREE</Text>
-          </View>
-        );
-      } else {
-        return <Text className="text-lg font-semibold text-primary">Rs.{counselor.sessionFee}</Text>;
-      }
-      */
     }
+    
+    // Free for students if counselor is volunteer with sessionFee > 0
+    if (counselor.isVolunteer && counselor.sessionFee > 0 && isStudent) {
+      return <Text className="text-lg font-semibold text-green-600">FREE</Text>;
+    }
+    
+    // Paid for everyone else
+    return <Text className="text-lg font-semibold text-primary">Rs.{counselor.sessionFee}</Text>;
   };
 
   // Define missing WebView handling functions
@@ -761,7 +712,7 @@ export default function BookSessionScreen() {
 
   const handleWebViewError = (syntheticEvent: any) => {
     const { nativeEvent } = syntheticEvent;
-    console.error('WebView error:', nativeEvent);
+    console.log('WebView error:', nativeEvent);
     Alert.alert(
       'Error',
       'There was a problem loading the payment page. Please try again.',
@@ -844,38 +795,50 @@ export default function BookSessionScreen() {
           </View>
         </View>
 
-        {/* Student Session Info - Only show if user is a student and counselor is not a volunteer */}
+        {/* Counselor Info Section */}
         {isCheckingStudentStatus ? (
           <View className="bg-white mx-5 mt-4 p-5 rounded-2xl items-center">
             <ActivityIndicator size="small" color="#2563EB" />
             <Text className="text-gray-500 mt-2">Checking student status...</Text>
           </View>
-        ) : counselor.isVolunteer ? (
+        ) : (counselor.isVolunteer && counselor.sessionFee === 0) ? (
           <View className="bg-green-50 mx-5 mt-4 p-5 rounded-2xl">
             <View className="flex-row items-center mb-3">
               <GraduationCap size={20} color="#059669" />
-              <Text className="text-lg font-semibold text-green-900 ml-2">Volunteer Counselor</Text>
+              <Text className="text-lg font-semibold text-green-900 ml-2">
+                Free Counselor
+              </Text>
             </View>
-            
-            {isStudent && !loadingStudentData && (
-              <View className="mt-3 bg-indigo-100/60 p-3 rounded-lg">
-                <View className="flex-row items-center">
-                  <GraduationCap size={16} color="#4F46E5" className="mr-2" />
-                  <Text className="text-indigo-800 font-medium">Student Benefits Apply</Text>
-                </View>
-                <Text className="text-indigo-700 text-sm mt-1">
-                  Sessions with volunteer counselors count toward your {freeSessionsRemaining} remaining free student sessions.
-                </Text>
-                {nextResetDate && (
-                  <View className="flex-row items-center mt-2">
-                    <Calendar size={14} color="#4F46E5" className="mr-1" />
-                    <Text className="text-indigo-800 text-xs font-medium">
-                      Plan resets on {formatResetDate(nextResetDate)}
-                    </Text>
-                  </View>
-                )}
+            <Text className="text-green-700 text-sm">
+              This counselor provides free sessions for everyone.
+            </Text>
+          </View>
+        ) : (counselor.isVolunteer && counselor.sessionFee > 0 && isStudent) ? (
+          <View className="bg-green-50 mx-5 mt-4 p-5 rounded-2xl">
+            <View className="flex-row items-center mb-3">
+              <GraduationCap size={20} color="#059669" />
+              <Text className="text-lg font-semibold text-green-900 ml-2">
+                Volunteer Counselor
+              </Text>
+            </View>
+            <View className="mt-3 bg-indigo-100/60 p-3 rounded-lg">
+              <View className="flex-row items-center">
+                <GraduationCap size={16} color="#4F46E5" className="mr-2" />
+                <Text className="text-indigo-800 font-medium">Student Benefits Apply</Text>
               </View>
-            )}
+              <Text className="text-indigo-700 text-sm mt-1">
+                As a verified student, you get free sessions with this volunteer counselor.
+                {!loadingStudentData && ` Sessions count toward your ${freeSessionsRemaining} remaining free student sessions.`}
+              </Text>
+              {nextResetDate && (
+                <View className="flex-row items-center mt-2">
+                  <Calendar size={14} color="#4F46E5" className="mr-1" />
+                  <Text className="text-indigo-800 text-xs font-medium">
+                    Plan resets on {formatResetDate(nextResetDate)}
+                  </Text>
+                </View>
+              )}
+            </View>
           </View>
         ) : isStudent ? (
           <View className="bg-indigo-50 mx-5 mt-4 p-5 rounded-2xl">
@@ -894,8 +857,8 @@ export default function BookSessionScreen() {
                 </View>
                 
                 <View>
-                  {counselor.isVolunteer ? (
-                    // This is a free counselor
+                  {counselor.isVolunteer && counselor.sessionFee > 0 ? (
+                    // This is a volunteer counselor that provides free sessions for students
                     freeSessionsRemaining > 0 ? (
                       <View>
                         <Text className="text-indigo-800">
@@ -911,14 +874,14 @@ export default function BookSessionScreen() {
                         )}
                         <View className="bg-indigo-100/50 p-2 rounded-lg mt-2">
                           <Text className="text-indigo-700 text-xs text-center">
-                            You've used {totalSessionsThisPeriod} of 4 free sessions this period
+                            You&apos;ve used {totalSessionsThisPeriod} of 4 free sessions this period
                           </Text>
                         </View>
                       </View>
                     ) : (
                       <View>
                         <Text className="text-yellow-800">
-                          You've used all your free student sessions this period. You can still book a paid session.
+                          You&apos;ve used all your free student sessions this period. You can still book a paid session for Rs.{counselor.sessionFee}.
                         </Text>
                         {nextResetDate && (
                           <View className="flex-row items-center mt-2">
@@ -934,7 +897,7 @@ export default function BookSessionScreen() {
                     // This is a paid counselor
                     <View>
                       <Text className="text-indigo-800">
-                        Student benefits apply only to free counselors. This is a paid counselor.
+                        Student benefits apply only to volunteer counselors. This counselor charges Rs.{counselor.sessionFee} for sessions.
                       </Text>
                       <Text className="text-indigo-700 mt-1">
                         You have {freeSessionsRemaining} free sessions remaining with volunteer counselors.
@@ -1060,19 +1023,19 @@ export default function BookSessionScreen() {
               Please select a time slot
             </Text>
           )}
-          {/* Show message if student has no free sessions left */}
-          {isStudent && !counselor.isVolunteer && freeSessionsRemaining === 0 && (
+          {/* Show message if student has no free sessions left with volunteer counselors */}
+          {isStudent && counselor.isVolunteer && counselor.sessionFee > 0 && freeSessionsRemaining === 0 && (
             <Text className="text-center text-yellow-500 mb-2 text-sm">
-              You've used all your free sessions this month
+              You&apos;ve used all your free sessions this month
             </Text>
           )}
           <PrimaryButton
             title={
               isCreatingPayment 
                 ? "Processing..." 
-                : counselor.isVolunteer && isStudent && freeSessionsRemaining > 0
+                : isSessionFree()
                   ? "Book Free Session"
-                    : `Book Session - Rs.${counselor.sessionFee}`
+                  : `Book Session - Rs.${counselor.sessionFee}`
             }
             onPress={() => {
               if (!isCreatingPayment) {

@@ -17,17 +17,17 @@ const Counsellor = () => {
       try {
         // Get the authentication token
         const token = await AsyncStorage.getItem('token');
-        
+
         if (token) {
           // Check if user is a student
           const isStudent = await checkIsStudent(token);
-          
+
           // If student, prefetch the free sessions data
           if (isStudent) {
             try {
               // Fetch remaining free sessions data
               const freeSessionsResponse = await getRemainingFreeSessions(token);
-              
+
               // Store the data in AsyncStorage for quick access
               if (freeSessionsResponse && freeSessionsResponse.data) {
                 const sessionInfo = freeSessionsResponse.data;
@@ -37,16 +37,18 @@ const Counsellor = () => {
                 await AsyncStorage.setItem('lastFreeSessionsFetch', new Date().toISOString());
               }
             } catch (error) {
-              console.error('Error fetching free sessions data:', error);
+              console.log('Error fetching free sessions data:', error);
             }
           }
         }
-      } catch (error) {
-        console.error('Error during prefetch:', error);
-      } finally {
-        setIsLoading(false);
+
         // Redirect to the counsellors page
         router.replace("/(hidden)/profile/counsellors");
+      } catch (error) {
+        console.log('Error during prefetch:', error);
+        setIsRedirecting(false);
+      } finally {
+        setIsLoading(false);
       }
     };
 

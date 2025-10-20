@@ -1,19 +1,20 @@
 import { checkIsStudent } from '@/api/api';
 import { Counselor, getAvailableCounselors } from '@/api/counselor';
+import { usePlatformFee } from '@/contexts/PlatformFeeContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import { ArrowLeft, Clock, GraduationCap, Star, Video } from 'lucide-react-native';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  Dimensions,
-  FlatList,
-  Image,
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  Text,
-  TouchableOpacity,
-  View
+    Dimensions,
+    FlatList,
+    Image,
+    SafeAreaView,
+    ScrollView,
+    StatusBar,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { PrimaryButton } from '../../components/Buttons';
 import SpecialtyTabs from '../../components/SpecialtyTabs';
@@ -42,7 +43,9 @@ const CounselorCard = ({ counselor, isUserStudent, freeSessionsRemaining }: { co
     price: counselor.sessionFee ? `Rs.${counselor.sessionFee}` : 'Free',
     isOnline: counselor.isAvailable || false,
     languages: counselor.languages || ['English', 'Sinhala'],
-    counselorType: counselor.isVolunteer ? 'free' : 'paid_only'
+    counselorType: counselor.isVolunteer && counselor.sessionFee === 0 ? 'free' : 
+                  counselor.isVolunteer && counselor.sessionFee > 0 ? 'paid_with_free_student' : 
+                  'paid_only'
   };
 
   // Determine the pricing display based on counselor type and student status
@@ -142,7 +145,7 @@ const CounselorCard = ({ counselor, isUserStudent, freeSessionsRemaining }: { co
         ))}
         
         {/* Show appropriate counselor type badge */}
-        {counselorDisplay.counselorType === 'free' ? (
+        {(counselorDisplay.counselorType === 'free') || (counselorDisplay.counselorType === 'paid_with_free_student' && isUserStudent) ? (
           <View className="flex-row items-center bg-green-100 px-3 py-1 rounded-xl">
             <GraduationCap size={12} color="#059669" className="mr-1" />
             <Text className="text-xs text-green-700 font-medium ml-1">Volunteer Counselor</Text>
@@ -166,13 +169,13 @@ const CounselorCard = ({ counselor, isUserStudent, freeSessionsRemaining }: { co
       {/* Show free session badge for students with remaining sessions */}
       {isUserStudent && freeSessionsRemaining > 0 ? (
         <View>
-        {counselorDisplay.counselorType === 'free' && (
+        {(counselorDisplay.counselorType === 'free' || counselorDisplay.counselorType === 'paid_with_free_student') && (
           <Text className="text-green-700 text-xs font-medium mb-3 bg-green-50 p-2 rounded-lg">
             ✓ {freeSessionsRemaining} free student sessions remaining this month
           </Text>
         )}
       </View>
-      ) : isUserStudent && counselorDisplay.providesStudentSessions && freeSessionsRemaining === 0 ? (
+      ) : isUserStudent && counselorDisplay.counselorType === 'paid_with_free_student' && freeSessionsRemaining === 0 ? (
         <View className="mb-3 bg-yellow-50 p-2 rounded-lg">
           <Text className="text-yellow-700 text-xs font-medium">
             ⓘ No free student sessions left this month
@@ -206,6 +209,7 @@ export default function CounselorsScreen() {
   const [counselors, setCounselors] = useState<ExtendedCounselor[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [availableSpecialties, setAvailableSpecialties] = useState<string[]>(['All']);
+  const { feeStatus, isLoading: feeLoading } = usePlatformFee();
 
   // Fetch counselors and check student status when component mounts
   useEffect(() => {
@@ -224,10 +228,12 @@ export default function CounselorsScreen() {
             
             return {
               ...counselor,
-              // Determine counselor type based on isVolunteer flag
-              counselorType: counselor.isVolunteer ? 'free' : 'paid_only',
-              // For now, assume all paid counselors can provide student sessions
-              providesStudentSessions: !counselor.isVolunteer,
+              // Determine counselor type based on isVolunteer flag and sessionFee
+              counselorType: counselor.isVolunteer && counselor.sessionFee === 0 ? 'free' : 
+                            counselor.isVolunteer && counselor.sessionFee > 0 ? 'paid_with_free_student' : 
+                            'paid_only',
+              // Set providesStudentSessions based on counselor type
+              providesStudentSessions: counselor.isVolunteer && counselor.sessionFee > 0,
               // Add any additional UI properties not provided by API
               experience: '5 years',
               // Map API's specialities to our interface's specialties
@@ -288,7 +294,7 @@ export default function CounselorsScreen() {
                   await AsyncStorage.setItem('lastFreeSessionsFetch', new Date().toISOString());
                 }
               } catch (error) {
-                console.error('Error fetching free sessions data:', error);
+                console.log('Error fetching free sessions data:', error);
                 // Fallback to stored data if available
                 if (storedFreeSessionsRemaining) {
                   setFreeSessionsRemaining(parseInt(storedFreeSessionsRemaining));
@@ -298,7 +304,7 @@ export default function CounselorsScreen() {
           }
         }
       } catch (error) {
-        console.error('Error fetching data:', error);
+        console.log('Error fetching data:', error);
         setError('Failed to load counselors. Please try again later.');
       } finally {
         setIsLoading(false);
@@ -307,6 +313,13 @@ export default function CounselorsScreen() {
     
     fetchData();
   }, []);
+
+  // Reset specialty filter if platform fee is not paid
+  useEffect(() => {
+    if (!feeStatus?.hasPaid && selectedSpecialty !== 'All') {
+      setSelectedSpecialty('All');
+    }
+  }, [feeStatus?.hasPaid, selectedSpecialty]);
 
   // Simple filter tabs for Free and Paid counselors
   const tabFilters = [
@@ -318,8 +331,8 @@ export default function CounselorsScreen() {
   const filteredCounselors = useMemo(() => {
     let filtered = counselors;
     
-    // Filter by specialty
-    if (selectedSpecialty !== 'All') {
+    // Filter by specialty - only if platform fee is paid
+    if (selectedSpecialty !== 'All' && feeStatus?.hasPaid) {
       filtered = filtered.filter((counselor) => 
         counselor.specialties?.includes(selectedSpecialty)
       );
@@ -345,7 +358,7 @@ export default function CounselorsScreen() {
       // Then by rating
       return (b.rating || 0) - (a.rating || 0);
     });
-  }, [selectedSpecialty, selectedTab, isStudent, freeSessionsRemaining, counselors]);
+  }, [selectedSpecialty, selectedTab, isStudent, freeSessionsRemaining, counselors, feeStatus?.hasPaid]);
 
   return (
     <SafeAreaView className="flex-1 bg-primary">
@@ -360,10 +373,18 @@ export default function CounselorsScreen() {
         <View className="w-6" />
       </View>
 
-      {/* Specialty tabs remain in the blue header */}
-      <View className="py-2 bg-primary">
-        <SpecialtyTabs selected={selectedSpecialty} onSelect={setSelectedSpecialty} specialties={availableSpecialties} />
-      </View>
+      {/* Specialty tabs remain in the blue header - only show if platform fee is paid */}
+      {feeStatus?.hasPaid ? (
+        <View className="py-2 bg-primary">
+          <SpecialtyTabs selected={selectedSpecialty} onSelect={setSelectedSpecialty} specialties={availableSpecialties} />
+        </View>
+      ) : (
+        <View className="py-3 bg-primary px-5">
+          <Text className="text-white/80 text-sm text-center">
+            💡 Upgrade with platform fee to filter by specialties like anxiety, depression, stress, and more
+          </Text>
+        </View>
+      )}
     
       <View className="flex-1 bg-gray-50 rounded-t-3xl">
         {/* Added proper padding at the top */}
@@ -376,7 +397,7 @@ export default function CounselorsScreen() {
                 <Text className="text-indigo-900 font-semibold">Student Benefits Active</Text>
                 <Text className="text-indigo-700 text-sm">
                   {freeSessionsRemaining > 0 
-                    ? `You have ${freeSessionsRemaining} free counseling sessions remaining this month` 
+                    ? `You have ${freeSessionsRemaining} free sessions remaining this month` 
                     : "You've used all your free sessions this month"}
                 </Text>
               </View>
@@ -450,10 +471,12 @@ export default function CounselorsScreen() {
                         
                         return {
                           ...counselor,
-                          // Determine counselor type based on isVolunteer flag
-                          counselorType: counselor.isVolunteer ? 'free' : 'paid_only',
-                          // For now, assume all paid counselors can provide student sessions
-                          providesStudentSessions: !counselor.isVolunteer,
+                          // Determine counselor type based on isVolunteer flag and sessionFee
+                          counselorType: counselor.isVolunteer && counselor.sessionFee === 0 ? 'free' : 
+                                        counselor.isVolunteer && counselor.sessionFee > 0 ? 'paid_with_free_student' : 
+                                        'paid_only',
+                          // Set providesStudentSessions based on counselor type
+                          providesStudentSessions: counselor.isVolunteer && counselor.sessionFee > 0,
                           // Add any additional UI properties not provided by API
                           experience: counselor.description ? 
                             `${counselor.description.split(' ').slice(-2)[0]} years` : 

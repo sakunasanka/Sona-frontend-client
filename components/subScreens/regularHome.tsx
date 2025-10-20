@@ -1,34 +1,32 @@
 import Homecard from '@/components/HomescreenCard';
-import IconButton from '@/components/Iconbutton';
 import FallingLeaves from '@/components/LeafFalling';
 import PinkOverlay from '@/components/Pinkoverlay'; // Import your overlay components
 //import FallingLeaves from '@/components/PurpleLeaves';
+import { hasCompletedPHQ9ThisPeriod } from '@/api/questionnaire';
 import CloudFloatingAnimation from '@/components/Cloud';
 import FocusAnimation from '@/components/Focused';
 import { icons } from '@/constants/icons';
+import { useShake } from '@/hooks/useShake';
 import { getDisplayName } from '@/util/asyncName';
-import { router } from 'expo-router';
-import React, { useState, useEffect } from 'react';
-import { FlatList, Text, View } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { LinearGradient } from 'expo-linear-gradient';
+import { router, useFocusEffect } from 'expo-router';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Alert, FlatList, Text, TouchableOpacity, View } from 'react-native';
+import { hasSubmittedTodaysMood } from '../../api/mood';
+import EmergencyPopup, { EmergencyContactData } from '../EmergencyPopUp';
 import TopBar from '../TopBar';
 
-const moodData = [
-  { icon: icons.happy, text: 'Happy', color: 'bg-buttonPink-100 w-32 h-32', mood: 'happy' },
-  { icon: icons.calm2, text: 'Calm', color: 'bg-buttonOrange-500 w-32 h-32', mood: 'calm' },
-  { icon: icons.focus, text: 'Focused', color: 'bg-buttonGreen-500 w-32 h-32', mood: 'focused' },
-  { icon: icons.relax, text: 'Relaxed', color: 'bg-buttonBlue-500 w-32 h-32', mood: 'relaxed' },
-]
-
-const HomescreenCard = [
+const baseHomescreenCards = [
   {
     title: "Counseling Session",
-    description: "Let’s open up to the  thing that matters amoung the people",
+    description: "Let's open up to the  thing that matters amoung the people",
     backgroundColor: 'bg-pink-100',
     textColor: 'text-pink-500',
     icon: icons.meetup,
     focusIcon: icons.play,
-    focusText: "Start Session",
-    // onPress: () => router.push('/(hidden)/meditation/')
+    focusText: "View My Sessions",
+    onPress: () => router.push('../(hidden)/session/upcomingSessions'),
   },
   {
     title: "Meditation",
@@ -39,8 +37,24 @@ const HomescreenCard = [
     focusIcon: icons.clock,
     focusText: "12.00 PM",
     onPress: () => router.push('/(hidden)/meditation/meditationAnimation')
-  }
+  },
 ]
+
+const wellBeingCard = {
+  title: 'Well-being Check (PHQ-9)',
+  description: 'A quick, research-backed mood check. Takes ~2 minutes.',
+  backgroundColor: 'bg-blue-100',
+  textColor: 'text-blue-500',
+  icon: icons.quiz,
+  focusIcon: icons.play,
+  focusText: 'Start',
+  onPress: () => {
+    // Trigger the questionnaire popup instead of navigating
+    if ((global as any).triggerQuestionnairePopup) {
+      (global as any).triggerQuestionnairePopup();
+    }
+  },
+}
 
 export default function RegularHome() {
   const name = getDisplayName() || "friend";
@@ -48,26 +62,116 @@ export default function RegularHome() {
   const [showFallingLeaves, setShowFallingLeaves] = useState(false);
   const [focused, setFocused] = useState(false);
   const [showRelaxedAnimation, setShowRelaxedAnimation] = useState(false);
+  const [showWellBeingCard, setShowWellBeingCard] = useState(true);
+  const [homescreenCards, setHomescreenCards] = useState(baseHomescreenCards);
+  const [hasSubmittedMoodToday, setHasSubmittedMoodToday] = useState(false);
+  const [isEmergencyPopupVisible, setEmergencyPopupVisible] = useState(false);
+  const [token, setToken] = useState<string>('');
+  
+  // Fetch token on mount
+  useEffect(() => {
+    const fetchToken = async () => {
+      const storedToken = await AsyncStorage.getItem('token');
+      if (storedToken) {
+        setToken(storedToken);
+      }
+    };
 
-  const handleMoodPress = (mood: string) => {
-    switch (mood) {
-      case 'happy':
-        setShowPinkOverlay(true);
-        break;
-      case 'calm':
-        setShowFallingLeaves(true);
-        break;
-      case 'focused':
-        setFocused(true);
-        break;
-      case 'relaxed':
-        setShowRelaxedAnimation(true);
-        console.log("Relaxed mood selected");
-        break;
-      default:
-        break;
+    fetchToken();
+  }, []);
+
+  //shake detection code. only work in this screen
+  const handleShake = () => {
+    // Show the popup *only if* it's not already visible
+    console.log("Shake detected!");
+    if (!isEmergencyPopupVisible) {
+      setEmergencyPopupVisible(true);
     }
   };
+
+  const [resetShake] = useShake(handleShake);
+
+  const handleEmergencyContact = (data: EmergencyContactData) => {
+    console.log('EMERGENCY DATA:', data);
+    // TODO: Send this data to your API
+    
+    // Close the popup and reset shake detection
+    setEmergencyPopupVisible(false);
+    resetShake();
+    
+    Alert.alert("Support Notified", "Your emergency request has been sent.");
+  };
+
+  const handleImFine = () => {
+    console.log("User is fine.");
+    setEmergencyPopupVisible(false);
+    resetShake();
+  };
+
+  const handleClose = () => {
+    console.log("Popup closed without action.");
+    setEmergencyPopupVisible(false);
+    resetShake();
+  };
+
+  // Check if user has submitted today's mood
+  useEffect(() => {
+    const checkTodaysMood = async () => {
+      try {
+        const hasSubmitted = await hasSubmittedTodaysMood();
+        setHasSubmittedMoodToday(hasSubmitted);
+      } catch (error) {
+        console.log('Error checking today\'s mood:', error);
+        setHasSubmittedMoodToday(false); // Default to showing mood tracker on error
+      }
+    };
+
+    checkTodaysMood();
+  }, []);
+
+  // Refresh mood status when screen comes back into focus (e.g., after submitting mood)
+  useFocusEffect(
+    useCallback(() => {
+      const refreshMoodStatus = async () => {
+        try {
+          const hasSubmitted = await hasSubmittedTodaysMood();
+          setHasSubmittedMoodToday(hasSubmitted);
+        } catch (error) {
+          console.log('Error refreshing mood status:', error);
+        }
+      };
+
+      refreshMoodStatus();
+    }, [])
+  );
+
+  // Refresh questionnaire status when screen comes back into focus (e.g., after submitting questionnaire)
+  useFocusEffect(
+    useCallback(() => {
+      const refreshQuestionnaireStatus = async () => {
+        try {
+          const hasCompleted = await hasCompletedPHQ9ThisPeriod();
+          setShowWellBeingCard(!hasCompleted); // Show card only if NOT completed this period
+          
+          // Update cards array based on whether to show well-being card
+          if (!hasCompleted) {
+            setHomescreenCards([...baseHomescreenCards, wellBeingCard]);
+          } else {
+            setHomescreenCards(baseHomescreenCards);
+          }
+        } catch (error) {
+          console.log('Error refreshing questionnaire status:', error);
+          // On error, show the card (fail safe)
+          setShowWellBeingCard(true);
+          setHomescreenCards([...baseHomescreenCards, wellBeingCard]);
+        }
+      };
+
+      refreshQuestionnaireStatus();
+    }, [])
+  );
+
+  
 
   const handlePinkOverlayComplete = () => {
     setShowPinkOverlay(false);
@@ -86,44 +190,15 @@ export default function RegularHome() {
   };
 
   return (
-    <View>
+    <View className='flex-1'>
       <TopBar title='Home'/>
 
-      <View className='px-4 pt-4 mt-5'>
-        <Text className='text-gray-700 text-4xl font-alegreya'>
-          Welcome Back,
-          <Text className='font-bold font-alegreya'>{name}</Text>
-        </Text>
-        <View className='mt-2' />
-        <Text className='text-gray-500 text-lg mt-1'>How are you feeling today?</Text>
-      </View>
-      <View className='px-4 pt-4'>
-          <FlatList
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ paddingHorizontal: 8 }}
-            data={moodData}
-            keyExtractor={(item, index) => `${item.text}-${index}`}
-            renderItem={({ item }) => (
-              <View className="mr-4">
-                <IconButton
-                  icon={item.icon}
-                  text={item.text}
-                  color={item.color}
-                  onPress={() => handleMoodPress(item.mood)}
-                />
-              </View>
-            )}
-          />
-      </View>
-      <Text className='text-gray-700 text-2xl font-alegreya px-4 pt-4 mt-5'>
-        Today&apos;s Recommendations
-      </Text>
-      <View className='px-4 pt-4 h-full'>
-        <FlatList
-          data={HomescreenCard}
-          keyExtractor={(item, index) => `${item.title}-${index}`}
-          renderItem={({ item }) => (
+      {/* Single vertical FlatList with a header so the page scrolls */}
+      <FlatList
+        data={homescreenCards}
+        keyExtractor={(item, index) => `${item.title}-${index}`}
+        renderItem={({ item }) => (
+          <View className='px-4 pt-4'>
             <Homecard
               title={item.title}
               description={item.description}
@@ -134,10 +209,71 @@ export default function RegularHome() {
               focusIcon={item.focusIcon}
               onPress={item.onPress}
             />
-          )}
-          showsVerticalScrollIndicator={false}
-        />
-      </View>
+          </View>
+        )}
+        ListHeaderComponent={
+          <View>
+            <View className='px-4 pt-4 mt-5'>
+              <Text className='text-gray-700 text-4xl font-alegreya'>
+                Welcome Back,
+                <Text className='font-bold font-alegreya'>{name}</Text>
+              </Text>
+              <View className='mt-2' />
+              {/* <Text className='text-gray-500 text-lg mt-1'>How are you feeling today?</Text> */}
+            </View>
+            
+            {/* Mood Tracker Card - Only show if user hasn't submitted today's mood */}
+            {!hasSubmittedMoodToday && (
+              <View className='px-4 pt-4'>
+                <TouchableOpacity
+                  className="rounded-2xl shadow-lg overflow-hidden"
+                  onPress={() => router.push('/(hidden)/mood/sampleMood' as any)}
+                >
+                  <LinearGradient
+                    colors={['#60A5FA', '#A78BFA']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={{ padding: 24 }}
+                  >
+                    <View className="flex-row items-center justify-between">
+                      <View className="flex-1">
+                        <Text className="text-white text-xl font-bold mb-2 font-alegreya">
+                          Track Your Mood
+                        </Text>
+                        <Text className="text-blue-100 text-sm font-alegreya">
+                          How are you feeling today? Express your emotions with our advanced mood tracker.
+                        </Text>
+                      </View>
+                      <View className="ml-4">
+                        <View className="w-16 h-16 bg-white/20 rounded-full items-center justify-center">
+                          <Text className="text-2xl">😊</Text>
+                        </View>
+                      </View>
+                    </View>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
+            )}
+            
+            <Text className='text-gray-700 text-2xl font-alegreya px-4 pt-4 mt-5'>
+              Today&apos;s Recommendations
+            </Text>
+          </View>
+        }
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 24 }}
+      />
+
+        {  
+        isEmergencyPopupVisible && (
+          <EmergencyPopup
+            visible={isEmergencyPopupVisible}
+            onClose={handleClose}
+            onEmergencyContact={handleEmergencyContact}
+            onImFine={handleImFine}
+            token={token}
+          />
+        )}
 
       <PinkOverlay
         visible={showPinkOverlay}
@@ -150,14 +286,14 @@ export default function RegularHome() {
       />
 
       <FocusAnimation 
-      visible={focused} 
-      onAnimationComplete={handleFocusComplete}
-         />
+        visible={focused} 
+        onAnimationComplete={handleFocusComplete}
+      />
 
-        <CloudFloatingAnimation
-          visible={showRelaxedAnimation}
-          onAnimationComplete={handleRelaxedComplete}
-        />
+      <CloudFloatingAnimation
+        visible={showRelaxedAnimation}
+        onAnimationComplete={handleRelaxedComplete}
+      />
     </View>
   );
 }

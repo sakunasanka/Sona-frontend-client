@@ -1,36 +1,34 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { usePlatformFee } from '@/contexts/PlatformFeeContext';
+import { usePlatformFeeGuard } from '@/hooks/usePlatformFeeGuard';
+import { router } from 'expo-router';
 import {
-  View,
+  ArrowLeft,
+  Check,
+  Clock,
+  Mic,
+  MoreVertical,
+  Paperclip,
+  Pause,
+  Play,
+  Send
+} from 'lucide-react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  ActionSheetIOS,
+  Alert,
+  Animated,
+  Image,
+  Keyboard,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
   Text,
   TextInput,
   TouchableOpacity,
-  ScrollView,
-  Image,
-  SafeAreaView,
-  Animated,
-  StatusBar,
   Vibration,
-  Keyboard,
-  Alert,
-  ActionSheetIOS,
-  Platform,
+  View,
 } from 'react-native';
-import { 
-  ArrowLeft, 
-  Send, 
-  Paperclip, 
-  Mic,
-  Play,
-  Pause,
-  MoreVertical,
-  Clock,
-  Camera,
-  ImageIcon,
-  FileText,
-  MapPin,
-  Check
-} from 'lucide-react-native';
-import { router } from 'expo-router';
 
 interface Message {
   id: string;
@@ -48,6 +46,18 @@ export default function CounselorChat() {
   const [isRecording, setIsRecording] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [isTyping, setIsTyping] = useState(false);
+  const { checkPlatformFeeAccess } = usePlatformFeeGuard();
+  const { feeStatus } = usePlatformFee();
+  const [hasPlatformAccess, setHasPlatformAccess] = useState<boolean | null>(null);
+
+  // Check platform fee access on mount and when fee status changes
+  useEffect(() => {
+    const checkAccess = async () => {
+      const hasAccess = await checkPlatformFeeAccess();
+      setHasPlatformAccess(hasAccess);
+    };
+    checkAccess();
+  }, [checkPlatformFeeAccess, feeStatus]);
   
   // Action handlers
   const handleBackPress = () => {
@@ -454,194 +464,220 @@ export default function CounselorChat() {
     <SafeAreaView className="flex-1 bg-white">
       <StatusBar barStyle="dark-content" backgroundColor="white" />
       
-      {/* Header */}
-      <View className="flex-row items-center px-4 py-4 bg-white shadow-sm border-b border-gray-100">
-        <TouchableOpacity 
-          className="p-2 -ml-2 mr-2"
-          onPress={() => router.back()}
-        >
-          <ArrowLeft size={24} color="#1F2937" />
-        </TouchableOpacity>
-        
-        <View className="flex-row items-center flex-1">
-          <View className="relative">
-            <Image
-              source={{ uri: 'https://images.pexels.com/photos/5327585/pexels-photo-5327585.jpeg' }}
-              className="w-12 h-12 rounded-full"
-            />
-            <View className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-emerald-500 border-2 border-white" />
-          </View>
-          <View className="ml-3 flex-1">
-            <Text className="text-lg font-semibold text-gray-900">Dr. Ugo David</Text>
-            <Text className="text-sm text-green font-medium">Available now</Text>
-          </View>
-        </View>
-        
-        <View className="flex-row items-center space-x-1">
-          <TouchableOpacity 
-            className="p-3 rounded-full hover:bg-gray-100"
-            onPress={handleMoreOptions}
+      {/* Platform Fee Access Check */}
+      {hasPlatformAccess === false && (
+        <View className="flex-1 justify-center items-center p-6">
+          <Text className="text-xl font-semibold text-gray-900 mb-4">Platform Fee Required</Text>
+          <Text className="text-gray-600 text-center mb-6">
+            You need to pay the monthly platform fee to chat with counselors.
+          </Text>
+          <TouchableOpacity
+            className="bg-primary px-6 py-3 rounded-lg"
+            onPress={() => router.push('/(hidden)/profile/view_profile')}
           >
-            <MoreVertical size={22} color="#6B7280" />
+            <Text className="text-white font-semibold">Pay Platform Fee</Text>
           </TouchableOpacity>
         </View>
-      </View>
+      )}
 
-      {/* Messages */}
-      <ScrollView 
-        ref={scrollViewRef}
-        className="flex-1 px-4 bg-gray-50" 
-        showsVerticalScrollIndicator={false}
-        onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
-      >
-        <View className="py-4">
-          {messages.map((msg, index) => {
-            const previousMessage = index > 0 ? messages[index - 1] : undefined;
-            const showDate = shouldShowDate(msg, previousMessage);
-            const isUser = msg.sender === 'user';
+      {hasPlatformAccess === null && (
+        <View className="flex-1 justify-center items-center">
+          <Text className="text-gray-600">Checking access...</Text>
+        </View>
+      )}
 
-            return (
-              <View key={msg.id} className="mb-6">
-                {showDate && (
-                  <View className="items-center my-6">
-                    <View className="bg-white px-4 py-2 rounded-full shadow-sm">
-                      <Text className="text-sm font-medium text-gray-600">
-                        {formatDate(msg.timestamp)}
-                      </Text>
-                    </View>
-                  </View>
-                )}
-                
-                <View className={`flex-row items-end ${isUser ? 'justify-end' : 'justify-start'} mb-1`}>
-                  {!isUser && (
-                    <Image
-                      source={{ uri: 'https://images.pexels.com/photos/5327585/pexels-photo-5327585.jpeg' }}
-                      className="w-8 h-8 rounded-full mr-3 mb-1"
-                    />
-                  )}
-                  
-                  <View className={`max-w-[80%] rounded-3xl px-5 py-4 shadow-sm ${
-                    isUser 
-                      ? 'bg-primary rounded-br-lg' 
-                      : 'bg-white rounded-bl-lg border border-gray-100'
-                  }`}>
-                    {msg.type === 'text' ? (
-                      <Text className={`text-base leading-relaxed ${
-                        isUser ? 'text-white' : 'text-gray-800'
+      {hasPlatformAccess === true && (
+        <>
+          {/* Header */}
+          <View className="flex-row items-center px-4 py-4 bg-white shadow-sm border-b border-gray-100">
+            <TouchableOpacity 
+              className="p-2 -ml-2 mr-2"
+              onPress={() => router.back()}
+            >
+              <ArrowLeft size={24} color="#1F2937" />
+            </TouchableOpacity>
+            
+            <View className="flex-row items-center flex-1">
+              <View className="relative">
+                <Image
+                  source={{ uri: 'https://images.icon-icons.com/1378/PNG/512/avatardefault_92824.png' }}
+                  className="w-12 h-12 rounded-full"
+                />
+                <View className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-emerald-500 border-2 border-white" />
+              </View>
+              <View className="ml-3 flex-1">
+                <Text className="text-lg font-semibold text-gray-900">Dr. Ugo David</Text>
+                <Text className="text-sm text-green font-medium">Available now</Text>
+              </View>
+            </View>
+            
+            <View className="flex-row items-center space-x-1">
+              <TouchableOpacity 
+                className="p-3 rounded-full hover:bg-gray-100"
+                onPress={handleMoreOptions}
+              >
+                <MoreVertical size={22} color="#6B7280" />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Messages */}
+          <ScrollView 
+            ref={scrollViewRef}
+            className="flex-1 px-4 bg-gray-50" 
+            showsVerticalScrollIndicator={false}
+            onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
+          >
+            <View className="py-4">
+              {messages.map((msg, index) => {
+                const previousMessage = index > 0 ? messages[index - 1] : undefined;
+                const showDate = shouldShowDate(msg, previousMessage);
+                const isUser = msg.sender === 'user';
+
+                return (
+                  <View key={msg.id} className="mb-6">
+                    {showDate && (
+                      <View className="items-center my-6">
+                        <View className="bg-white px-4 py-2 rounded-full shadow-sm">
+                          <Text className="text-sm font-medium text-gray-600">
+                            {formatDate(msg.timestamp)}
+                          </Text>
+                        </View>
+                      </View>
+                    )}
+                    
+                    <View className={`flex-row items-end ${isUser ? 'justify-end' : 'justify-start'} mb-1`}>
+                      {!isUser && (
+                        <Image
+                          source={{ uri: 'https://images.icon-icons.com/1378/PNG/512/avatardefault_92824.png' }}
+                          className="w-8 h-8 rounded-full mr-3 mb-1"
+                        />
+                      )}
+                      
+                      <View className={`max-w-[80%] rounded-3xl px-5 py-4 shadow-sm ${
+                        isUser 
+                          ? 'bg-primary rounded-br-lg' 
+                          : 'bg-white rounded-bl-lg border border-gray-100'
                       }`}>
-                        {msg.content}
-                      </Text>
+                        {msg.type === 'text' ? (
+                          <Text className={`text-base leading-relaxed ${
+                            isUser ? 'text-white' : 'text-gray-800'
+                          }`}>
+                            {msg.content}
+                          </Text>
+                        ) : (
+                          <VoiceMessage message={msg} isUser={isUser} />
+                        )}
+                      </View>
+                    </View>
+                    
+                    {/* Status and timestamp row */}
+                    {isUser ? (
+                      <View className="flex-row items-center justify-end mt-1 space-x-2">
+                        <MessageStatus status={msg.status} />
+                        <Text className="text-xs text-gray-400">
+                          {formatTime(msg.timestamp)}
+                        </Text>
+                      </View>
                     ) : (
-                      <VoiceMessage message={msg} isUser={isUser} />
+                      <View className="flex-row items-center mt-1 ml-14 space-x-2">
+                        <Text className="text-xs text-gray-400">
+                          {formatTime(msg.timestamp)}
+                        </Text>
+                      </View>
                     )}
                   </View>
+                );
+              })}
+              
+              {/* Typing Indicator */}
+              {isTyping && (
+                <View className="flex-row items-end justify-start mb-4">
+                  <Image
+                    source={{ uri: 'https://images.icon-icons.com/1378/PNG/512/avatardefault_92824.png' }}
+                    className="w-8 h-8 rounded-full mr-3"
+                  />
+                  <View className="bg-white rounded-3xl rounded-bl-lg px-5 py-4 shadow-sm border border-gray-100">
+                    <Animated.View 
+                      className="flex-row items-center space-x-1"
+                      style={{ opacity: typingDots }}
+                    >
+                      <View className="w-2 h-2 rounded-full bg-gray-400" />
+                      <View className="w-2 h-2 rounded-full bg-gray-400" />
+                      <View className="w-2 h-2 rounded-full bg-gray-400" />
+                    </Animated.View>
+                  </View>
                 </View>
-                
-                {/* Status and timestamp row */}
-                {isUser ? (
-                  <View className="flex-row items-center justify-end mt-1 space-x-2">
-                    <MessageStatus status={msg.status} />
-                    <Text className="text-xs text-gray-400">
-                      {formatTime(msg.timestamp)}
-                    </Text>
-                  </View>
-                ) : (
-                  <View className="flex-row items-center mt-1 ml-14 space-x-2">
-                    <Text className="text-xs text-gray-400">
-                      {formatTime(msg.timestamp)}
-                    </Text>
-                  </View>
-                )}
-              </View>
-            );
-          })}
-          
-          {/* Typing Indicator */}
-          {isTyping && (
-            <View className="flex-row items-end justify-start mb-4">
-              <Image
-                source={{ uri: 'https://images.pexels.com/photos/5327585/pexels-photo-5327585.jpeg' }}
-                className="w-8 h-8 rounded-full mr-3"
-              />
-              <View className="bg-white rounded-3xl rounded-bl-lg px-5 py-4 shadow-sm border border-gray-100">
-                <Animated.View 
-                  className="flex-row items-center space-x-1"
-                  style={{ opacity: typingDots }}
-                >
-                  <View className="w-2 h-2 rounded-full bg-gray-400" />
-                  <View className="w-2 h-2 rounded-full bg-gray-400" />
-                  <View className="w-2 h-2 rounded-full bg-gray-400" />
-                </Animated.View>
-              </View>
-            </View>
-          )}
-        </View>
-      </ScrollView>
-
-      {/* Input Area */}
-      <View 
-        className="px-4 py-4 bg-white border-t border-gray-100"
-        style={{ paddingBottom: Math.max(keyboardHeight ? 4 : 20, 4) }}
-      >
-        <View className="flex-row items-end bg-gray-100 rounded-3xl px-4 py-3 min-h-14 shadow-sm">
-          <TextInput
-            className="flex-1 text-base text-gray-800 max-h-24 leading-relaxed"
-            placeholder="Type your message..."
-            placeholderTextColor="#9CA3AF"
-            value={message}
-            onChangeText={setMessage}
-            multiline
-            style={{ paddingTop: 8, paddingBottom: 8 }}
-          />
-          
-          <TouchableOpacity 
-            className="p-2 ml-2"
-            onPress={handleAttachment}
-          >
-            <Paperclip size={22} color="#6B7280" />
-          </TouchableOpacity>
-          
-          {message.trim() ? (
-            <TouchableOpacity 
-              className="w-11 h-11 rounded-full bg-primary items-center justify-center ml-2 shadow-lg"
-              onPress={sendMessage}
-            >
-              <Send size={20} color="white" />
-            </TouchableOpacity>
-          ) : (
-            <View className="relative">
-              {isRecording && (
-                <Animated.View 
-                  className="absolute inset-0 w-11 h-11 rounded-full bg-red-400"
-                  style={{
-                    opacity: recordingPulse.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [0.3, 0]
-                    }),
-                    transform: [{
-                      scale: recordingPulse.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [1, 2]
-                      })
-                    }]
-                  }}
-                />
               )}
-              <Animated.View style={{ transform: [{ scale: recordingAnimation }] }}>
-                <TouchableOpacity
-                  className={`w-11 h-11 rounded-full items-center justify-center ml-2 shadow-lg ${
-                    isRecording ? 'bg-red-600' : 'bg-emerald-600'
-                  }`}
-                  onPressIn={startRecording}
-                  onPressOut={stopRecording}
-                >
-                  <Mic size={20} color="white" />
-                </TouchableOpacity>
-              </Animated.View>
             </View>
-          )}
-        </View>
-      </View>
+          </ScrollView>
+
+          {/* Input Area */}
+          <View 
+            className="px-4 py-4 bg-white border-t border-gray-100"
+            style={{ paddingBottom: Math.max(keyboardHeight ? 4 : 20, 4) }}
+          >
+            <View className="flex-row items-end bg-gray-100 rounded-3xl px-4 py-3 min-h-14 shadow-sm">
+              <TextInput
+                className="flex-1 text-base text-gray-800 max-h-24 leading-relaxed"
+                placeholder="Type your message..."
+                placeholderTextColor="#9CA3AF"
+                value={message}
+                onChangeText={setMessage}
+                multiline
+                style={{ paddingTop: 8, paddingBottom: 8 }}
+              />
+              
+              <TouchableOpacity 
+                className="p-2 ml-2"
+                onPress={handleAttachment}
+              >
+                <Paperclip size={22} color="#6B7280" />
+              </TouchableOpacity>
+              
+              {message.trim() ? (
+                <TouchableOpacity 
+                  className="w-11 h-11 rounded-full bg-primary items-center justify-center ml-2 shadow-lg"
+                  onPress={sendMessage}
+                >
+                  <Send size={20} color="white" />
+                </TouchableOpacity>
+              ) : (
+                <View className="relative">
+                  {isRecording && (
+                    <Animated.View 
+                      className="absolute inset-0 w-11 h-11 rounded-full bg-red-400"
+                      style={{
+                        opacity: recordingPulse.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [0.3, 0]
+                        }),
+                        transform: [{
+                          scale: recordingPulse.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [1, 2]
+                          })
+                        }]
+                      }}
+                    />
+                  )}
+                  <Animated.View style={{ transform: [{ scale: recordingAnimation }] }}>
+                    <TouchableOpacity
+                      className={`w-11 h-11 rounded-full items-center justify-center ml-2 shadow-lg ${
+                        isRecording ? 'bg-red-600' : 'bg-emerald-600'
+                      }`}
+                      onPressIn={startRecording}
+                      onPressOut={stopRecording}
+                    >
+                      <Mic size={20} color="white" />
+                    </TouchableOpacity>
+                  </Animated.View>
+                </View>
+              )}
+            </View>
+          </View>
+        </>
+      )}
     </SafeAreaView>
   );
 }

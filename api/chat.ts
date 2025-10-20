@@ -54,7 +54,7 @@ export const getChatMessages = async (
     });
     return response;
   } catch (error) {
-    // console.error('Error fetching chat messages:', error);
+    console.log('Error fetching chat messages:', error);
     throw error;
   }
 };
@@ -63,16 +63,19 @@ export const getChatMessages = async (
 export const getOlderMessages = async (
   chatId: number, 
   beforeMessageId: number, 
-  limit: number = 50
+  limit: number = 50,
+  token?: string
 ): Promise<PaginatedResponse<ChatMessage>> => {
   try {
+    console.log('Fetch older messages:', { chatId, beforeMessageId, limit, token });
     const response = await apiRequest({
       method: 'get',
-      path: `/chat/${chatId}/messages?before=${beforeMessageId}&limit=${limit}`
+      path: `/chat/${chatId}/messages?before=${beforeMessageId}&limit=${limit}`,
+      token
     });
     return response;
   } catch (error) {
-    // console.error('Error fetching older messages:', error);
+    console.log('Error fetching older messages:', error);
     throw error;
   }
 };
@@ -98,7 +101,7 @@ export const sendChatMessage = async (
     console.log('Message sent successfully:', response);
     return response;
   } catch (error) {
-    // console.error('Error sending message via HTTP:', error);
+    // console.log('Error sending message via HTTP:', error);
     throw error;
   }
 };
@@ -116,7 +119,23 @@ export const sendMessage = async (
     });
     return response;
   } catch (error) {
-    // console.error('Error sending message:', error);
+    // console.log('Error sending message:', error);
     throw error;
   }
 };
+
+//get chatroom from clientId and counselorId
+export const getChatRoom = async (counselorId: number, token: string) => {
+  try {
+    const response = await apiRequest({
+      method: 'get',
+      path: `chat/rooms/getRoomFromCounselorId/${counselorId}`,
+      token
+    })
+    console.log("data ", response.data)
+    if(response.data.room) return response.data.room.id;
+  }catch (error) {
+    console.log('Error fetching chat room:', error);
+    throw error;
+  }
+}

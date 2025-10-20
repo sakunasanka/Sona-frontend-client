@@ -1,14 +1,13 @@
-import { API_URL, PORT } from '@/config/env';
-import { Platform } from 'react-native';
+import { API_URL, PORT, host, server_URL } from '@/config/env';
 import { apiRequest } from "./api";
 
 let API_BASE_URL = '';
-if (Platform.OS === 'android') {
+
+if(host && server_URL){
+  API_BASE_URL = server_URL + '/api';
+  console.log("Using server_URL from config/env.ts as API_BASE_URL:", API_BASE_URL);
+}else {
   API_BASE_URL = API_URL + ':' + PORT + '/api';
-} else if (Platform.OS === 'ios') {
-  API_BASE_URL = API_URL + ':' + PORT + '/api';
-} else {
-  API_BASE_URL = 'http://localhost:' + PORT + '/api';
 }
 
 export interface Session {
@@ -43,7 +42,7 @@ export const fetchUserSessions = async (token: string) => {
     });
     return response;
   } catch (error) {
-    console.error('Error fetching sessions:', error);
+    console.log('Error fetching sessions:', error);
     throw error;
   }
 };
@@ -60,7 +59,7 @@ export const fetchTimeSlots = async (counselorId: string, date: string, token?: 
     });
     return response;
   } catch (error) {
-    console.error('Error fetching time slots:', error);
+    console.log('Error fetching time slots:', error);
     throw error;
   }
 };
@@ -84,7 +83,7 @@ export const bookSession = async (sessionData: {
     });
     return response;
   } catch (error) {
-    console.error('Error booking session:', error);
+    console.log('Error booking session:', error);
     throw error;
   }
 };
@@ -107,7 +106,7 @@ export const bookFreeStudentSession = async (sessionData: {
     });
     return response;
   } catch (error) {
-    console.error('Error booking free student session:', error);
+    console.log('Error booking free student session:', error);
     throw error;
   }
 };
@@ -124,7 +123,7 @@ export const cancelSession = async (sessionId: string, token: string) => {
     });
     return response;
   } catch (error) {
-    console.error('Error cancelling session:', error);
+    console.log('Error cancelling session:', error);
     throw error;
   }
 };
@@ -141,7 +140,7 @@ export const getRemainingFreeSessions = async (token: string) => {
     });
     return response;
   } catch (error) {
-    console.error('Error fetching remaining free sessions:', error);
+    console.log('Error fetching remaining free sessions:', error);
     throw error;
   }
 };
@@ -151,4 +150,165 @@ export interface StudentSessionInfo {
   nextResetDate: string;
   totalSessionsThisPeriod: number;
   isStudent: boolean;
-} 
+}
+
+/**
+ * Fetch available psychiatrists
+ */
+export const fetchPsychiatrists = async (token?: string) => {
+  try {
+    const response = await apiRequest({
+      method: 'get',
+      path: 'psychiatrists',
+      token
+    });
+    return response;
+  } catch (error) {
+    console.log('Error fetching psychiatrists:', error);
+    throw error;
+  }
+};
+
+/**
+ * Fetch psychiatrist by ID
+ */
+export const fetchPsychiatristById = async (psychiatristId: string, token?: string) => {
+  try {
+    const response = await apiRequest({
+      method: 'get',
+      path: `psychiatrists/${psychiatristId}`,
+      token
+    });
+    return response;
+  } catch (error) {
+    console.log('Error fetching psychiatrist:', error);
+    throw error;
+  }
+};
+
+/**
+ * Fetch available time slots for a psychiatrist on a specific date
+ */
+export const fetchPsychiatristTimeSlots = async (psychiatristId: string, date: string, token?: string) => {
+  try {
+    const response = await apiRequest({
+      method: 'get',
+      path: `psychiatrist-timeslots/${psychiatristId}/${date}`,
+      token
+    });
+    return response;
+  } catch (error) {
+    console.log('Error fetching psychiatrist time slots:', error);
+    throw error;
+  }
+};
+
+/**
+ * Book a session with a psychiatrist
+ */
+export const bookPsychiatristSession = async (sessionData: {
+  psychiatristId: string;
+  date: string;
+  timeSlot: string;
+  duration: number;
+  price: number;
+  concerns?: string;
+}, token: string) => {
+  try {
+    const response = await apiRequest({
+      method: 'post',
+      path: 'sessions/book',
+      data: {
+        ...sessionData,
+        counselorId: sessionData.psychiatristId, // Map to counselorId for backend compatibility
+        type: 'psychiatrist'
+      },
+      token
+    });
+    return response;
+  } catch (error) {
+    console.log('Error booking psychiatrist session:', error);
+    throw error;
+  }
+};
+
+/**
+ * Book a free psychiatrist session for students
+ */
+export const bookFreePsychiatristSession = async (sessionData: {
+  psychiatristId: string;
+  date: string;
+  timeSlot: string;
+  duration: number;
+}, token: string) => {
+  try {
+    const response = await apiRequest({
+      method: 'post',
+      path: 'sessions/book-free',
+      data: {
+        ...sessionData,
+        counselorId: sessionData.psychiatristId, // Map to counselorId for backend compatibility
+        type: 'psychiatrist'
+      },
+      token
+    });
+    return response;
+  } catch (error) {
+    console.log('Error booking free psychiatrist session:', error);
+    throw error;
+  }
+}; 
+
+//get session link from backend
+export const getSessionLink = async (sessionId: string, token: string) => {
+  try {
+    const response = await apiRequest({
+      method: 'get',
+      path: `sessions/getSessionLink/${sessionId}`,
+      token
+    })
+
+    return response;
+  }catch (error) {
+    console.log('Error fetching session link:', error);
+    throw error;
+  }
+}
+
+export const getUpcomingSessions = async (token: string) => {
+  try {
+    const response = await apiRequest({
+      method: 'get',
+      path: 'sessions/bookedSessions',
+      token
+    })
+
+    return response;
+  }catch (error) {
+    console.log('Error fetching upcoming sessions:', error);
+    throw error;
+  }
+}
+
+export const sendEmergencyAlert = async (token: string, {
+  contactNumber, description
+}: {
+  contactNumber: string;
+  description: string;
+}) => {
+  try {
+    const response = await apiRequest({
+      method: 'post',
+      path: 'users/client/urgent-help',
+      data: {
+        "contactNo" : contactNumber,
+        "message" : description
+      },
+      token
+    });
+    return response;
+  } catch (error) {
+    console.log('Error sending emergency alert:', error);
+    throw error;
+  }
+}

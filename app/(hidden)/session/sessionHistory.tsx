@@ -1,11 +1,13 @@
 import { checkIsStudent } from '@/api/api';
+import { getChatRoom } from '@/api/chat';
 import { fetchUserSessions, getRemainingFreeSessions } from '@/api/sessions';
+import { usePlatformFee } from '@/contexts/PlatformFeeContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, Calendar, Check, ChevronDown, Clock, ExternalLink, Filter, GraduationCap, MessageCircle, Search, Star, User } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Image, RefreshControl, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 
 // Define types
 type SessionStatus = 'upcoming' | 'past' | 'all' | 'student' | 'free';
@@ -35,6 +37,7 @@ type UISession = {
 
 export default function SessionHistory() {
     const router = useRouter();
+    const { feeStatus, isLoading: feeLoading } = usePlatformFee();
     const [sessions, setSessions] = useState<UISession[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
@@ -50,6 +53,18 @@ export default function SessionHistory() {
     const [nextResetDate, setNextResetDate] = useState<string>('');
     const [totalSessionsThisPeriod, setTotalSessionsThisPeriod] = useState<number>(0);
     const [loadingStudentData, setLoadingStudentData] = useState<boolean>(false);
+    const [token, setToken] = useState<string>('');
+
+    useEffect(() => {
+        const getToken = async () => {
+            const token = await AsyncStorage.getItem('token');
+            setToken(token || '');
+        };
+        getToken();
+    }, []);
+
+    // Platform fee status comes directly from context - no need to check again!
+    const hasPlatformFeeAccess = feeStatus?.hasPaid ?? false;
 
     // Check if user is a student and fetch free sessions data
     useEffect(() => {
@@ -66,7 +81,7 @@ export default function SessionHistory() {
                     }
                 }
             } catch (error) {
-                console.error('Error checking student status:', error);
+                console.log('Error checking student status:', error);
             }
         };
         
@@ -85,7 +100,7 @@ export default function SessionHistory() {
                 setTotalSessionsThisPeriod(sessionInfo.totalSessionsThisPeriod);
             }
         } catch (error) {
-            console.error('Failed to fetch remaining free sessions:', error);
+            console.log('Failed to fetch remaining free sessions:', error);
         } finally {
             setLoadingStudentData(false);
         }
@@ -127,7 +142,7 @@ export default function SessionHistory() {
                     counselorImage: counselor.avatar || '',
                     specialties: counselor.specialties || ['Counseling'],
                     rating: counselor.rating || 5,
-                    status: getSessionStatus(`${session.date}T${session.timeSlot || '00:00'}:00`),
+                    status: mapSessionStatus(session.status || 'upcoming'),
                     timeSlot: session.timeSlot || '',
                     sessionStatus: session.status || 'scheduled',
                     isStudentSession,
@@ -143,7 +158,7 @@ export default function SessionHistory() {
                 await fetchStudentSessionsData(authToken);
             }
         } catch (err: any) {
-            console.error('Failed to fetch sessions:', err);
+            console.log('Failed to fetch sessions:', err);
             setError(err.message || 'Failed to load sessions. Please try again.');
             
             if (err.name === 'AbortError') {
@@ -320,6 +335,22 @@ export default function SessionHistory() {
         }
     };
     
+    const mapSessionStatus = (apiStatus: string): SessionStatus => {
+        // Map API status to UI status
+        switch (apiStatus.toLowerCase()) {
+            case 'completed':
+                return 'past';
+            case 'cancelled':
+                return 'past';
+            case 'upcoming':
+                return 'upcoming';
+            case 'ongoing':
+                return 'upcoming'; // Ongoing sessions are still active
+            default:
+                return 'upcoming';
+        }
+    };
+    
     const getSessionStatus = (dateString: string): SessionStatus => {
         try {
             const sessionDate = new Date(dateString);
@@ -340,8 +371,9 @@ export default function SessionHistory() {
         router.push(`/(hidden)/profile/counsellor_profile?id=${counselorId}`);
     };
     
-    const handleChatWithCounselor = (counselorId: string): void => {
-        router.push(`/(hidden)/profile/counsellor-chat?counselorId=${counselorId}`);
+    const handleChatWithCounselor = async (counselorId: string): Promise<void> => {
+        const chatId = await getChatRoom(parseInt(counselorId), token);
+        router.push(`/(hidden)/session/messageWithCouncilor?id=${chatId}`);
     };
     
     const handleBookSession = (counselorId: string): void => {
@@ -382,11 +414,52 @@ export default function SessionHistory() {
         }
     };
 
+    // Show loading while context is still loading fee status
+    if (feeLoading) {
+        return (
+            <View className="flex-1 bg-gray-50 justify-center items-center">
+                <View className="bg-white rounded-2xl p-8 shadow-lg items-center max-w-sm">
+                    <ActivityIndicator size="large" color="#6366F1" />
+                    <Text className="text-gray-700 text-lg font-medium mt-4">Checking access...</Text>
+                </View>
+            </View>
+        );
+    }
+
+    // Show platform fee required if user hasn't paid
+    if (!hasPlatformFeeAccess) {
+        return (
+            <View className="flex-1 bg-gray-50 justify-center items-center px-6">
+                <View className="bg-white rounded-2xl p-8 shadow-lg items-center max-w-sm">
+                    <View className="w-16 h-16 rounded-full bg-red-50 justify-center items-center mb-4">
+                        <Calendar size={32} color="#DC2626" />
+                    </View>
+                    <Text className="text-xl font-semibold text-gray-900 mb-2 text-center">Platform Fee Required</Text>
+                    <Text className="text-gray-600 text-center mb-6 leading-5">
+                        You need to pay the monthly platform fee to view your session history.
+                    </Text>
+                    <TouchableOpacity
+                        className="my-4 bg-primary py-3 rounded-xl items-center"
+                        onPress={() => router.push('/(hidden)/profile/view_profile')}
+                    >
+                        <Text className="text-white font-semibold mx-4">Pay Platform Fee</Text>
+                    </TouchableOpacity>
+                </View>
+            </View>
+        );
+    }
+    
+    // Show loading while fetching sessions
     if (loading) {
         return (
-            <View className="flex-1 justify-center items-center bg-white">
-                <ActivityIndicator size="large" color="#6366F1" />
-                <Text className="text-gray-600 mt-4">Loading your sessions...</Text>
+            <View className="flex-1 bg-gray-50 justify-center items-center">
+                <View className="bg-white rounded-2xl p-8 shadow-lg items-center max-w-sm">
+                    <ActivityIndicator size="large" color="#6366F1" />
+                    <Text className="text-gray-700 text-lg font-medium mt-4">Loading your sessions...</Text>
+                    <Text className="text-gray-500 text-sm text-center mt-2">
+                        Please wait while we fetch your session history
+                    </Text>
+                </View>
             </View>
         );
     }
@@ -479,7 +552,7 @@ export default function SessionHistory() {
                     </View>
                     
                     {/* Filter Tabs */}
-                    <ScrollView 
+                    {/* <ScrollView 
                         horizontal 
                         showsHorizontalScrollIndicator={false} 
                         className="mb-4"
@@ -503,7 +576,7 @@ export default function SessionHistory() {
                                 </Text>
                             </TouchableOpacity>
                         ))}
-                    </ScrollView>
+                    </ScrollView> */}
                     
                     {/* Advanced Filters */}
                     {showFilters && (
@@ -523,7 +596,7 @@ export default function SessionHistory() {
                                 </TouchableOpacity>
                                 
                                 {showCounselorDropdown && (
-                                    <View className="bg-white mt-2 rounded-xl shadow-lg absolute top-20 left-0 right-0 z-10 border border-gray-100 overflow-hidden">
+                                    <View className="bg-white mt-2 rounded-xl shadow-lg absolute top-20 left-0 right-0 z-[100] border border-gray-100 overflow-hidden">
                                         {counselors.map((counselor) => (
                                             <TouchableOpacity
                                                 key={counselor.value}
@@ -693,7 +766,12 @@ export default function SessionHistory() {
                                     {session.status !== 'past' ? (
                                         <TouchableOpacity 
                                             className="flex-1 ml-2 py-3 bg-primary rounded-lg items-center justify-center flex-row"
-                                            onPress={() => Alert.alert('Join Session', 'This would navigate to the video call screen in a real app.')}
+                                            onPress={
+                                                () => {
+                                                    router.push(`/(hidden)/session/VideoCallPage?sessionId=${session.id}`);
+                                                    console.log('Join session', session.id);
+                                                }
+                                            }
                                         >
                                             <ExternalLink size={16} color="#FFFFFF" className="mr-1" />
                                             <Text className="text-white font-medium text-sm">Join Session</Text>
@@ -789,7 +867,7 @@ export default function SessionHistory() {
     </LinearGradient>
 </TouchableOpacity>
                 )}
-            </ScrollView>     
+            </ScrollView>
         </View>
     );
 }

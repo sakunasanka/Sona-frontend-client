@@ -6,13 +6,37 @@
   "build": {
     "development": {
       "developmentClient": true,
-      "distribution": "internal"
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "${EXPO_PUBLIC_API_URL}",
+        "EXPO_PUBLIC_HOST": "${EXPO_PUBLIC_HOST}",
+        "EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME": "${EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME}",
+        "EXPO_PUBLIC_CLOUDINARY_API_KEY": "${EXPO_PUBLIC_CLOUDINARY_API_KEY}",
+        "EXPO_PUBLIC_CLOUDINARY_API_SECRET": "${EXPO_PUBLIC_CLOUDINARY_API_SECRET}",
+        "EXPO_PUBLIC_CLOUDINARY_URL": "${EXPO_PUBLIC_CLOUDINARY_URL}"
+      }
     },
     "preview": {
-      "distribution": "internal"
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "${EXPO_PUBLIC_API_URL}",
+        "EXPO_PUBLIC_HOST": "${EXPO_PUBLIC_HOST}",
+        "EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME": "${EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME}",
+        "EXPO_PUBLIC_CLOUDINARY_API_KEY": "${EXPO_PUBLIC_CLOUDINARY_API_KEY}",
+        "EXPO_PUBLIC_CLOUDINARY_API_SECRET": "${EXPO_PUBLIC_CLOUDINARY_API_SECRET}",
+        "EXPO_PUBLIC_CLOUDINARY_URL": "${EXPO_PUBLIC_CLOUDINARY_URL}"
+      }
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_API_URL": "${EXPO_PUBLIC_API_URL}",
+        "EXPO_PUBLIC_HOST": "${EXPO_PUBLIC_HOST}",
+        "EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME": "${EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME}",
+        "EXPO_PUBLIC_CLOUDINARY_API_KEY": "${EXPO_PUBLIC_CLOUDINARY_API_KEY}",
+        "EXPO_PUBLIC_CLOUDINARY_API_SECRET": "${EXPO_PUBLIC_CLOUDINARY_API_SECRET}",
+        "EXPO_PUBLIC_CLOUDINARY_URL": "${EXPO_PUBLIC_CLOUDINARY_URL}"
+      }
     }
   },
   "submit": {

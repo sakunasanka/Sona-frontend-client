@@ -3,7 +3,7 @@ import { createPaymentLink } from "@/api/payment";
 import {
     getPsychiatristById
 } from "@/api/psychiatrist";
-import { API_URL, PORT } from "@/config/env";
+import { API_URL, PORT, server_URL, host } from "../../../../config/config";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router, useLocalSearchParams } from "expo-router";
 import { ArrowLeft, Stethoscope } from 'lucide-react-native';
@@ -59,10 +59,8 @@ interface PaymentMethod {
 import { Platform } from 'react-native';
 
 let API_BASE_URL = '';
-if (Platform.OS === 'android') {
-  API_BASE_URL = API_URL + ':' + PORT + '/api';
-} else {
-  API_BASE_URL = API_URL + ':' + PORT + '/api';
+if (host == "server"){
+  API_BASE_URL = `${server_URL}/api`;
 }
 
 const fetchTimeSlots = async (psychiatristId: string, date: Date): Promise<TimeSlot[]> => {

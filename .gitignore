@@ -43,5 +43,5 @@ app-example
 ios/*
 android/*
 
-config/env.ts
+config/env.local.ts
 .npmrc

@@ -3,7 +3,7 @@ import { createPaymentLink } from "@/api/payment";
 import {
     getPsychiatristById
 } from "@/api/psychiatrist";
-import { API_URL, PORT, host, server_URL } from "@/config/env";
+import { API_URL, PORT, host, server_URL } from "@/config/config.ts";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router, useLocalSearchParams } from "expo-router";
 import { ArrowLeft, Stethoscope } from 'lucide-react-native';

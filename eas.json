@@ -19,8 +19,8 @@
     "preview": {
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_API_URL": "${EXPO_PUBLIC_API_URL}",
-        "EXPO_PUBLIC_HOST": "${EXPO_PUBLIC_HOST}",
+        "EXPO_PUBLIC_API_URL": "https://sona.org.lk",
+        "EXPO_PUBLIC_HOST": "host",
         "EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME": "${EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME}",
         "EXPO_PUBLIC_CLOUDINARY_API_KEY": "${EXPO_PUBLIC_CLOUDINARY_API_KEY}",
         "EXPO_PUBLIC_CLOUDINARY_API_SECRET": "${EXPO_PUBLIC_CLOUDINARY_API_SECRET}",
